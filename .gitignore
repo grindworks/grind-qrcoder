@@ -20,4 +20,6 @@ Thumbs.db
 
 # アプリのバックアップ・データファイル
 *.qrcoder
+icons-preview.html
+tool_optimize_sprite.php
 tailwindcss-macos-arm64

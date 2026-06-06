@@ -28,7 +28,7 @@
     -->
   <script>
     window.ICON_CONFIG = {
-      spriteUrl: "icons-sprite.svg?v=8",
+      spriteUrl: "./icons-sprite.svg",
     };
   </script>
 
@@ -168,7 +168,7 @@
     function iconPreview() {
       return {
         icons: [],
-        spriteUrl: window.ICON_CONFIG?.spriteUrl || "icons-sprite.svg",
+        spriteUrl: window.ICON_CONFIG?.spriteUrl || "./icons-sprite.svg",
         searchQuery: "",
         copyMode: "id",
         iconSize: 32,

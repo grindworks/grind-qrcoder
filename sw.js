@@ -1,5 +1,5 @@
 // 💡 アップデート時はここを書き換えることで更新が発火します
-const CACHE_NAME = "grindqrcoder-v16";
+const CACHE_NAME = "grindqrcoder-v22";
 const urlsToCache = [
   "./",
   "./index.html",
@@ -8,14 +8,9 @@ const urlsToCache = [
   "./icon-192.png",
   "./icon-512.png",
   "./icons-sprite.svg",
-  "./ICON_ACTIVECAMPAIGN.png",
   "./ICON_EMAIL.png",
   "./ICON_FACEBOOK.png",
   "./ICON_INSTAGRAM.png",
-  "./ICON_LINE.png",
-  "./ICON_MESSENGER.png",
-  "./ICON_SMS.png",
-  "./ICON_THRED.png",
   "./ICON_TIKTOK.png",
   "./ICON_X.png",
   "./ICON_ZOOM.png",

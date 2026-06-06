@@ -550,7 +550,7 @@ function qrCodeGenerator() {
     currentPage: 1,
 
     // --- アプリケーション内で使用する固定データ ---
-    presetLogos: ["ICON_ACTIVECAMPAIGN.png", "ICON_EMAIL.png", "ICON_FACEBOOK.png", "ICON_INSTAGRAM.png", "ICON_LINE.png", "ICON_MESSENGER.png", "ICON_SMS.png", "ICON_THRED.png", "ICON_TIKTOK.png", "ICON_X.png", "ICON_ZOOM.png"],
+    presetLogos: ["ICON_EMAIL.png", "ICON_FACEBOOK.png", "ICON_INSTAGRAM.png", "ICON_TIKTOK.png", "ICON_X.png", "ICON_ZOOM.png"],
     qrTypes: [
       {
         id: "url",
