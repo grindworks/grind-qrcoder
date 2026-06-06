@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Icons Sprite Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    }
+  </script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 dark:bg-gray-900 transition-colors duration-300" :class="{ 'dark': darkMode }"
+  x-data="iconPreview()">
+  <!--
+      アイコンスプライトのプレビュー画面です。
+      アイコンをクリックするとIDやSVGタグをコピーできます。
+    -->
+  <script>
+    window.ICON_CONFIG = {
+      spriteUrl: "icons-sprite.svg?v=8",
+    };
+  </script>
+
+  <div class="container mx-auto min-h-screen p-4 sm:p-6 lg:p-8">
+    <header class="mb-4">
+      <h1 class="text-2xl font-bold text-gray-800 transition-colors sm:text-3xl"
+        :class="darkMode ? 'text-white' : 'text-gray-800'">Icons Sprite Preview</h1>
+    </header>
+
+    <div class="sticky top-0 z-10 -mx-4 mb-8 px-4 pb-4 pt-2 transition-colors sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
+      :class="darkMode ? 'bg-gray-900' : 'bg-gray-100'">
+      <p class="mt-2 text-gray-600 transition-colors" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
+        <span x-text="totalFilteredCount"></span>
+        /
+        <span x-text="icons.length"></span>
+        icons found in
+        <code class="rounded-md bg-gray-200 px-1 py-0.5 text-gray-800">icons-sprite.svg</code>
+      </p>
+
+      <div
+        class="mt-4 flex flex-col justify-between gap-4 rounded-lg border p-4 shadow-sm transition-colors md:flex-row md:items-center"
+        :class="darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'">
+        <!-- Search -->
+        <div class="relative w-full md:max-w-xs">
+          <input type="text" x-model.debounce.300ms="searchQuery" aria-label="Search icons"
+            placeholder="Search icons..."
+            class="w-full rounded-lg border py-2 pl-10 pr-10 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500"
+            :class="darkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'" />
+          <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor"
+            viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          <button x-show="searchQuery" @click="searchQuery = ''" aria-label="Clear search"
+            class="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600 focus:outline-none" x-cloak>
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4 sm:gap-6">
+          <!-- Dark Mode Toggle -->
+          <button @click="darkMode = !darkMode" type="button"
+            class="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white focus:outline-none">
+            <span x-show="!darkMode" class="flex items-center gap-1">
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+              </svg>
+              Dark
+            </span>
+            <span x-show="darkMode" class="flex items-center gap-1" x-cloak>
+              <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              Light
+            </span>
+          </button>
+
+          <!-- Size Slider -->
+          <div class="flex items-center gap-2">
+            <label for="size" class="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Size</label>
+            <input id="size" type="range" min="16" max="64" step="4" x-model="iconSize"
+              class="h-2 w-24 cursor-pointer appearance-none rounded-lg bg-gray-200 dark:bg-gray-700" />
+            <span class="w-8 text-xs text-gray-500 dark:text-gray-400" x-text="iconSize + 'px'"></span>
+          </div>
+
+          <!-- Copy Mode -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">Copy</span>
+            <select x-model="copyMode"
+              class="rounded-md border bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white py-1 pl-2 pr-8 text-sm shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+              <option value="id">ID</option>
+              <option value="tag">SVG Tag</option>
+              <option value="blade">Blade Component</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div x-show="isLoading" class="py-12 text-center text-gray-500">
+      <svg class="mx-auto h-10 w-10 animate-spin text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none"
+        viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+        </path>
+      </svg>
+      <p class="mt-2">Loading icons...</p>
+    </div>
+
+    <!-- Error State -->
+    <div x-show="error" x-cloak class="rounded-lg bg-red-50 p-4 text-center text-red-600">
+      <p x-text="error"></p>
+    </div>
+
+    <template x-for="(groupIcons, groupName) in groupedIcons" :key="groupName">
+      <div class="mb-8" x-show="!isLoading && !error && groupIcons.length > 0" x-cloak>
+        <h2 class="mb-4 text-lg font-bold capitalize text-gray-700 dark:text-gray-300 transition-colors" x-text="groupName"></h2>
+        <div class="grid grid-cols-2 gap-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10">
+          <template x-for="icon in groupIcons" :key="icon.id">
+            <button type="button" @click="copyToClipboard(icon)"
+              class="group flex w-full cursor-pointer flex-col items-center justify-start rounded-lg bg-white dark:bg-gray-800 p-4 shadow-sm transition-all hover:bg-blue-50 dark:hover:bg-gray-700 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+              <svg class="text-gray-600 dark:text-gray-300 transition-colors group-hover:text-blue-600 dark:group-hover:text-white"
+                :style="`width: ${iconSize}px; height: ${iconSize}px;`" :fill="icon.isOutline ? 'none' : 'currentColor'"
+                :stroke="icon.isOutline ? 'currentColor' : 'none'" :stroke-width="icon.isOutline ? '1.5' : '0'">
+                <use :href="`${spriteUrl}#${icon.id}`"></use>
+              </svg>
+              <span class="mt-2 break-all text-center text-xs text-gray-500 dark:text-gray-400 dark:group-hover:text-gray-200" x-text="icon.id"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <!-- Empty State -->
+    <div x-show="!isLoading && !error && totalFilteredCount === 0" class="py-12 text-center text-gray-500" x-cloak>
+      <p>
+        No icons found matching "
+        <span x-text="searchQuery" class="font-medium text-gray-900 dark:text-white"></span>
+        "
+      </p>
+    </div>
+
+    <div x-show="copied" x-transition x-cloak role="alert"
+      class="fixed bottom-5 right-5 rounded-lg bg-gray-800 px-4 py-2 text-sm text-white shadow-lg">
+      <span
+        x-text="copyMode === 'id' ? 'ID Copied!' : (copyMode === 'blade' ? 'Blade Component Copied!' : 'SVG Tag Copied!')"></span>
+    </div>
+  </div>
+
+  <script>
+    function iconPreview() {
+      return {
+        icons: [],
+        spriteUrl: window.ICON_CONFIG?.spriteUrl || "icons-sprite.svg",
+        searchQuery: "",
+        copyMode: "id",
+        iconSize: 32,
+        copied: false,
+        darkMode: false,
+        copyTimeout: null,
+        isLoading: true,
+        error: null,
+        init() {
+          fetch(this.spriteUrl)
+            .then((response) => {
+              if (!response.ok) throw new Error("Failed to load icons-sprite.svg");
+              return response.text();
+            })
+            .then((text) => {
+              const parser = new DOMParser();
+              const svgDoc = parser.parseFromString(text, "image/svg+xml");
+
+              // symbolタグとg[id]の両方を取得
+              const elements = [...svgDoc.querySelectorAll("symbol"), ...svgDoc.querySelectorAll("g[id]")];
+
+              const extractedIcons = elements
+                .filter((el) => el.id)
+                .map((el) => {
+                  const id = el.id;
+                  const isOutline = id.startsWith("outline-");
+                  let category = isOutline ? "Outline" : id.startsWith("solid-") ? "Solid" : id.startsWith("icon-") ? "General" : "Other";
+                  return { id, isOutline, category };
+                });
+
+              this.icons = extractedIcons;
+              this.isLoading = false;
+            })
+            .catch((error) => {
+              console.error("Error loading icons:", error);
+              this.error = "アイコンスプライトの読み込みに失敗しました。";
+              this.isLoading = false;
+            });
+        },
+        get groupedIcons() {
+          const groups = { Outline: [], Solid: [], General: [], Other: [] };
+          const term = this.searchQuery.toLowerCase();
+
+          this.icons.forEach((icon) => {
+            if (term && !icon.id.toLowerCase().includes(term)) return;
+            groups[icon.category].push(icon);
+          });
+
+          // Filter out empty groups
+          return Object.fromEntries(Object.entries(groups).filter(([_, icons]) => icons.length > 0));
+        },
+        get totalFilteredCount() {
+          return Object.values(this.groupedIcons).reduce((acc, group) => acc + group.length, 0);
+        },
+        copyToClipboard(icon) {
+          const id = icon.id;
+          let textToCopy = id;
+
+          if (this.copyMode === "tag") {
+            const attrs = icon.isOutline ? 'fill="none" stroke="currentColor" stroke-width="1.5"' : 'fill="currentColor"';
+            const cleanUrl = this.spriteUrl.split("?")[0];
+            textToCopy = `<svg class="w-6 h-6" ${attrs} aria-hidden="true"><use href="${cleanUrl}#${id}"></use></svg>`;
+          } else if (this.copyMode === "blade") {
+            textToCopy = `<x-icon name="${id}" />`;
+          }
+
+          if (navigator.clipboard) {
+            navigator.clipboard
+              .writeText(textToCopy)
+              .then(() => {
+                this.copied = true;
+                if (this.copyTimeout) clearTimeout(this.copyTimeout);
+                this.copyTimeout = setTimeout(() => {
+                  this.copied = false;
+                }, 2000);
+              })
+              .catch((err) => {
+                console.error("Failed to copy:", err);
+                alert("クリップボードへのコピーに失敗しました。\n(HTTPS環境以外では動作しない場合があります)");
+              });
+          } else {
+            console.error("Clipboard API not supported");
+            alert("このブラウザはクリップボード操作に対応していません。");
+          }
+        },
+      };
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,7 @@
+{
+  "livePreview.defaultPreviewPath": "/index.html",
+  "files.associations": {
+    "*.qrcoder": "json"
+  },
+  "css.lint.propertyIgnoredDueToDisplay": "ignore"
+}

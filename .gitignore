@@ -1,0 +1,23 @@
+# OS generated files
+# 依存関係
+node_modules/
+
+# OSの一時ファイル
+.DS_Store
+.DS_Store?
+._*
+.Trashes
+*.tmp
+*.log
+
+# IDEs and Editors
+.idea/
+
+# 開発用スクリプト・ファイル
+export_ai.md
+export_ai.sh
+Thumbs.db
+
+# アプリのバックアップ・データファイル
+*.qrcoder
+tailwindcss-macos-arm64
