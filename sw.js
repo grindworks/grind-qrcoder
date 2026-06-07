@@ -1,5 +1,5 @@
 // 💡 アップデート時はここを書き換えることで更新が発火します
-const CACHE_NAME = "grindqrcoder-v22";
+const CACHE_NAME = "grindqrcoder-v36";
 const urlsToCache = [
   "./",
   "./index.html",
@@ -15,13 +15,14 @@ const urlsToCache = [
   "./ICON_X.png",
   "./ICON_ZOOM.png",
   "./poster.jpg",
-  "./card.png"
+  "./card.png",
+  "./manifest.json"
 ];
 
 const externalUrlsToCache = [
-  "https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js",
-  "https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.x.x/dist/cdn.min.js",
-  "https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.x.x/dist/cdn.min.js",
+  "https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js",
+  "https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.13.5/dist/cdn.min.js",
+  "https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.13.5/dist/cdn.min.js",
   "https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js"
 ];
 

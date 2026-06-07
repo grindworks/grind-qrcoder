@@ -3,5 +3,6 @@
   "files.associations": {
     "*.qrcoder": "json"
   },
-  "css.lint.propertyIgnoredDueToDisplay": "ignore"
+  "css.lint.propertyIgnoredDueToDisplay": "ignore",
+  "tailwindCSS.lint.cssConflict": "ignore"
 }
