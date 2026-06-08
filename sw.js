@@ -1,5 +1,5 @@
 // 💡 アップデート時はここを書き換えることで更新が発火します
-const CACHE_NAME = "grindqrcoder-v36";
+const CACHE_NAME = "grindqrcoder-v81";
 const urlsToCache = [
   "./",
   "./index.html",
@@ -78,29 +78,40 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// fetchイベントでキャッシュを返す
+// fetchイベントでキャッシュを返す (Stale-while-revalidate 戦略に変更)
 self.addEventListener("fetch", (event) => {
+  // GETリクエスト以外はキャッシュ処理をバイパス
+  if (event.request.method !== "GET") return;
+
   event.respondWith(
     // クエリパラメータを無視してWASMファイルなどを確実にキャッシュヒットさせる
     caches.match(event.request, { ignoreSearch: true }).then((response) => {
-      // 1. キャッシュがあればそれを返す
-      if (response) {
-        return response;
-      }
-      // 2. キャッシュがなければネットワークから取得を試みる
-      return fetch(event.request).catch(() => {
-        // 3. オフラインかつキャッシュにもない場合のフォールバック（HTMLへのアクセス時のみ）
-        if (
-          event.request.mode === "navigate" ||
-          (event.request.headers.get("accept") &&
-            event.request.headers.get("accept").includes("text/html"))
-        ) {
-          const fallbackHtml = `\n            <!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>QR Coder - 通知</title><style>body { font-family: sans-serif; background-color: #fafafa; color: #333; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; padding: 20px; } h1 { font-size: 20px; color: #111827; margin-bottom: 16px; font-weight: bold; } p { font-size: 15px; color: #4b5563; line-height: 1.6; margin-bottom: 24px; } .icon { font-size: 48px; margin-bottom: 16px; }</style></head><body><div class="icon">💡</div><h1>ブラウザのキャッシュがクリアされたようです</h1><p>データはあなたのPCに安全に保存されています。<br><br>アプリを再びオフラインで使うには、一度インターネットに接続した状態でアクセスし直してください。</p></body></html>\n          `;
-          return new Response(fallbackHtml, {
-            headers: { "Content-Type": "text/html; charset=utf-8" },
-          });
-        }
-      });
+      // ネットワークから最新リソースをフェッチし、成功すればキャッシュを更新する（裏側で実行）
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.ok && (networkResponse.type === "basic" || networkResponse.type === "cors")) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // オフラインかつキャッシュにもない場合のフォールバック（HTMLへのアクセス時のみ）
+          if (
+            event.request.mode === "navigate" ||
+            (event.request.headers.get("accept") && event.request.headers.get("accept").includes("text/html"))
+          ) {
+            const fallbackHtml = `\n            <!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>QR Coder - 通知</title><style>body { font-family: sans-serif; background-color: #fafafa; color: #333; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; padding: 20px; } h1 { font-size: 20px; color: #111827; margin-bottom: 16px; font-weight: bold; } p { font-size: 15px; color: #4b5563; line-height: 1.6; margin-bottom: 24px; } .icon { font-size: 48px; margin-bottom: 16px; }</style></head><body><div class="icon">💡</div><h1>ブラウザのキャッシュがクリアされたようです</h1><p>データはあなたのPCに安全に保存されています。<br><br>アプリを再びオフラインで使うには、一度インターネットに接続した状態でアクセスし直してください。</p></body></html>\n          `;
+            return new Response(fallbackHtml, {
+              headers: { "Content-Type": "text/html; charset=utf-8" },
+            });
+          }
+        });
+
+      // キャッシュがあれば即座に返し、なければ fetchPromise の結果を待つ
+      return response || fetchPromise;
     }),
   );
 });

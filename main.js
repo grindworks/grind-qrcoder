@@ -79,7 +79,7 @@ function setDirty(state) {
       badge.classList.remove("flex");
     }
   }
-  const fileName = fileHandle && fileHandle.name ? fileHandle.name : "Backup.json";
+  const fileName = fileHandle && fileHandle.name ? fileHandle.name : "Unsaved.qrcoder";
   const filenameBadge = document.getElementById("current-filename");
   if (filenameBadge) {
     filenameBadge.textContent = fileName;
@@ -181,6 +181,10 @@ async function processQRCoderFile(file) {
 }
 
 async function loadQRCoderFile() {
+  const app = window.$app;
+  if (app && app.hasUnsavedEdit) {
+    if (!confirm("エディタに未保存の変更があります。破棄してファイルを読み込みますか？")) return;
+  }
   if (isDirty) {
     if (!confirm("未保存の変更（ダッシュボード）があります。変更を破棄して別のバックアップを読み込みますか？")) return;
   }
@@ -206,6 +210,7 @@ async function loadQRCoderFile() {
 
     await processQRCoderFile(file);
   } catch (err) {
+    if (err.name === 'AbortError') return; // キャンセル時は何もしない
     console.error(err);
     alert("ファイルの読み込みに失敗しました。ファイルが破損しているか形式が違います。");
   }
@@ -276,6 +281,8 @@ async function saveQRCoderFile() {
       const blob = new Blob([fileData], { type: "application/octet-stream" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
+      a.target = "_blank";
+      a.rel = "noopener";
       a.href = url;
       a.download = fileHandle && fileHandle.name ? fileHandle.name : "Data.qrcoder";
       document.body.appendChild(a);
@@ -341,6 +348,10 @@ function toggleCommandPalette() {
   if (!palette || !content) return;
 
   isCommandPaletteOpen = !isCommandPaletteOpen;
+
+  const metaTheme = document.getElementById("meta-theme-color");
+  if (metaTheme) metaTheme.setAttribute("content", isCommandPaletteOpen ? "#111827" : "#f8fafc");
+
   if (isCommandPaletteOpen) {
     palette.classList.remove("hidden");
     palette.classList.add("flex");
@@ -348,21 +359,24 @@ function toggleCommandPalette() {
     selectedCommandIndex = 0;
     renderCommandList();
 
+    input.focus();
+
     requestAnimationFrame(() => {
       palette.classList.remove("opacity-0");
       palette.classList.add("opacity-100");
       content.classList.remove("scale-95");
       content.classList.add("scale-100");
     });
-    setTimeout(() => input.focus(), 100);
   } else {
     palette.classList.remove("opacity-100");
     palette.classList.add("opacity-0");
     content.classList.remove("scale-100");
     content.classList.add("scale-95");
     setTimeout(() => {
-      palette.classList.add("hidden");
-      palette.classList.remove("flex");
+      if (!isCommandPaletteOpen) {
+        palette.classList.add("hidden");
+        palette.classList.remove("flex");
+      }
     }, 300);
   }
 }
@@ -703,13 +717,13 @@ function qrCodeGenerator() {
       {
         id: "images",
         title: "画像ギャラリー",
-        description: "複数の画像をアップロードして専用ページを作成します。",
+        description: "Googleフォト等の共有アルバムリンクをQRコード化します。",
         icon: "photo",
       },
       {
         id: "video",
         title: "ビデオ",
-        description: "動画をアップロード、またはURLを指定して共有します。",
+        description: "YouTubeなどの動画共有リンクをQRコード化します。",
         icon: "video-camera",
       },
     ],
@@ -873,6 +887,7 @@ function qrCodeGenerator() {
       },
     ],
     presetTemplates: [],
+    presetTemplateGroups: [],
 
     // --- Computed Properties (算出プロパティ) ---
     // 表示するアイテムをソート・ページネーションして計算
@@ -974,6 +989,17 @@ function qrCodeGenerator() {
       this.initQrCode();
       this.validateUrl();
 
+      // モーダル展開時のステータスバー動的暗転 (UX Polish)
+      const metaTheme = document.getElementById("meta-theme-color");
+      const updateThemeColor = (isOpen) => {
+        if (metaTheme) metaTheme.setAttribute("content", isOpen ? "#111827" : "#f8fafc");
+      };
+      this.$watch('showSaveModal', updateThemeColor);
+      this.$watch('showShareModal', updateThemeColor);
+      this.$watch('showDownloadModal', updateThemeColor);
+      this.$watch('showSceneModal', updateThemeColor);
+      this.$watch('showPromptModal', updateThemeColor);
+
       // History APIによるブラウザバック（スワイプバック）離脱の防止と制御
       window.addEventListener('popstate', (e) => {
         // モーダルが開いている場合は閉じる処理を優先
@@ -1010,6 +1036,7 @@ function qrCodeGenerator() {
           if (typeof setDirty === 'function') setDirty(false);
           this.hasUnsavedEdit = false;
           this._isInitialized = true; // 初期化完了フラグ
+          history.replaceState({ view: 'generator', step: 'typeSelection' }, '', location.href);
         }, 100);
       });
     },
@@ -1073,17 +1100,18 @@ function qrCodeGenerator() {
         this.logoFileName = "";
       }
 
-      this.normalizeColors();
       this.checkQrQuality();
 
       // 【重要】Alpine.jsの監視データ(Proxy)を解除して、純粋なデータに変換します
-      // ディープコピー時のUIフリーズ（OOMクラッシュ）やProxyの意図せぬ反応を防ぐため、Alpine.rawを使用し巨大なBase64を一時避難
+      // ディープコピー時のUIフリーズ（OOMクラッシュ）やProxyの意図せぬ反応を防ぐため、スプレッド構文で巨大なBase64を分離
       const rawOptions = window.Alpine.raw(this.qrOptions);
-      const logoTemp = rawOptions.logo;
-      rawOptions.logo = "";
-      const plainOptions = JSON.parse(JSON.stringify(rawOptions));
-      plainOptions.logo = logoTemp;
-      rawOptions.logo = logoTemp;
+      const { logo, ...restOptions } = rawOptions;
+
+      const plainOptions = JSON.parse(JSON.stringify(restOptions));
+      plainOptions.logo = logo;
+
+      // 無効な背景色でライブラリがクラッシュするのを防ぐフォールバック
+      const fixHex = (c) => /^#?([0-9a-fA-F]{3,8})$/.test(c) ? (c.startsWith('#') ? c : '#' + c) : '#ffffff';
 
       // ライブラリに渡す設定オブジェクトを作成
       const updateConfig = {
@@ -1102,7 +1130,7 @@ function qrCodeGenerator() {
 
         // その他の設定
         dotsOptions: this.buildDotsOptions(),
-        backgroundOptions: { color: plainOptions.backgroundColor },
+        backgroundOptions: { color: fixHex(plainOptions.backgroundColor) },
         cornersSquareOptions: this.buildCornersSquareOptions(),
         cornersDotOptions: this.buildCornersDotOptions(),
         qrOptions: {
@@ -1195,6 +1223,11 @@ function qrCodeGenerator() {
     handleLogoUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
+      if (file.type === "image/svg+xml" && file.size > 500 * 1024) {
+        this.showFlashNotification("SVGロゴは複雑すぎると処理が重くなるため、500KB以下のファイルを選択してください。");
+        event.target.value = "";
+        return;
+      }
       if (file.size > 2 * 1024 * 1024) {
         this.showFlashNotification("ロゴ画像は2MB以下のファイルを選択してください。");
         return;
@@ -1288,9 +1321,25 @@ function qrCodeGenerator() {
                 const innerSvg = doc.documentElement;
 
                 if (innerSvg && innerSvg.tagName.toLowerCase() === "svg") {
-                  // 🛡️ 悪意あるスクリプトの混入を完全防止（XSSサニタイズ）
-                  const scripts = innerSvg.querySelectorAll("script");
-                  scripts.forEach(s => s.remove());
+                  // 🛡️ 悪意ある要素や属性の混入を完全防止（XSSサニタイズ強化）
+                  const allElements = innerSvg.querySelectorAll("*");
+                  allElements.forEach(el => {
+                    const tagName = el.tagName.toLowerCase();
+                    if (['script', 'foreignobject', 'object', 'embed', 'iframe', 'applet'].includes(tagName)) {
+                      el.remove();
+                      return;
+                    }
+                    Array.from(el.attributes).forEach(attr => {
+                      const attrName = attr.name.toLowerCase();
+                      const attrVal = attr.value.trim().toLowerCase();
+                      if (attrName.startsWith('on')) {
+                        el.removeAttribute(attr.name);
+                      }
+                      if ((attrName === 'href' || attrName === 'xlink:href') && attrVal.startsWith('javascript:')) {
+                        el.removeAttribute(attr.name);
+                      }
+                    });
+                  });
 
                   // 元の <image> タグが持っていた座標とサイズを、展開した <svg> に引き継ぐ
                   ['x', 'y', 'width', 'height'].forEach(attr => {
@@ -1376,7 +1425,7 @@ function qrCodeGenerator() {
       if (!this.qrCodeInstance) return;
 
       const extension = this.download.format;
-      const name = this.download.fileName || "grinds-qr-code";
+      const safeName = (this.download.fileName || "grinds-qr-code").replace(/[\\/:*?"<>|]/g, "-");
 
       const visibleCanvas = this.showSceneModal ? this.$refs.modalQrCanvas : this.$refs.qrCodeCanvas;
       const svgElement = visibleCanvas.querySelector("svg");
@@ -1446,9 +1495,25 @@ function qrCodeGenerator() {
                 const innerSvg = doc.documentElement;
 
                 if (innerSvg && innerSvg.tagName.toLowerCase() === "svg") {
-                  // 🛡️ 悪意あるスクリプトの混入を完全防止（XSSサニタイズ）
-                  const scripts = innerSvg.querySelectorAll("script");
-                  scripts.forEach(s => s.remove());
+                  // 🛡️ 悪意ある要素や属性の混入を完全防止（XSSサニタイズ強化）
+                  const allElements = innerSvg.querySelectorAll("*");
+                  allElements.forEach(el => {
+                    const tagName = el.tagName.toLowerCase();
+                    if (['script', 'foreignobject', 'object', 'embed', 'iframe', 'applet'].includes(tagName)) {
+                      el.remove();
+                      return;
+                    }
+                    Array.from(el.attributes).forEach(attr => {
+                      const attrName = attr.name.toLowerCase();
+                      const attrVal = attr.value.trim().toLowerCase();
+                      if (attrName.startsWith('on')) {
+                        el.removeAttribute(attr.name);
+                      }
+                      if ((attrName === 'href' || attrName === 'xlink:href') && attrVal.startsWith('javascript:')) {
+                        el.removeAttribute(attr.name);
+                      }
+                    });
+                  });
 
                   // 元の <image> タグが持っていた座標とサイズを、展開した <svg> に引き継ぐ
                   ['x', 'y', 'width', 'height'].forEach(attr => {
@@ -1510,7 +1575,7 @@ function qrCodeGenerator() {
           acceptTypes = { "image/png": [".png"] };
         }
 
-        const fullFileName = `${name}.${extension}`;
+        const fullFileName = `${safeName}.${extension}`;
 
         if ("showSaveFilePicker" in window) {
           try {
@@ -1534,6 +1599,8 @@ function qrCodeGenerator() {
         } else {
           // API非対応ブラウザ向けのフォールバック
           const a = document.createElement("a");
+          a.target = "_blank";
+          a.rel = "noopener";
           const url = extension === "png" ? URL.createObjectURL(fileData) : svgBlobUrl;
           a.href = url;
           a.download = fullFileName;
@@ -1586,18 +1653,21 @@ function qrCodeGenerator() {
         qrOptions: {
           errorCorrectionLevel: this.qrOptions.errorCorrectionLevel,
         },
-        imageOptions: this.qrOptions.imageOptions,
-        margin: this.qrOptions.margin,
+        imageOptions: {
+          ...this.qrOptions.imageOptions,
+          margin: this.qrOptions.imageOptions.margin ? this.qrOptions.imageOptions.margin / 4 : 0,
+        },
+        margin: this.qrOptions.margin ? this.qrOptions.margin / 4 : 0,
       };
 
-      // ディープコピー時のUIフリーズ（OOMクラッシュ）とProxyの副作用を防ぐため、Alpine.rawを使用し巨大なBase64を一時避難
+      // ディープコピー時のUIフリーズ（OOMクラッシュ）とProxyの副作用を防ぐため、スプレッド構文で巨大なBase64を分離
       const rawOptions = window.Alpine.raw(this.qrOptions);
-      const logoTemp = rawOptions.logo;
-      rawOptions.logo = "";
-      const copiedOptions = JSON.parse(JSON.stringify(rawOptions));
-      copiedOptions.logo = logoTemp;
-      rawOptions.logo = logoTemp;
+      const { logo, ...restOptions } = rawOptions;
 
+      const copiedOptions = JSON.parse(JSON.stringify(restOptions));
+      copiedOptions.logo = logo;
+
+      const isNew = !this.editingQRCodeId;
       const newQr = {
         id: this.editingQRCodeId || this.generateUniqueId(),
         name: this.saveName,
@@ -1612,7 +1682,7 @@ function qrCodeGenerator() {
         previewSvgUrl: await this.getPreviewSvgUrl(previewOptions),
       };
 
-      if (this.editingQRCodeId) {
+      if (!isNew) {
         const index = this.savedQRCodes.findIndex((qr) => qr.id === this.editingQRCodeId);
         if (index !== -1) {
           this.savedQRCodes[index] = newQr;
@@ -1622,6 +1692,7 @@ function qrCodeGenerator() {
         this.showFlashNotification("QRコードの設定を更新しました。");
       } else {
         this.savedQRCodes.unshift(newQr);
+        this.editingQRCodeId = newQr.id; // 新規保存からシームレスに編集モードへ移行
         this.showFlashNotification("QRコードを保存しました。");
         this.hapticFeedback('success');
       }
@@ -1703,7 +1774,10 @@ function qrCodeGenerator() {
         case "email":
           const { to, subject, body } = this.formData.email;
           if (to) {
-            data = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            let query = [];
+            if (subject) query.push(`subject=${encodeURIComponent(subject)}`);
+            if (body) query.push(`body=${encodeURIComponent(body)}`);
+            data = `mailto:${to}${query.length > 0 ? '?' + query.join('&') : ''}`;
           }
           break;
         case "geo":
@@ -1736,6 +1810,31 @@ function qrCodeGenerator() {
               case "tiktok":
                 data = `https://www.tiktok.com/@${encodeURIComponent(cleanId)}`;
                 break;
+              case "linkedin":
+                // URLや 'in/' が含まれていない場合は自動付与
+                const lnId = cleanId.replace(/^in\//i, '');
+                data = `https://www.linkedin.com/in/${encodeURIComponent(lnId)}`;
+                break;
+              case "whatsapp":
+                data = `https://wa.me/${encodeURIComponent(cleanId.replace(/[^0-9]/g, ''))}`;
+                break;
+              case "github":
+                data = `https://github.com/${encodeURIComponent(cleanId)}`;
+                break;
+              case "discord":
+                // URLが直接貼り付けられた場合はそのまま、そうでない場合は招待リンクとして処理
+                if (identifier.includes("http")) {
+                  data = identifier.trim();
+                } else {
+                  data = `https://discord.gg/${encodeURIComponent(cleanId)}`;
+                }
+                break;
+              case "paypal":
+                data = `https://paypal.me/${encodeURIComponent(cleanId)}`;
+                break;
+              case "paypay":
+                data = identifier.trim();
+                break;
             }
           }
           break;
@@ -1764,7 +1863,12 @@ function qrCodeGenerator() {
       this.qrQuality.issues = [];
       let score = 100;
 
-      const fgColors = this.qrOptions.colorType === "single" ? [this.qrOptions.foregroundColor] : [this.qrOptions.gradient.color1, this.qrOptions.gradient.color2];
+      const fgColorsList = this.qrOptions.colorType === "single" ? [this.qrOptions.foregroundColor] : [this.qrOptions.gradient.color1, this.qrOptions.gradient.color2];
+
+      // コーナーの色も追加して全て背景色とのコントラスト・輝度をチェック
+      fgColorsList.push(this.qrOptions.cornerColor, this.qrOptions.cornerDotColor);
+      const fgColors = [...new Set(fgColorsList)];
+
       const bgRgb = this.hexToRgb(this.qrOptions.backgroundColor);
 
       let minContrast = Infinity;
@@ -1880,7 +1984,8 @@ function qrCodeGenerator() {
         // ロゴ倍率 + 余白倍率 = 実質的な欠損率
         const totalCoverageRatio = this.qrOptions.imageOptions.imageSize + marginRatio;
 
-        if (totalCoverageRatio > 0.4) {
+        // 閾値を 0.45 に引き上げて、UIの最大値 (0.4) を選択しても即エラーにならないようにする
+        if (totalCoverageRatio > 0.45) {
           this.qrQuality.issues.push({
             status: "warning",
             message: "ロゴと余白の合計範囲が大きすぎます。読み取りエラーの原因になります。",
@@ -1926,12 +2031,10 @@ function qrCodeGenerator() {
       // Alpine.raw を使ってプロキシを解除してからクローンする
       const rawOptions = window.Alpine.raw(this.qrOptions);
 
-      // ロゴ文字列は巨大なので、参照を外してメモリを節約しつつクローン
-      const logoBackup = rawOptions.logo;
-      rawOptions.logo = "";
-      const clonedOptions = JSON.parse(JSON.stringify(rawOptions));
-      clonedOptions.logo = logoBackup;
-      rawOptions.logo = logoBackup;
+      // ロゴ文字列は巨大なので、オブジェクトから分離してメモリを節約しつつクローン
+      const { logo, ...restOptions } = rawOptions;
+      const clonedOptions = JSON.parse(JSON.stringify(restOptions));
+      clonedOptions.logo = logo;
 
       const currentState = {
         qrOptions: clonedOptions,
@@ -1967,11 +2070,10 @@ function qrCodeGenerator() {
     applyState(state) {
       // Undo/Redo時にも巨大なBase64画像のディープコピー（UIフリーズ）を回避する
       const rawStateOptions = window.Alpine.raw(state.qrOptions);
-      const logoTemp = rawStateOptions.logo;
-      rawStateOptions.logo = "";
-      this.qrOptions = JSON.parse(JSON.stringify(rawStateOptions));
-      this.qrOptions.logo = logoTemp;
-      rawStateOptions.logo = logoTemp;
+      const { logo, ...restOptions } = rawStateOptions;
+
+      this.qrOptions = JSON.parse(JSON.stringify(restOptions));
+      this.qrOptions.logo = logo;
 
       this.frame = JSON.parse(JSON.stringify(window.Alpine.raw(state.frame)));
       if (state.formData) this.formData = JSON.parse(JSON.stringify(window.Alpine.raw(state.formData)));
@@ -1980,7 +2082,7 @@ function qrCodeGenerator() {
     },
     generatePresetTemplates() {
       // 基本のテンプレート群
-      this.presetTemplates = [
+      const basicTemplates = [
         {
           name: "シンプル",
           preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><rect x="10" y="10" width="80" height="80" rx="8" fill="#000"/></svg>`,
@@ -2059,15 +2161,409 @@ function qrCodeGenerator() {
 
       // Data URLの生成
       const iconGreenUrl = `data:image/svg+xml;base64,${btoa(lineIconSvg)}`;
-      const iconBlackUrl = `data:image/svg+xml;base64,${btoa(lineIconSvg.replace(/#4cc764/g, "#000000"))}`;
       const textGreenUrl = `data:image/svg+xml;base64,${btoa(lineTextSvg)}`;
-      const textBlackUrl = `data:image/svg+xml;base64,${btoa(lineTextSvg.replace(/#4cc764/g, "#000000"))}`;
+
+      // Gmail テンプレート定義
+      const gmailSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="192" height="192" fill="none" viewBox="0 0 192 192"><path fill="url(#a)" d="M146 44h38v110c0 6.627-5.373 12-12 12h-20a6 6 0 0 1-6-6z"/><path fill="#fc413d" d="M46 44H8v110c0 6.627 5.373 12 12 12h20a6 6 0 0 0 6-6z"/><path fill="url(#b)" d="M39.226 30.456c-8.033-6.752-20.018-5.714-26.77 2.319-6.752 8.032-5.714 20.017 2.319 26.77l76.078 63.949a8 8 0 0 0 10.295 0l76.078-63.95c8.032-6.752 9.07-18.737 2.318-26.77-6.752-8.032-18.737-9.07-26.769-2.318L96 78.18z"/><defs><linearGradient id="a" x1="165" x2="165" y1="44" y2="166" gradientUnits="userSpaceOnUse"><stop stop-color="#60d673"/><stop offset=".17" stop-color="#42c868"/><stop offset=".39" stop-color="#0ebc5f"/><stop offset=".62" stop-color="#00a9bb"/><stop offset=".86" stop-color="#3c90ff"/><stop offset="1" stop-color="#3186ff"/></linearGradient><linearGradient id="b" x1="8" x2="184" y1="46.13" y2="46.13" gradientUnits="userSpaceOnUse"><stop offset=".08" stop-color="#ff63a0"/><stop offset=".3" stop-color="#fc413d"/><stop offset=".5" stop-color="#fc413d"/><stop offset=".65" stop-color="#fc413d"/><stop offset=".72" stop-color="#fc5c30"/><stop offset=".86" stop-color="#feb10c"/><stop offset=".91" stop-color="#fec700"/><stop offset=".96" stop-color="#ffdb0f"/></linearGradient></defs></svg>`;
+      const gmailLogoUrl = `data:image/svg+xml;base64,${btoa(gmailSvg)}`;
+
+      const gmailTemplate = {
+        name: "Gmail",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#fc413d"/></g><image x="30" y="30" width="40" height="40" href="${gmailLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: gmailLogoUrl,
+          colorType: "single",
+          foregroundColor: "#fc413d",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#fc413d",
+          cornerDotColor: "#fc413d",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 4, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Instagram テンプレート定義
+      const instagramSvg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="264.583" height="264.583" viewBox="0 0 264.583 264.583"><defs><radialGradient xlink:href="#a" id="f" cx="158.429" cy="578.088" r="52.352" fx="158.429" fy="578.088" gradientTransform="matrix(0 -4.03418 4.28018 0 -2332.227 942.236)" gradientUnits="userSpaceOnUse"/><radialGradient xlink:href="#b" id="g" cx="172.615" cy="600.692" r="65" fx="172.615" fy="600.692" gradientTransform="matrix(.67441 -1.16203 1.51283 .87801 -814.366 -47.835)" gradientUnits="userSpaceOnUse"/><radialGradient xlink:href="#c" id="h" cx="144.012" cy="51.337" r="67.081" fx="144.012" fy="51.337" gradientTransform="matrix(-2.3989 .67549 -.23008 -.81732 464.996 -26.404)" gradientUnits="userSpaceOnUse"/><radialGradient xlink:href="#d" id="e" cx="199.788" cy="628.438" r="52.352" fx="199.788" fy="628.438" gradientTransform="matrix(-3.10797 .87652 -.6315 -2.23914 1345.65 1374.198)" gradientUnits="userSpaceOnUse"/><linearGradient id="d"><stop offset="0" stop-color="#ff005f"/><stop offset="1" stop-color="#fc01d8"/></linearGradient><linearGradient id="c"><stop offset="0" stop-color="#780cff"/><stop offset="1" stop-color="#820bff" stop-opacity="0"/></linearGradient><linearGradient id="b"><stop offset="0" stop-color="#fc0"/><stop offset="1" stop-color="#fc0" stop-opacity="0"/></linearGradient><linearGradient id="a"><stop offset="0" stop-color="#fc0"/><stop offset=".124" stop-color="#fc0"/><stop offset=".567" stop-color="#fe4a05"/><stop offset=".694" stop-color="#ff0f3f"/><stop offset="1" stop-color="#fe0657" stop-opacity="0"/></linearGradient></defs><path fill="url(#e)" d="M204.15 18.143c-55.23 0-71.383.057-74.523.317-11.334.943-18.387 2.728-26.07 6.554-5.922 2.942-10.592 6.351-15.201 11.13-8.394 8.716-13.481 19.439-15.323 32.184-.895 6.188-1.156 7.45-1.209 39.056-.02 10.536 0 24.4 0 42.999 0 55.2.062 71.341.326 74.476.916 11.032 2.645 17.973 6.308 25.565 7 14.533 20.37 25.443 36.12 29.514 5.453 1.404 11.476 2.178 19.208 2.544 3.277.142 36.669.244 70.081.244 33.413 0 66.826-.04 70.02-.203 8.954-.422 14.153-1.12 19.901-2.606 15.852-4.09 28.977-14.838 36.12-29.575 3.591-7.409 5.412-14.614 6.236-25.07.18-2.28.255-38.626.255-74.924 0-36.304-.082-72.583-.26-74.863-.835-10.625-2.656-17.77-6.364-25.32-3.042-6.182-6.42-10.799-11.324-15.519-8.752-8.361-19.455-13.45-32.21-15.29-6.18-.894-7.41-1.158-39.033-1.213z" transform="translate(-71.816 -18.143)"/><path fill="url(#f)" d="M204.15 18.143c-55.23 0-71.383.057-74.523.317-11.334.943-18.387 2.728-26.07 6.554-5.922 2.942-10.592 6.351-15.201 11.13-8.394 8.716-13.481 19.439-15.323 32.184-.895 6.188-1.156 7.45-1.209 39.056-.02 10.536 0 24.4 0 42.999 0 55.2.062 71.341.326 74.476.916 11.032 2.645 17.973 6.308 25.565 7 14.533 20.37 25.443 36.12 29.514 5.453 1.404 11.476 2.178 19.208 2.544 3.277.142 36.669.244 70.081.244 33.413 0 66.826-.04 70.02-.203 8.954-.422 14.153-1.12 19.901-2.606 15.852-4.09 28.977-14.838 36.12-29.575 3.591-7.409 5.412-14.614 6.236-25.07.18-2.28.255-38.626.255-74.924 0-36.304-.082-72.583-.26-74.863-.835-10.625-2.656-17.77-6.364-25.32-3.042-6.182-6.42-10.799-11.324-15.519-8.752-8.361-19.455-13.45-32.21-15.29-6.18-.894-7.41-1.158-39.033-1.213z" transform="translate(-71.816 -18.143)"/><path fill="url(#g)" d="M204.15 18.143c-55.23 0-71.383.057-74.523.317-11.334.943-18.387 2.728-26.07 6.554-5.922 2.942-10.592 6.351-15.201 11.13-8.394 8.716-13.481 19.439-15.323 32.184-.895 6.188-1.156 7.45-1.209 39.056-.02 10.536 0 24.4 0 42.999 0 55.2.062 71.341.326 74.476.916 11.032 2.645 17.973 6.308 25.565 7 14.533 20.37 25.443 36.12 29.514 5.453 1.404 11.476 2.178 19.208 2.544 3.277.142 36.669.244 70.081.244 33.413 0 66.826-.04 70.02-.203 8.954-.422 14.153-1.12 19.901-2.606 15.852-4.09 28.977-14.838 36.12-29.575 3.591-7.409 5.412-14.614 6.236-25.07.18-2.28.255-38.626.255-74.924 0-36.304-.082-72.583-.26-74.863-.835-10.625-2.656-17.77-6.364-25.32-3.042-6.182-6.42-10.799-11.324-15.519-8.752-8.361-19.455-13.45-32.21-15.29-6.18-.894-7.41-1.158-39.033-1.213z" transform="translate(-71.816 -18.143)"/><path fill="url(#h)" d="M204.15 18.143c-55.23 0-71.383.057-74.523.317-11.334.943-18.387 2.728-26.07 6.554-5.922 2.942-10.592 6.351-15.201 11.13-8.394 8.716-13.481 19.439-15.323 32.184-.895 6.188-1.156 7.45-1.209 39.056-.02 10.536 0 24.4 0 42.999 0 55.2.062 71.341.326 74.476.916 11.032 2.645 17.973 6.308 25.565 7 14.533 20.37 25.443 36.12 29.514 5.453 1.404 11.476 2.178 19.208 2.544 3.277.142 36.669.244 70.081.244 33.413 0 66.826-.04 70.02-.203 8.954-.422 14.153-1.12 19.901-2.606 15.852-4.09 28.977-14.838 36.12-29.575 3.591-7.409 5.412-14.614 6.236-25.07.18-2.28.255-38.626.255-74.924 0-36.304-.082-72.583-.26-74.863-.835-10.625-2.656-17.77-6.364-25.32-3.042-6.182-6.42-10.799-11.324-15.519-8.752-8.361-19.455-13.45-32.21-15.29-6.18-.894-7.41-1.158-39.033-1.213z" transform="translate(-71.816 -18.143)"/><path fill="#fff" d="M132.345 33.973c-26.716 0-30.07.117-40.563.594-10.472.48-17.62 2.136-23.876 4.567-6.47 2.51-11.958 5.87-17.426 11.335-5.472 5.464-8.834 10.948-11.354 17.412-2.44 6.252-4.1 13.397-4.57 23.858-.47 10.486-.593 13.838-.593 40.535 0 26.697.119 30.037.594 40.522.482 10.465 2.14 17.609 4.57 23.859 2.515 6.465 5.876 11.95 11.346 17.414 5.466 5.468 10.955 8.834 17.42 11.345 6.26 2.431 13.41 4.088 23.881 4.567 10.493.477 13.844.594 40.559.594 26.719 0 30.061-.117 40.555-.594 10.472-.48 17.63-2.136 23.888-4.567 6.468-2.51 11.948-5.877 17.414-11.345 5.472-5.464 8.834-10.949 11.354-17.412 2.419-6.252 4.079-13.398 4.57-23.858.472-10.486.595-13.828.595-40.525s-.123-30.047-.594-40.533c-.492-10.465-2.152-17.608-4.57-23.858-2.521-6.466-5.883-11.95-11.355-17.414-5.472-5.468-10.944-8.827-17.42-11.335-6.271-2.431-13.424-4.088-23.897-4.567-10.493-.477-13.834-.594-40.558-.594zm-8.825 17.715c2.62-.004 5.542 0 8.825 0 26.266 0 29.38.094 39.752.565 9.591.438 14.797 2.04 18.264 3.385 4.591 1.782 7.864 3.912 11.305 7.352 3.443 3.44 5.575 6.717 7.362 11.305 1.346 3.46 2.951 8.663 3.388 18.247.47 10.363.573 13.475.573 39.71 0 26.233-.102 29.346-.573 39.709-.44 9.584-2.042 14.786-3.388 18.247-1.783 4.587-3.919 7.854-7.362 11.292-3.443 3.441-6.712 5.57-11.305 7.352-3.463 1.352-8.673 2.95-18.264 3.388-10.37.47-13.486.573-39.752.573-26.268 0-29.38-.102-39.751-.573-9.592-.443-14.797-2.044-18.267-3.39-4.59-1.781-7.87-3.911-11.313-7.352-3.443-3.44-5.574-6.709-7.362-11.298-1.346-3.461-2.95-8.663-3.387-18.247-.472-10.363-.566-13.476-.566-39.726s.094-29.347.566-39.71c.438-9.584 2.04-14.786 3.387-18.25 1.783-4.588 3.919-7.865 7.362-11.305 3.443-3.441 6.722-5.57 11.313-7.357 3.468-1.351 8.675-2.949 18.267-3.389 9.075-.41 12.592-.532 30.926-.553zm61.337 16.322c-6.518 0-11.805 5.277-11.805 11.792 0 6.512 5.287 11.796 11.805 11.796 6.517 0 11.804-5.284 11.804-11.796 0-6.513-5.287-11.796-11.805-11.796zm-52.512 13.782c-27.9 0-50.519 22.603-50.519 50.482 0 27.879 22.62 50.471 50.52 50.471s50.51-22.592 50.51-50.471c0-27.879-22.613-50.482-50.513-50.482zm0 17.715c18.11 0 32.792 14.67 32.792 32.767 0 18.096-14.683 32.767-32.792 32.767-18.11 0-32.791-14.671-32.791-32.767 0-18.098 14.68-32.767 32.791-32.767z"/></svg>`;
+      const instagramLogoUrl = `data:image/svg+xml;base64,${btoa(instagramSvg)}`;
+
+      const instagramTemplate = {
+        name: "Instagram",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#f09433"/><stop offset="25%" stop-color="#e6683c"/><stop offset="50%" stop-color="#dc2743"/><stop offset="75%" stop-color="#cc2366"/><stop offset="100%" stop-color="#bc1888"/></linearGradient></defs><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="url(#ig-grad)"/></g><image x="30" y="30" width="40" height="40" href="${instagramLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: instagramLogoUrl,
+          colorType: "gradient",
+          gradient: {
+            type: "linear",
+            rotation: "45",
+            color1: "#f58529",
+            color2: "#d6249f",
+          },
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#e6683c",
+          cornerDotColor: "#d6249f",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Facebook テンプレート定義
+      const facebookSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="666.667" height="666.667" viewBox="0 0 666.667 666.667"><defs><clipPath id="a" clipPathUnits="userSpaceOnUse"><path d="M0 700h700V0H0Z"/></clipPath></defs><g clip-path="url(#a)" transform="matrix(1.33333 0 0 -1.33333 -133.333 800)"><path d="M0 0c0 138.071-111.929 250-250 250S-500 138.071-500 0c0-117.245 80.715-215.622 189.606-242.638v166.242h-51.552V0h51.552v32.919c0 85.092 38.508 124.532 122.048 124.532 15.838 0 43.167-3.105 54.347-6.211V81.986c-5.901.621-16.149.932-28.882.932-40.993 0-56.832-15.528-56.832-55.9V0h81.659l-14.028-76.396h-67.631v-171.773C-95.927-233.218 0-127.818 0 0" style="fill:#0866ff;fill-opacity:1;fill-rule:nonzero;stroke:none" transform="translate(600 350)"/><path d="m0 0 14.029 76.396H-67.63v27.019c0 40.372 15.838 55.899 56.831 55.899 12.733 0 22.981-.31 28.882-.931v69.253c-11.18 3.106-38.509 6.212-54.347 6.212-83.539 0-122.048-39.441-122.048-124.533V76.396h-51.552V0h51.552v-166.242a250.559 250.559 0 0 1 60.394-7.362c10.254 0 20.358.632 30.288 1.831V0Z" style="fill:#fff;fill-opacity:1;fill-rule:nonzero;stroke:none" transform="translate(447.918 273.604)"/></g></svg>`;
+      const facebookLogoUrl = `data:image/svg+xml;base64,${btoa(facebookSvg)}`;
+
+      const facebookTemplate = {
+        name: "Facebook",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#0866ff"/></g><image x="30" y="30" width="40" height="40" href="${facebookLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: facebookLogoUrl,
+          colorType: "single",
+          foregroundColor: "#0866ff",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#0866ff",
+          cornerDotColor: "#0866ff",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 6, crossOrigin: "anonymous" },
+        },
+      };
+
+      // TikTok テンプレート定義
+      const tiktokSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="352.28" height="398.67" id="Layer_2" viewBox="0 0 352.28 398.67"><defs><style>.cls-2{fill:#fe2c55}.cls-3{fill:#25f4ee}</style></defs><g id="Layer_1-2"><path d="M137.17 156.98v-15.56c-5.34-.73-10.76-1.18-16.29-1.18C54.23 140.24 0 194.47 0 261.13c0 40.9 20.43 77.09 51.61 98.97-20.12-21.6-32.46-50.53-32.46-82.31 0-65.7 52.69-119.28 118.03-120.81Z" class="cls-3"/><path d="M140.02 333c29.74 0 54-23.66 55.1-53.13l.11-263.2h48.08c-1-5.41-1.55-10.97-1.55-16.67h-65.67l-.11 263.2c-1.1 29.47-25.36 53.13-55.1 53.13-9.24 0-17.95-2.31-25.61-6.34C105.3 323.9 121.6 333 140.02 333ZM333.13 106V91.37c-18.34 0-35.43-5.45-49.76-14.8 12.76 14.65 30.09 25.22 49.76 29.43Z" class="cls-3"/><path d="M283.38 76.57c-13.98-16.05-22.47-37-22.47-59.91h-17.59c4.63 25.02 19.48 46.49 40.06 59.91ZM120.88 205.92c-30.44 0-55.21 24.77-55.21 55.21 0 21.2 12.03 39.62 29.6 48.86-6.55-9.08-10.45-20.18-10.45-32.2 0-30.44 24.77-55.21 55.21-55.21 5.68 0 11.13.94 16.29 2.55v-67.05c-5.34-.73-10.76-1.18-16.29-1.18-.96 0-1.9.05-2.85.07v51.49c-5.16-1.61-10.61-2.55-16.29-2.55Z" class="cls-2"/><path d="M333.13 106v51.04c-34.05 0-65.61-10.89-91.37-29.38v133.47c0 66.66-54.23 120.88-120.88 120.88-25.76 0-49.64-8.12-69.28-21.91 22.08 23.71 53.54 38.57 88.42 38.57 66.66 0 120.88-54.23 120.88-120.88V144.33c25.76 18.49 57.32 29.38 91.37 29.38v-65.68c-6.57 0-12.97-.71-19.14-2.03Z" class="cls-2"/><path d="M241.76 261.13V127.66c25.76 18.49 57.32 29.38 91.37 29.38V106c-19.67-4.21-37-14.77-49.76-29.43-20.58-13.42-35.43-34.88-40.06-59.91h-48.08l-.11 263.2c-1.1 29.47-25.36 53.13-55.1 53.13-18.42 0-34.72-9.1-44.75-23.01-17.57-9.25-29.6-27.67-29.6-48.86 0-30.44 24.77-55.21 55.21-55.21 5.68 0 11.13.94 16.29 2.55v-51.49C71.83 158.5 19.14 212.08 19.14 277.78c0 31.78 12.34 60.71 32.46 82.31C71.23 373.87 95.12 382 120.88 382c66.65 0 120.88-54.23 120.88-120.88Z" style="fill:#000"/></g></svg>`;
+      const tiktokLogoUrl = `data:image/svg+xml;base64,${btoa(tiktokSvg)}`;
+
+      const tiktokTemplate = {
+        name: "TikTok",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#000000"/></g><image x="35" y="30" width="30" height="40" href="${tiktokLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: tiktokLogoUrl,
+          colorType: "single",
+          foregroundColor: "#000000",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#000000",
+          cornerDotColor: "#fe2c55",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.4, margin: 10, crossOrigin: "anonymous" },
+        },
+      };
+
+      // X テンプレート定義
+      const xSvg = `<svg width="24" height="24" fill="#000000" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>X</title><path d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg>`;
+      const xLogoUrl = `data:image/svg+xml;base64,${btoa(xSvg)}`;
+
+      const xTemplate = {
+        name: "X",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#000000"/></g><image x="35" y="35" width="30" height="30" href="${xLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: xLogoUrl,
+          colorType: "single",
+          foregroundColor: "#000000",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#000000",
+          cornerDotColor: "#000000",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10, crossOrigin: "anonymous" },
+        },
+      };
+
+      // ZOOM テンプレート定義
+      const zoomSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" preserveAspectRatio="xMidYMid" viewBox="0 0 256 256"><defs><linearGradient id="a" x1="23.666%" x2="76.334%" y1="95.6118%" y2="4.3882%"><stop offset=".00006%" stop-color="#0845BF"/><stop offset="19.11%" stop-color="#0950DE"/><stop offset="38.23%" stop-color="#0B59F6"/><stop offset="50%" stop-color="#0B5CFF"/><stop offset="67.32%" stop-color="#0E5EFE"/><stop offset="77.74%" stop-color="#1665FC"/><stop offset="86.33%" stop-color="#246FF9"/><stop offset="93.88%" stop-color="#387FF4"/><stop offset="100%" stop-color="#4F90EE"/></linearGradient></defs><path fill="url(#a)" d="M256 128c0 13.568-1.024 27.136-3.328 40.192-6.912 43.264-41.216 77.568-84.48 84.48C155.136 254.976 141.568 256 128 256c-13.568 0-27.136-1.024-40.192-3.328-43.264-6.912-77.568-41.216-84.48-84.48C1.024 155.136 0 141.568 0 128c0-13.568 1.024-27.136 3.328-40.192 6.912-43.264 41.216-77.568 84.48-84.48C100.864 1.024 114.432 0 128 0c13.568 0 27.136 1.024 40.192 3.328 43.264 6.912 77.568 41.216 84.48 84.48C254.976 100.864 256 114.432 256 128Z"/><path fill="#FFF" d="M204.032 207.872H75.008c-8.448 0-16.64-4.608-20.48-12.032-4.608-8.704-2.816-19.2 4.096-26.112l89.856-89.856H83.968c-17.664 0-32-14.336-32-32h118.784c8.448 0 16.64 4.608 20.48 12.032 4.608 8.704 2.816 19.2-4.096 26.112l-89.6 90.112h74.496c17.664 0 32 14.08 32 31.744Z"/></svg>`;
+      const zoomLogoUrl = `data:image/svg+xml;base64,${btoa(zoomSvg)}`;
+
+      const zoomTemplate = {
+        name: "Zoom",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#0b5cff"/></g><image x="30" y="30" width="40" height="40" href="${zoomLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: zoomLogoUrl,
+          colorType: "single",
+          foregroundColor: "#0b5cff",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#0b5cff",
+          cornerDotColor: "#0b5cff",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 6, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Discord テンプレート定義
+      const discordSvg = `<svg viewBox="0 0 256 199" width="256" height="199" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid"><path d="M216.856 16.597A208.502 208.502 0 0 0 164.042 0c-2.275 4.113-4.933 9.645-6.766 14.046-19.692-2.961-39.203-2.961-58.533 0-1.832-4.4-4.55-9.933-6.846-14.046a207.809 207.809 0 0 0-52.855 16.638C5.618 67.147-3.443 116.4 1.087 164.956c22.169 16.555 43.653 26.612 64.775 33.193A161.094 161.094 0 0 0 79.735 175.3a136.413 136.413 0 0 1-21.846-10.632 108.636 108.636 0 0 0 5.356-4.237c42.122 19.702 87.89 19.702 129.51 0a131.66 131.66 0 0 0 5.355 4.237 136.07 136.07 0 0 1-21.886 10.653c4.006 8.02 8.638 15.67 13.873 22.848 21.142-6.58 42.646-16.637 64.815-33.213 5.316-56.288-9.08-105.09-38.056-148.36ZM85.474 135.095c-12.645 0-23.015-11.805-23.015-26.18s10.149-26.2 23.015-26.2c12.867 0 23.236 11.804 23.015 26.2.02 14.375-10.148 26.18-23.015 26.18Zm85.051 0c-12.645 0-23.014-11.805-23.014-26.18s10.148-26.2 23.014-26.2c12.867 0 23.236 11.804 23.015 26.2 0 14.375-10.148 26.18-23.015 26.18Z" fill="#5865F2"/></svg>`;
+      const discordLogoUrl = `data:image/svg+xml;base64,${btoa(discordSvg)}`;
+
+      const discordTemplate = {
+        name: "Discord",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#5865F2"/></g><image x="30" y="30" width="40" height="40" href="${discordLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: discordLogoUrl,
+          colorType: "single",
+          foregroundColor: "#5865F2",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#5865F2",
+          cornerDotColor: "#5865F2",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8, crossOrigin: "anonymous" },
+        },
+      };
+
+      // GitHub テンプレート定義
+      const githubSvg = `<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8C0 11.54 2.29 14.53 5.47 15.59C5.87 15.66 6.02 15.42 6.02 15.21C6.02 15.02 6.01 14.39 6.01 13.72C4 14.09 3.48 13.23 3.32 12.78C3.23 12.55 2.84 11.84 2.5 11.65C2.22 11.5 1.82 11.13 2.49 11.12C3.12 11.11 3.57 11.7 3.72 11.94C4.44 13.15 5.59 12.81 6.05 12.6C6.12 12.08 6.33 11.73 6.56 11.53C4.78 11.33 2.92 10.64 2.92 7.58C2.92 6.71 3.23 5.99 3.74 5.43C3.66 5.23 3.38 4.41 3.82 3.31C3.82 3.31 4.49 3.1 6.02 4.13C6.66 3.95 7.34 3.86 8.02 3.86C8.7 3.86 9.38 3.95 10.02 4.13C11.55 3.09 12.22 3.31 12.22 3.31C12.66 4.41 12.38 5.23 12.3 5.43C12.81 5.99 13.12 6.7 13.12 7.58C13.12 10.65 11.25 11.33 9.47 11.53C9.76 11.78 10.01 12.26 10.01 13.01C10.01 14.08 10 14.94 10 15.21C10 15.42 10.15 15.67 10.55 15.59C13.71 14.53 16 11.53 16 8C16 3.58 12.42 0 8 0Z" transform="scale(64)" fill="#181717"/></svg>`;
+      const githubLogoUrl = `data:image/svg+xml;base64,${btoa(githubSvg)}`;
+
+      const githubTemplate = {
+        name: "GitHub",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#181717"/></g><image x="30" y="30" width="40" height="40" href="${githubLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: githubLogoUrl,
+          colorType: "single",
+          foregroundColor: "#181717",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#181717",
+          cornerDotColor: "#181717",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10, crossOrigin: "anonymous" },
+        },
+      };
+
+      // YouTube テンプレート定義
+      const youtubeSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="180" preserveAspectRatio="xMidYMid" viewBox="0 0 256 180"><path fill="#FF0000" d="M250.346 28.075A32.18 32.18 0 0 0 227.69 5.418C207.824 0 127.87 0 127.87 0S47.912.164 28.046 5.582A32.18 32.18 0 0 0 5.39 28.24c-6.009 35.298-8.34 89.084.165 122.97a32.18 32.18 0 0 0 22.656 22.657c19.866 5.418 99.822 5.418 99.822 5.418s79.955 0 99.82-5.418a32.18 32.18 0 0 0 22.657-22.657c6.338-35.348 8.291-89.1-.164-123.134Z"/><path fill="#FFF" d="m102.421 128.06 66.328-38.418-66.328-38.418z"/></svg>`;
+      const youtubeLogoUrl = `data:image/svg+xml;base64,${btoa(youtubeSvg)}`;
+
+      const youtubeTemplate = {
+        name: "YouTube",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#FF0000"/></g><image x="25" y="32.5" width="50" height="35" href="${youtubeLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: youtubeLogoUrl,
+          colorType: "single",
+          foregroundColor: "#FF0000",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#FF0000",
+          cornerDotColor: "#FF0000",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.4, margin: 8, crossOrigin: "anonymous" },
+        },
+      };
+
+      // LinkedIn テンプレート定義
+      const linkedinSvg = `<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid" viewBox="0 0 256 256"><path d="M218.123 218.127h-37.931v-59.403c0-14.165-.253-32.4-19.728-32.4-19.756 0-22.779 15.434-22.779 31.369v60.43h-37.93V95.967h36.413v16.694h.51a39.907 39.907 0 0 1 35.928-19.733c38.445 0 45.533 25.288 45.533 58.186l-.016 67.013ZM56.955 79.27c-12.157.002-22.014-9.852-22.016-22.009-.002-12.157 9.851-22.014 22.008-22.016 12.157-.003 22.014 9.851 22.016 22.008A22.013 22.013 0 0 1 56.955 79.27m18.966 138.858H37.95V95.967h37.97v122.16ZM237.033.018H18.89C8.58-.098.125 8.161-.001 18.471v219.053c.122 10.315 8.576 18.582 18.89 18.474h218.144c10.336.128 18.823-8.139 18.966-18.474V18.454c-.147-10.33-8.635-18.588-18.966-18.453" fill="#0A66C2"/></svg>`;
+      const linkedinLogoUrl = `data:image/svg+xml;base64,${btoa(linkedinSvg)}`;
+
+      const linkedinTemplate = {
+        name: "LinkedIn",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#0A66C2"/></g><image x="30" y="30" width="40" height="40" href="${linkedinLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: linkedinLogoUrl,
+          colorType: "single",
+          foregroundColor: "#0A66C2",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#0A66C2",
+          cornerDotColor: "#0A66C2",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Spotify テンプレート定義
+      const spotifySvg = `<svg viewBox="0 0 256 256" width="256" height="256" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid"><path d="M128 0C57.308 0 0 57.309 0 128c0 70.696 57.309 128 128 128 70.697 0 128-57.304 128-128C256 57.314 198.697.007 127.998.007l.001-.006Zm58.699 184.614c-2.293 3.76-7.215 4.952-10.975 2.644-30.053-18.357-67.885-22.515-112.44-12.335a7.981 7.981 0 0 1-9.552-6.007 7.968 7.968 0 0 1 6-9.553c48.76-11.14 90.583-6.344 124.323 14.276 3.76 2.308 4.952 7.215 2.644 10.975Zm15.667-34.853c-2.89 4.695-9.034 6.178-13.726 3.289-34.406-21.148-86.853-27.273-127.548-14.92-5.278 1.594-10.852-1.38-12.454-6.649-1.59-5.278 1.386-10.842 6.655-12.446 46.485-14.106 104.275-7.273 143.787 17.007 4.692 2.89 6.175 9.034 3.286 13.72v-.001Zm1.345-36.293C162.457 88.964 94.394 86.71 55.007 98.666c-6.325 1.918-13.014-1.653-14.93-7.978-1.917-6.328 1.65-13.012 7.98-14.935C93.27 62.027 168.434 64.68 215.929 92.876c5.702 3.376 7.566 10.724 4.188 16.405-3.362 5.69-10.73 7.565-16.4 4.187h-.006Z" fill="#1ED760"/></svg>`;
+      const spotifyLogoUrl = `data:image/svg+xml;base64,${btoa(spotifySvg)}`;
+
+      const spotifyTemplate = {
+        name: "Spotify",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#1ED760"/></g><image x="30" y="30" width="40" height="40" href="${spotifyLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: spotifyLogoUrl,
+          colorType: "single",
+          foregroundColor: "#1ED760",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#1ED760",
+          cornerDotColor: "#1ED760",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Apple Music テンプレート定義
+      const appleMusicSvg = `<svg width="24" height="24" fill="#fa233b" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Apple Music</title><path d="M23.994 6.124a9.23 9.23 0 00-.24-2.19c-.317-1.31-1.062-2.31-2.18-3.043a5.022 5.022 0 00-1.877-.726 10.496 10.496 0 00-1.564-.15c-.04-.003-.083-.01-.124-.013H5.986c-.152.01-.303.017-.455.026-.747.043-1.49.123-2.193.4-1.336.53-2.3 1.452-2.865 2.78-.192.448-.292.925-.363 1.408-.056.392-.088.785-.1 1.18 0 .032-.007.062-.01.093v12.223c.01.14.017.283.027.424.05.815.154 1.624.497 2.373.65 1.42 1.738 2.353 3.234 2.801.42.127.856.187 1.293.228.555.053 1.11.06 1.667.06h11.03a12.5 12.5 0 001.57-.1c.822-.106 1.596-.35 2.295-.81a5.046 5.046 0 001.88-2.207c.186-.42.293-.87.37-1.324.113-.675.138-1.358.137-2.04-.002-3.8 0-7.595-.003-11.393zm-6.423 3.99v5.712c0 .417-.058.827-.244 1.206-.29.59-.76.962-1.388 1.14-.35.1-.706.157-1.07.173-.95.045-1.773-.6-1.943-1.536a1.88 1.88 0 011.038-2.022c.323-.16.67-.25 1.018-.324.378-.082.758-.153 1.134-.24.274-.063.457-.23.51-.516a.904.904 0 00.02-.193c0-1.815 0-3.63-.002-5.443a.725.725 0 00-.026-.185c-.04-.15-.15-.243-.304-.234-.16.01-.318.035-.475.066-.76.15-1.52.303-2.28.456l-2.325.47-1.374.278c-.016.003-.032.01-.048.013-.277.077-.377.203-.39.49-.002.042 0 .086 0 .13-.002 2.602 0 5.204-.003 7.805 0 .42-.047.836-.215 1.227-.278.64-.77 1.04-1.434 1.233-.35.1-.71.16-1.075.172-.96.036-1.755-.6-1.92-1.544-.14-.812.23-1.685 1.154-2.075.357-.15.73-.232 1.108-.31.287-.06.575-.116.86-.177.383-.083.583-.323.6-.714v-.15c0-2.96 0-5.922.002-8.882 0-.123.013-.25.042-.37.07-.285.273-.448.546-.518.255-.066.515-.112.774-.165.733-.15 1.466-.296 2.2-.444l2.27-.46c.67-.134 1.34-.27 2.01-.403.22-.043.442-.088.663-.106.31-.025.523.17.554.482.008.073.012.148.012.223.002 1.91.002 3.822 0 5.732z"/></svg>`;
+      const appleMusicLogoUrl = `data:image/svg+xml;base64,${btoa(appleMusicSvg)}`;
+
+      const appleMusicTemplate = {
+        name: "Apple Music",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#fa233b"/></g><image x="30" y="30" width="40" height="40" href="${appleMusicLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: appleMusicLogoUrl,
+          colorType: "single",
+          foregroundColor: "#fa233b",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#fa233b",
+          cornerDotColor: "#fa233b",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10, crossOrigin: "anonymous" },
+        },
+      };
+
+      // WhatsApp テンプレート定義
+      const whatsappSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="362" fill="none" viewBox="0 0 360 362"><path fill="#25D366" fill-rule="evenodd" d="M307.546 52.566C273.709 18.684 228.706.017 180.756 0 81.951 0 1.538 80.404 1.504 179.235c-.017 31.594 8.242 62.432 23.928 89.609L0 361.736l95.024-24.925c26.179 14.285 55.659 21.805 85.655 21.814h.077c98.788 0 179.21-80.413 179.244-179.244.017-47.898-18.608-92.926-52.454-126.807v-.008Zm-126.79 275.788h-.06c-26.73-.008-52.952-7.194-75.831-20.765l-5.44-3.231-56.391 14.791 15.05-54.981-3.542-5.638c-14.912-23.721-22.793-51.139-22.776-79.286.035-82.14 66.867-148.973 149.051-148.973 39.793.017 77.198 15.53 105.328 43.695 28.131 28.157 43.61 65.596 43.593 105.398-.035 82.149-66.867 148.982-148.982 148.982v.008Zm81.719-111.577c-4.478-2.243-26.497-13.073-30.606-14.568-4.108-1.496-7.09-2.243-10.073 2.243-2.982 4.487-11.568 14.577-14.181 17.559-2.613 2.991-5.226 3.361-9.704 1.117-4.477-2.243-18.908-6.97-36.02-22.226-13.313-11.878-22.304-26.54-24.916-31.027-2.613-4.486-.275-6.91 1.959-9.136 2.011-2.011 4.478-5.234 6.721-7.847 2.244-2.613 2.983-4.486 4.478-7.469 1.496-2.991.748-5.603-.369-7.847-1.118-2.243-10.073-24.289-13.812-33.253-3.636-8.732-7.331-7.546-10.073-7.692-2.613-.13-5.595-.155-8.586-.155-2.991 0-7.839 1.118-11.947 5.604-4.108 4.486-15.677 15.324-15.677 37.361s16.047 43.344 18.29 46.335c2.243 2.991 31.585 48.225 76.51 67.632 10.684 4.615 19.029 7.374 25.535 9.437 10.727 3.412 20.49 2.931 28.208 1.779 8.604-1.289 26.498-10.838 30.228-21.298 3.73-10.46 3.73-19.433 2.613-21.298-1.117-1.865-4.108-2.991-8.586-5.234l.008-.017Z" clip-rule="evenodd"/></svg>`;
+      const whatsappLogoUrl = `data:image/svg+xml;base64,${btoa(whatsappSvg)}`;
+
+      const whatsappTemplate = {
+        name: "WhatsApp",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#25D366"/></g><image x="30" y="30" width="40" height="40" href="${whatsappLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: whatsappLogoUrl,
+          colorType: "single",
+          foregroundColor: "#25D366",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#25D366",
+          cornerDotColor: "#25D366",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10, crossOrigin: "anonymous" },
+        },
+      };
+
+      // PayPal テンプレート定義
+      const paypalSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="38" height="45" viewBox="7.056000232696533 3 37.35095977783203 45"><g xmlns="http://www.w3.org/2000/svg"><path fill="#002991" d="M38.914 13.35c0 5.574-5.144 12.15-12.927 12.15H18.49l-.368 2.322L16.373 39H7.056l5.605-36h15.095c5.083 0 9.082 2.833 10.555 6.77a9.687 9.687 0 0 1 .603 3.58z"></path><path fill="#60CDFF" d="M44.284 23.7A12.894 12.894 0 0 1 31.53 34.5h-5.206L24.157 48H14.89l1.483-9 1.75-11.178.367-2.322h7.497c7.773 0 12.927-6.576 12.927-12.15 3.825 1.974 6.055 5.963 5.37 10.35z"></path><path fill="#008CFF" d="M38.914 13.35C37.31 12.511 35.365 12 33.248 12h-12.64L18.49 25.5h7.497c7.773 0 12.927-6.576 12.927-12.15z"></path></g></svg>`;
+      const paypalLogoUrl = `data:image/svg+xml;base64,${btoa(paypalSvg)}`;
+
+      const paypalTemplate = {
+        name: "PayPal",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#002991"/></g><image x="35" y="30" width="30" height="40" href="${paypalLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: paypalLogoUrl,
+          colorType: "single",
+          foregroundColor: "#002991",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#002991",
+          cornerDotColor: "#008CFF",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Notion テンプレート定義
+      const notionSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="268" preserveAspectRatio="xMidYMid" viewBox="0 0 256 268"><path fill="#FFF" d="M16.092 11.538 164.09.608c18.179-1.56 22.85-.508 34.28 7.801l47.243 33.282C253.406 47.414 256 48.975 256 55.207v182.527c0 11.439-4.155 18.205-18.696 19.24L65.44 267.378c-10.913.517-16.11-1.043-21.825-8.327L8.826 213.814C2.586 205.487 0 199.254 0 191.97V29.726c0-9.352 4.155-17.153 16.092-18.188Z"/><path d="M164.09.608 16.092 11.538C4.155 12.573 0 20.374 0 29.726v162.245c0 7.284 2.585 13.516 8.826 21.843l34.789 45.237c5.715 7.284 10.912 8.844 21.825 8.327l171.864-10.404c14.532-1.035 18.696-7.801 18.696-19.24V55.207c0-5.911-2.336-7.614-9.21-12.66l-1.185-.856L198.37 8.409C186.94.1 182.27-.952 164.09.608ZM69.327 52.22c-14.033.945-17.216 1.159-25.186-5.323L23.876 30.778c-2.06-2.086-1.026-4.69 4.163-5.207l142.274-10.395c11.947-1.043 18.17 3.12 22.842 6.758l24.401 17.68c1.043.525 3.638 3.637.517 3.637L71.146 52.095l-1.819.125Zm-16.36 183.954V81.222c0-6.767 2.077-9.887 8.3-10.413L230.02 60.93c5.724-.517 8.31 3.12 8.31 9.879v153.917c0 6.767-1.044 12.49-10.387 13.008l-161.487 9.361c-9.343.517-13.489-2.594-13.489-10.921ZM212.377 89.53c1.034 4.681 0 9.362-4.681 9.897l-7.783 1.542v114.404c-6.758 3.637-12.981 5.715-18.18 5.715-8.308 0-10.386-2.604-16.609-10.396l-50.898-80.079v77.476l16.1 3.646s0 9.362-12.989 9.362l-35.814 2.077c-1.043-2.086 0-7.284 3.63-8.318l9.351-2.595V109.823l-12.98-1.052c-1.044-4.68 1.55-11.439 8.826-11.965l38.426-2.585 52.958 81.113v-71.76l-13.498-1.552c-1.043-5.733 3.111-9.896 8.3-10.404l35.84-2.087Z"/></svg>`;
+      const notionLogoUrl = `data:image/svg+xml;base64,${btoa(notionSvg)}`;
+
+      const notionTemplate = {
+        name: "Notion",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#000000"/></g><image x="30" y="30" width="40" height="40" href="${notionLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: notionLogoUrl,
+          colorType: "single",
+          foregroundColor: "#000000",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#000000",
+          cornerDotColor: "#000000",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Google Drive テンプレート定義
+      const googleDriveSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="87.3" height="78" viewBox="0 0 87.3 78"><path fill="#0066da" d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z"/><path fill="#00ac47" d="M43.65 25 29.9 1.2c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44A9.06 9.06 0 0 0 0 53h27.5z"/><path fill="#ea4335" d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75L86.1 57.5c.8-1.4 1.2-2.95 1.2-4.5H59.798l5.852 11.5z"/><path fill="#00832d" d="M43.65 25 57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z"/><path fill="#2684fc" d="M59.8 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z"/><path fill="#ffba00" d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25 59.8 53h27.45c0-1.55-.4-3.1-1.2-4.5z"/></svg>`;
+      const googleDriveLogoUrl = `data:image/svg+xml;base64,${btoa(googleDriveSvg)}`;
+
+      const googleDriveTemplate = {
+        name: "Google Drive",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#2684fc"/></g><image x="30" y="32" width="40" height="36" href="${googleDriveLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: googleDriveLogoUrl,
+          colorType: "single",
+          foregroundColor: "#2684fc",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#2684fc",
+          cornerDotColor: "#00ac47",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10, crossOrigin: "anonymous" },
+        },
+      };
+
+      // PayPay テンプレート定義
+      const paypaySvg = `<svg height="1546" viewBox="0 0 1547 1546" width="1547" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><clipPath id="paypay-clip-a"><path d="m1546.61.98v1544.44h-1545.63v-1544.44z"/></clipPath><clipPath id="paypay-clip-b"><path d="m1546.61.98v1544.44h-1545.63v-1544.44z"/></clipPath><g clip-path="url(#paypay-clip-a)"><path d="m1318.19.98c125.75 0 228.42 102.67 228.42 228.42v1087.6c0 125.75-102.67 228.42-228.42 228.42h-1088.79c-125.35 0-228.42-102.67-228.42-228.42v-832.91l.8-267.02c6.36-119.79 106.25-216.09 227.62-216.09z" fill="#fff" fill-rule="evenodd"/></g><g clip-path="url(#paypay-clip-b)"><path d="m1546.61 229.4v1087.6c0 125.75-102.67 228.42-228.42 228.42h-923.64l70.44-292.1c469.98-35.81 758.89-144.85 821.76-429.38 69.64-315.58-373.67-632.74-1285.37-606.87 6.76-119.79 106.65-216.09 228.02-216.09h1088.79c125.75 0 228.42 102.67 228.42 228.42zm-1036.26 835.69 138.09-575.03c381.24 51.33 619.21 187.83 583 335.47-39 158.78-401.93 254.69-721.09 239.56zm-208.52 480.33h-72.43c-125.75 0-228.42-102.67-228.42-228.42v-832.51c204.94-21.09 396.36-20.3 564.29-3.98z" fill="#f03" fill-rule="evenodd"/></g></svg>`;
+      const paypayLogoUrl = `data:image/svg+xml;base64,${btoa(paypaySvg)}`;
+
+      const paypayTemplate = {
+        name: "PayPay",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#ff0033"/></g><image x="30" y="30" width="40" height="40" href="${paypayLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: paypayLogoUrl,
+          colorType: "single",
+          foregroundColor: "#ff0033",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#ff0033",
+          cornerDotColor: "#ff0033",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10, crossOrigin: "anonymous" },
+        },
+      };
 
       // LINE テンプレート定義
       const lineTemplates = [
         // 1. アイコン・緑
         {
-          name: "LINE(緑)",
+          name: "LINE",
           preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#4cc764"/></g><image x="35" y="35" width="30" height="30" href="${iconGreenUrl}" /></svg>`,
           options: {
             ...defaultQrOptions,
@@ -2084,28 +2580,9 @@ function qrCodeGenerator() {
             imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 4, crossOrigin: "anonymous" },
           },
         },
-        // 2. アイコン・黒
+        // 2. 文字ロゴ・緑
         {
-          name: "LINE(黒)",
-          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#000"/></g><image x="35" y="35" width="30" height="30" href="${iconBlackUrl}" /></svg>`,
-          options: {
-            ...defaultQrOptions,
-            errorCorrectionLevel: "H",
-            logo: iconBlackUrl,
-            colorType: "single",
-            foregroundColor: "#000000",
-            backgroundColor: "#ffffff",
-            dotsStyle: "dots",
-            cornersStyle: "extra-rounded",
-            cornerColor: "#000000",
-            cornerDotColor: "#000000",
-            cornersDotStyle: "extra-rounded",
-            imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 4, crossOrigin: "anonymous" },
-          },
-        },
-        // 3. 文字ロゴ・緑
-        {
-          name: "LINE文字(緑)",
+          name: "LINE文字",
           preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#4cc764"/></g><image x="20" y="40" width="60" height="20" href="${textGreenUrl}" /></svg>`,
           options: {
             ...defaultQrOptions,
@@ -2123,29 +2600,52 @@ function qrCodeGenerator() {
             imageOptions: { hideBackgroundDots: true, imageSize: 0.35, margin: 6, crossOrigin: "anonymous" },
           },
         },
-        // 4. 文字ロゴ・黒
-        {
-          name: "LINE文字(黒)",
-          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#000"/></g><image x="20" y="40" width="60" height="20" href="${textBlackUrl}" /></svg>`,
-          options: {
-            ...defaultQrOptions,
-            errorCorrectionLevel: "H",
-            logo: textBlackUrl,
-            colorType: "single",
-            foregroundColor: "#000000",
-            backgroundColor: "#ffffff",
-            dotsStyle: "dots",
-            cornersStyle: "extra-rounded",
-            cornerColor: "#000000",
-            cornerDotColor: "#000000",
-            cornersDotStyle: "extra-rounded",
-            // 文字ロゴは横長なので、サイズを少し大きめに設定
-            imageOptions: { hideBackgroundDots: true, imageSize: 0.35, margin: 6, crossOrigin: "anonymous" },
-          },
-        },
       ];
 
-      this.presetTemplates.push(...lineTemplates);
+      // カテゴリごとにテンプレートをグループ化
+      this.presetTemplateGroups = [
+        {
+          name: "スタイル・パターン",
+          templates: basicTemplates
+        },
+        {
+          name: "SNS・コミュニケーション",
+          templates: [
+            lineTemplates[0],
+            lineTemplates[1],
+            instagramTemplate,
+            xTemplate,
+            facebookTemplate,
+            tiktokTemplate,
+            whatsappTemplate,
+            discordTemplate
+          ]
+        },
+        {
+          name: "ビジネス・ツール",
+          templates: [
+            youtubeTemplate,
+            githubTemplate,
+            linkedinTemplate,
+            notionTemplate,
+            googleDriveTemplate,
+            zoomTemplate,
+            gmailTemplate,
+            paypalTemplate,
+            paypayTemplate
+          ]
+        },
+        {
+          name: "エンタメ・メディア",
+          templates: [
+            spotifyTemplate,
+            appleMusicTemplate
+          ]
+        }
+      ];
+
+      // 既存の処理のためにフラットな配列も保持
+      this.presetTemplates = this.presetTemplateGroups.flatMap(group => group.templates);
     },
     getActiveType() {
       return this.qrTypes.find((t) => t.id === this.selectedType) || {};
@@ -2173,6 +2673,12 @@ function qrCodeGenerator() {
         line: "grinds",
         youtube: "grinds_channel",
         tiktok: "grinds.official",
+        linkedin: "ユーザー名 (例: taro-yamada)",
+        whatsapp: "電話番号 (国番号付 例: 819012345678)",
+        github: "ユーザー名 (例: octocat)",
+        discord: "サーバー招待コード または URL",
+        paypal: "PayPal.me のID (例: grinds)",
+        paypay: "決済リンクURL (例: https://qr.paypay.ne.jp/...)",
       };
       return placeholders[this.formData.sns.service] || "";
     },
@@ -2297,9 +2803,12 @@ function qrCodeGenerator() {
         switch (this.frame.style) {
           case "scan-me-1": {
             frameHeight = 40;
-            svgElement.setAttribute("viewBox", `0 0 ${originalSize} ${originalSize + frameHeight}`);
-            textY = originalSize + frameHeight / 2;
             fontSize = 24;
+            const textWidth = visualLen * (fontSize * 0.6) + 30;
+            const requiredWidth = Math.max(originalSize, textWidth + 20);
+            const offsetX = (requiredWidth - originalSize) / 2;
+            svgElement.setAttribute("viewBox", `${-offsetX} 0 ${requiredWidth} ${originalSize + frameHeight}`);
+            textY = originalSize + frameHeight / 2;
             const text1 = document.createElementNS("http://www.w3.org/2000/svg", "text");
             Object.assign(text1.style, {
               textAnchor: "middle",
@@ -2307,7 +2816,7 @@ function qrCodeGenerator() {
               fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
               fontWeight: "bold",
             });
-            text1.setAttribute("x", "50%");
+            text1.setAttribute("x", originalSize / 2);
             text1.setAttribute("y", textY);
             text1.setAttribute("font-size", `${fontSize}px`);
             text1.setAttribute("fill", textColor);
@@ -2317,12 +2826,14 @@ function qrCodeGenerator() {
           }
           case "scan-me-2": {
             frameHeight = 50;
-            svgElement.setAttribute("viewBox", `0 0 ${originalSize} ${originalSize + frameHeight}`);
-            textY = originalSize + frameHeight / 2;
             fontSize = 22;
             const textWidth = visualLen * (fontSize * 0.6) + 30;
+            const requiredWidth = Math.max(originalSize, textWidth + 20);
+            const offsetX = (requiredWidth - originalSize) / 2;
+            svgElement.setAttribute("viewBox", `${-offsetX} 0 ${requiredWidth} ${originalSize + frameHeight}`);
+            textY = originalSize + frameHeight / 2;
             const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            rect.setAttribute("x", (originalSize - textWidth) / 2);
+            rect.setAttribute("x", originalSize / 2 - textWidth / 2);
             rect.setAttribute("y", originalSize + 10);
             rect.setAttribute("width", textWidth);
             rect.setAttribute("height", frameHeight - 20);
@@ -2338,7 +2849,7 @@ function qrCodeGenerator() {
               fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
               fontWeight: "bold",
             });
-            text2.setAttribute("x", "50%");
+            text2.setAttribute("x", originalSize / 2);
             text2.setAttribute("y", textY);
             text2.setAttribute("font-size", `${fontSize}px`);
             text2.setAttribute("fill", textColor);
@@ -2348,13 +2859,16 @@ function qrCodeGenerator() {
           }
           case "scan-me-3": {
             frameHeight = 40;
-            svgElement.setAttribute("viewBox", `0 0 ${originalSize} ${originalSize + frameHeight}`);
-            textY = originalSize + frameHeight / 2;
             fontSize = 22;
+            const textWidth = visualLen * (fontSize * 0.6) + 30;
+            const requiredWidth = Math.max(originalSize, textWidth + 20);
+            const offsetX = (requiredWidth - originalSize) / 2;
+            svgElement.setAttribute("viewBox", `${-offsetX} 0 ${requiredWidth} ${originalSize + frameHeight}`);
+            textY = originalSize + frameHeight / 2;
             const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            bgRect.setAttribute("x", 0);
+            bgRect.setAttribute("x", -offsetX);
             bgRect.setAttribute("y", originalSize);
-            bgRect.setAttribute("width", originalSize);
+            bgRect.setAttribute("width", requiredWidth);
             bgRect.setAttribute("height", frameHeight);
             bgRect.setAttribute("fill", textColor);
             frameGroup.appendChild(bgRect);
@@ -2365,7 +2879,7 @@ function qrCodeGenerator() {
               fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
               fontWeight: "bold",
             });
-            text3.setAttribute("x", "50%");
+            text3.setAttribute("x", originalSize / 2);
             text3.setAttribute("y", textY);
             text3.setAttribute("font-size", `${fontSize}px`);
             text3.setAttribute("fill", this.qrOptions.backgroundColor);
@@ -2475,11 +2989,20 @@ function qrCodeGenerator() {
     async getPreviewSvgUrl(options) {
       const previewInstance = new QRCodeStyling(options);
       const blob = await previewInstance.getRawData("svg");
+
       return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
+        const textReader = new FileReader();
+        textReader.onloadend = () => {
+          let svgString = textReader.result;
+          svgString = svgString.replace(/crossorigin="[^"]*"/gi, "");
+          const cleanBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+          const dataUrlReader = new FileReader();
+          dataUrlReader.onloadend = () => resolve(dataUrlReader.result);
+          dataUrlReader.onerror = reject;
+          dataUrlReader.readAsDataURL(cleanBlob);
+        };
+        textReader.onerror = reject;
+        textReader.readAsText(blob);
       });
     },
     resetGenerator() {
@@ -2594,6 +3117,41 @@ function qrCodeGenerator() {
           this.savedQRCodes = [];
         }
       }
+
+      // --- 古いサムネイル（crossorigin属性付き）の自動修復マイグレーション ---
+      let needsSave = false;
+      this.savedQRCodes.forEach(qr => {
+        if (qr.previewSvgUrl && qr.previewSvgUrl.includes("base64,")) {
+          try {
+            const b64 = qr.previewSvgUrl.split("base64,")[1];
+            const binStr = atob(b64);
+            if (binStr.toLowerCase().includes("crossorigin")) {
+              const bytes = new Uint8Array(binStr.length);
+              for (let i = 0; i < binStr.length; i++) {
+                bytes[i] = binStr.charCodeAt(i);
+              }
+              let svgString = new TextDecoder('utf-8').decode(bytes);
+
+              svgString = svgString.replace(/crossorigin="[^"]*"/gi, "");
+
+              const newBytes = new TextEncoder().encode(svgString);
+              let newBinStr = "";
+              const chunkSize = 8192;
+              for (let i = 0; i < newBytes.length; i += chunkSize) {
+                newBinStr += String.fromCharCode.apply(null, newBytes.subarray(i, i + chunkSize));
+              }
+              qr.previewSvgUrl = "data:image/svg+xml;base64," + btoa(newBinStr);
+              needsSave = true;
+            }
+          } catch (e) {
+            console.warn("サムネイルの自動修復に失敗しました", e);
+          }
+        }
+      });
+      if (needsSave) {
+        this.persistSavedQRCodes();
+      }
+
       this.currentView = this.savedQRCodes.length > 0 ? "dashboard" : "generator";
     },
     editQRCode(id) {
@@ -2636,13 +3194,14 @@ function qrCodeGenerator() {
     async duplicateQRCode(id) {
       const originalQr = this.savedQRCodes.find((qr) => qr.id === id);
       if (originalQr) {
-        // ディープコピー時のOOMクラッシュ対策（Base64を退避）とProxyの回避
+        // ディープコピー時のOOMクラッシュ対策とProxyの回避
         const rawOriginalQr = window.Alpine.raw(originalQr);
-        const logoTemp = rawOriginalQr.qrOptions.logo;
-        rawOriginalQr.qrOptions.logo = "";
-        const newQr = JSON.parse(JSON.stringify(rawOriginalQr));
-        rawOriginalQr.qrOptions.logo = logoTemp;
-        newQr.qrOptions.logo = logoTemp;
+        const { qrOptions, ...restQr } = rawOriginalQr;
+        const { logo, ...restOptions } = qrOptions;
+
+        const newQr = JSON.parse(JSON.stringify(restQr));
+        newQr.qrOptions = JSON.parse(JSON.stringify(restOptions));
+        newQr.qrOptions.logo = logo;
 
         newQr.id = this.generateUniqueId();
         newQr.name = `${originalQr.name} (コピー)`;
@@ -2674,8 +3233,11 @@ function qrCodeGenerator() {
           qrOptions: {
             errorCorrectionLevel: newQr.qrOptions.errorCorrectionLevel,
           },
-          imageOptions: newQr.qrOptions.imageOptions,
-          margin: newQr.qrOptions.margin,
+          imageOptions: {
+            ...newQr.qrOptions.imageOptions,
+            margin: newQr.qrOptions.imageOptions.margin ? newQr.qrOptions.imageOptions.margin / 4 : 0,
+          },
+          margin: newQr.qrOptions.margin ? newQr.qrOptions.margin / 4 : 0,
         };
         newQr.previewSvgUrl = await this.getPreviewSvgUrl(thumbnailOptions);
         this.savedQRCodes.unshift(newQr);
@@ -2731,14 +3293,14 @@ function qrCodeGenerator() {
       return new Promise(async (resolve, reject) => {
         try {
           let svgString = "";
-          if (svgDataUrl.startsWith("data:image/svg+xml;base64,")) {
-            const binStr = atob(svgDataUrl.split(",")[1]);
+          if (svgDataUrl.includes("base64,")) {
+            const binStr = atob(svgDataUrl.split("base64,")[1]);
             const bytes = new Uint8Array(binStr.length);
             for (let i = 0; i < binStr.length; i++) {
               bytes[i] = binStr.charCodeAt(i);
             }
             svgString = new TextDecoder('utf-8').decode(bytes); // UTF-8として正しくデコード
-          } else if (svgDataUrl.startsWith("data:image/svg+xml,")) {
+          } else if (svgDataUrl.includes(",")) {
             svgString = decodeURIComponent(svgDataUrl.split(",")[1]);
           }
 
@@ -2825,6 +3387,12 @@ function qrCodeGenerator() {
     handleBrandLogoUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
+
+      if (file.type === "image/svg+xml" && file.size > 500 * 1024) {
+        this.showFlashNotification("SVGロゴは複雑すぎると処理が重くなるため、500KB以下のファイルを選択してください。");
+        event.target.value = null;
+        return;
+      }
 
       if (file.size > 2 * 1024 * 1024) {
         this.showFlashNotification("ブランドロゴは2MB以下のファイルを選択してください。");

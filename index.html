@@ -54,6 +54,11 @@
         display: none !important;
       }
 
+      html, body {
+        overscroll-behavior-y: none;
+        overscroll-behavior-x: none;
+      }
+
       input[type="color"] {
         -webkit-appearance: none;
         -moz-appearance: none;
@@ -195,7 +200,7 @@
                 data-lpignore="true" spellcheck="false" autocorrect="off" autocapitalize="off"
                 class="bg-white shadow-sm py-2 pr-8 pl-3 border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/20 rounded-md outline-none w-36 text-slate-900 text-base md:text-sm transition-all placeholder-slate-400"
                 title="パスワードを入力すると保存時にファイルを強力に暗号化します">
-              <button type="button" onclick="togglePasswordVisibility()"
+              <button type="button" onclick="togglePasswordVisibility()" aria-label="パスワードの表示/非表示を切り替える"
                 class="right-2 absolute text-slate-400 hover:text-slate-600 transition-colors" title="パスワードの表示/非表示">
                 <svg id="icon-eye-open" class="hidden w-4 h-4">
                   <use href="icons-sprite.svg#outline-eye"></use>
@@ -207,7 +212,7 @@
             </div>
 
             <button onclick="loadQRCoderFile()"
-              class="bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-600 hover:text-slate-900 text-sm transition-colors cursor-pointer shrink-0"
+              class="bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-600 hover:text-slate-900 text-sm transition-colors cursor-pointer shrink-0" aria-label="バックアップを開く"
               title="開く">
               <svg class="w-4 h-4">
                 <use href="icons-sprite.svg#outline-folder"></use>
@@ -215,7 +220,7 @@
             </button>
             <button id="btn-save" @click="saveQRCoderFile()"
               :disabled="qrQuality.issues.some(i => i.id === 'capacity_error')"
-              class="relative bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-900 text-sm transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="relative bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-900 text-sm transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="バックアップを保存"
               title="ファイルとしてバックアップ">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5">
                 <use href="icons-sprite.svg#outline-arrow-down-tray"></use>
@@ -228,7 +233,7 @@
 
             <!-- コマンドパレット呼び出しボタン -->
             <button onclick="toggleCommandPalette()"
-              class="flex items-center gap-2 bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-600 hover:text-slate-900 text-sm transition-colors cursor-pointer shrink-0"
+              class="flex items-center gap-2 bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-600 hover:text-slate-900 text-sm transition-colors cursor-pointer shrink-0" aria-label="コマンドパレットを開く"
               title="コマンドパレットを開く">
               <svg class="w-4 h-4">
                 <use href="icons-sprite.svg#outline-magnifying-glass"></use>
@@ -303,7 +308,7 @@
           <!-- ステップ2: コンテンツ入力とデザイン設定 -->
           <div x-show="currentStep === 'contentEntry'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
             <div class="mb-6 flex items-center gap-4">
-              <button @click="currentStep = 'typeSelection'" class="rounded-lg border border-slate-300 bg-white p-2.5 shadow-sm transition-colors hover:bg-slate-100">
+              <button @click="window.history.length > 1 ? window.history.back() : currentStep = 'typeSelection'" aria-label="前の画面に戻る" class="rounded-lg border border-slate-300 bg-white p-2.5 shadow-sm transition-colors hover:bg-slate-100">
                 <svg class="h-5 w-5 text-slate-600" fill="none" stroke="currentColor" stroke-width="2.5">
                   <use href="icons-sprite.svg#outline-chevron-left"></use>
                 </svg>
@@ -365,7 +370,7 @@
                             </label>
                             <input type="text" id="wifi-ssid" x-model="formData.wifi.ssid" @input.debounce.300ms="updateQrCode()" placeholder="My Wifi Network" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
-                          <div>
+                          <div x-show="formData.wifi.encryption !== 'なし'" x-collapse>
                             <label for="wifi-password" class="mb-2 block text-sm font-medium text-slate-700">パスワード</label>
                             <input type="password" id="wifi-password" x-model="formData.wifi.password" @input.debounce.300ms="updateQrCode()" placeholder="********" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
@@ -384,12 +389,12 @@
                         <p class="mb-4 text-sm text-slate-500">スキャンするとアドレス帳に登録される連絡先情報を作成します。</p>
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <div>
-                            <label for="vcard-firstname" class="mb-2 block text-sm font-medium text-slate-700">名</label>
-                            <input type="text" id="vcard-firstname" x-model="formData.vcard.firstName" @input.debounce.300ms="updateQrCode()" placeholder="太郎" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
-                          </div>
-                          <div>
                             <label for="vcard-lastname" class="mb-2 block text-sm font-medium text-slate-700">姓</label>
                             <input type="text" id="vcard-lastname" x-model="formData.vcard.lastName" @input.debounce.300ms="updateQrCode()" placeholder="山田" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                          </div>
+                          <div>
+                            <label for="vcard-firstname" class="mb-2 block text-sm font-medium text-slate-700">名</label>
+                            <input type="text" id="vcard-firstname" x-model="formData.vcard.firstName" @input.debounce.300ms="updateQrCode()" placeholder="太郎" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div class="sm:col-span-2">
                             <label for="vcard-org" class="mb-2 block text-sm font-medium text-slate-700">会社名</label>
@@ -426,11 +431,17 @@
                           </div>
                           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
-                              <label for="event-start" class="mb-2 block text-sm font-medium text-slate-700">開始日時</label>
+                              <label for="event-start" class="mb-2 block text-sm font-medium text-slate-700">
+                                開始日時
+                                <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">必須</span>
+                              </label>
                               <input type="datetime-local" id="event-start" x-model="formData.event.start" @change="updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                             </div>
                             <div>
-                              <label for="event-end" class="mb-2 block text-sm font-medium text-slate-700">終了日時</label>
+                              <label for="event-end" class="mb-2 block text-sm font-medium text-slate-700">
+                                終了日時
+                                <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">必須</span>
+                              </label>
                               <input type="datetime-local" id="event-end" x-model="formData.event.end" @change="updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                             </div>
                           </div>
@@ -483,8 +494,8 @@
                         <p class="mt-2 text-xs text-slate-500">例: 東京駅 (緯度: 35.681236, 経度: 139.767125)</p>
                       </div>
                       <div x-show="selectedType === 'sns'">
-                        <h3 class="mb-1 text-lg font-semibold text-slate-800">SNSプロフィール</h3>
-                        <p class="mb-4 text-sm text-slate-500">各種SNSのプロフィールページへリンクするQRコードを作成します。</p>
+                        <h3 class="mb-1 text-lg font-semibold text-slate-800">SNS / アカウント</h3>
+                        <p class="mb-4 text-sm text-slate-500">各種SNSやアカウントのプロフィールページへリンクするQRコードを作成します。</p>
                         <div class="space-y-4">
                           <div>
                             <label for="sns-service" class="mb-2 block text-sm font-medium text-slate-700">サービス</label>
@@ -495,12 +506,18 @@
                               <option value="line">LINE</option>
                               <option value="youtube">YouTube</option>
                               <option value="tiktok">TikTok</option>
+                              <option value="linkedin">LinkedIn</option>
+                              <option value="whatsapp">WhatsApp</option>
+                              <option value="github">GitHub</option>
+                              <option value="discord">Discord</option>
+                              <option value="paypal">PayPal</option>
+                              <option value="paypay">PayPay</option>
                             </select>
                           </div>
                           <div>
                             <label for="sns-identifier" class="mb-2 block text-sm font-medium text-slate-700" x-text="formData.sns.service === 'line' ? '公式アカウントID' : 'ユーザー名 / ID'"></label>
                             <div class="flex items-center">
-                              <span x-show="!['line', 'facebook'].includes(formData.sns.service)" class="inline-flex items-center rounded-l-lg border border-r-0 border-slate-300 bg-slate-100 px-3 text-sm text-slate-600">@</span>
+                              <span x-show="['x', 'instagram', 'tiktok', 'youtube'].includes(formData.sns.service)" class="inline-flex items-center rounded-l-lg border border-r-0 border-slate-300 bg-slate-100 px-3 text-sm text-slate-600">@</span>
                               <input type="text" id="sns-identifier" x-model="formData.sns.identifier" @input.debounce.300ms="updateQrCode()" :placeholder="getSnsPlaceholder()" class="block w-full rounded-r-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                             </div>
                           </div>
@@ -539,14 +556,21 @@
                       <div class="p-6">
                         <h3 class="text-lg font-semibold text-slate-800">デザインテンプレート</h3>
                         <p class="mb-4 text-sm text-slate-500">クリック一つでプロのデザインを適用できます。</p>
-                        <div class="grid grid-cols-2 gap-4 sm:grid-cols-6">
-                          <template x-for="template in presetTemplates" :key="template.name">
-                            <button @click="applyPreset(template)" class="group space-y-2">
-                              <div class="aspect-square w-full transform rounded-lg border-2 bg-slate-50 p-2 shadow-inner transition group-hover:scale-105 group-hover:border-primary/50" :class="isCurrentTemplate(template) ? 'border-primary ring-2 ring-primary/30' : 'border-slate-200'">
-                                <div class="flex h-full w-full items-center justify-center rounded-md" x-html="template.preview"></div>
+                        <div class="space-y-8">
+                          <template x-for="group in presetTemplateGroups" :key="group.name">
+                            <div>
+                              <h4 class="mb-3 text-sm font-bold text-slate-700 border-b border-slate-200 pb-2" x-text="group.name"></h4>
+                              <div class="grid grid-cols-2 gap-4 sm:grid-cols-6">
+                                <template x-for="template in group.templates" :key="template.name">
+                                  <button @click="applyPreset(template)" class="group space-y-2">
+                                    <div class="aspect-square w-full transform rounded-lg border-2 bg-slate-50 p-2 shadow-inner transition group-hover:scale-105 group-hover:border-primary/50" :class="isCurrentTemplate(template) ? 'border-primary ring-2 ring-primary/30' : 'border-slate-200'">
+                                      <div class="flex h-full w-full items-center justify-center rounded-md" x-html="template.preview"></div>
+                                    </div>
+                                    <p class="text-center text-sm font-medium text-slate-600" x-text="template.name"></p>
+                                  </button>
+                                </template>
                               </div>
-                              <p class="text-center text-sm font-medium text-slate-600" x-text="template.name"></p>
-                            </button>
+                            </div>
                           </template>
                         </div>
                       </div>
@@ -568,36 +592,16 @@
                               <button @click="qrOptions.colorType = 'gradient'; updateQrCode()" :class="qrOptions.colorType === 'gradient' ? 'bg-white shadow-sm text-primary' : 'text-slate-600 hover:bg-white/60'" class="rounded-md px-4 py-2 text-sm font-semibold transition-all">グラデーション</button>
                             </div>
                           </div>
-                          <div x-show="qrOptions.colorType === 'single'" class="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2">
-                            <div>
+
+                          <div class="space-y-6">
+                            <div x-show="qrOptions.colorType === 'single'">
                               <label for="fg-color" class="mb-2 block text-sm font-medium text-slate-700">ドットの色（前景）</label>
                               <div class="flex items-center gap-3">
-                                <input type="color" id="fg-color" x-model="qrOptions.foregroundColor" @input.debounce.300ms="updateQrCode()" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" x-model="qrOptions.foregroundColor" @input.debounce.300ms="updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                <input type="color" id="fg-color" x-model="qrOptions.foregroundColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" x-model="qrOptions.foregroundColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               </div>
                             </div>
-                            <div>
-                              <label for="bg-color" class="mb-2 block text-sm font-medium text-slate-700">背景色</label>
-                              <div class="flex items-center gap-3">
-                                <input type="color" id="bg-color" x-model="qrOptions.backgroundColor" @input.debounce.300ms="updateQrCode()" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" x-model="qrOptions.backgroundColor" @input.debounce.300ms="updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
-                              </div>
-                            </div>
-                            <div>
-                              <label for="corner-color" class="mb-2 block text-sm font-medium text-slate-700">四隅の枠の色</label>
-                              <div class="flex items-center gap-3">
-                                <input type="color" id="corner-color" x-model="qrOptions.cornerColor" @input.debounce.300ms="updateQrCode()" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" x-model="qrOptions.cornerColor" @input.debounce.300ms="updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
-                              </div>
-                            </div>
-                            <div>
-                              <label for="corner-dot-color" class="mb-2 block text-sm font-medium text-slate-700">四隅の点の色</label>
-                              <div class="flex items-center gap-3">
-                                <input type="color" id="corner-dot-color" x-model="qrOptions.cornerDotColor" @input.debounce.300ms="updateQrCode()" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" x-model="qrOptions.cornerDotColor" @input.debounce.300ms="updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
-                              </div>
-                            </div>
-                          </div>
+
                           <div x-show="qrOptions.colorType === 'gradient'" class="space-y-6">
                             <div>
                               <label for="gradient-type" class="mb-2 block text-sm font-medium text-slate-700">グラデーションタイプ</label>
@@ -616,17 +620,42 @@
                                 <label for="gradient-start" class="mb-2 block text-sm font-medium text-slate-700">開始色</label>
                                 <div class="flex items-center gap-3">
                                   <input type="color" id="gradient-start" x-model="qrOptions.gradient.color1" @input.debounce.300ms="updateQrCode()" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" x-model="qrOptions.gradient.color1" @input.debounce.300ms="updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                <input type="text" x-model="qrOptions.gradient.color1" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                                 </div>
                               </div>
                               <div>
                                 <label for="gradient-end" class="mb-2 block text-sm font-medium text-slate-700">終了色</label>
                                 <div class="flex items-center gap-3">
                                   <input type="color" id="gradient-end" x-model="qrOptions.gradient.color2" @input.debounce.300ms="updateQrCode()" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" x-model="qrOptions.gradient.color2" @input.debounce.300ms="updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                <input type="text" x-model="qrOptions.gradient.color2" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                                 </div>
                               </div>
                             </div>
+                          </div>
+
+                          <div class="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 pt-6 border-t border-slate-200">
+                            <div>
+                              <label for="bg-color" class="mb-2 block text-sm font-medium text-slate-700">背景色</label>
+                              <div class="flex items-center gap-3">
+                                <input type="color" id="bg-color" x-model="qrOptions.backgroundColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" x-model="qrOptions.backgroundColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                              </div>
+                            </div>
+                            <div>
+                              <label for="corner-color" class="mb-2 block text-sm font-medium text-slate-700">四隅の枠の色</label>
+                              <div class="flex items-center gap-3">
+                                <input type="color" id="corner-color" x-model="qrOptions.cornerColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" x-model="qrOptions.cornerColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                              </div>
+                            </div>
+                            <div>
+                              <label for="corner-dot-color" class="mb-2 block text-sm font-medium text-slate-700">四隅の点の色</label>
+                              <div class="flex items-center gap-3">
+                                <input type="color" id="corner-dot-color" x-model="qrOptions.cornerDotColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" x-model="qrOptions.cornerDotColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                              </div>
+                            </div>
+                          </div>
                           </div>
                           <div class="mt-8 border-t border-slate-200 pt-6">
                             <label class="mb-2 block text-sm font-medium text-slate-700">推奨カラーパレット</label>
@@ -697,7 +726,7 @@
                         <div class="mb-4 flex items-center justify-between">
                           <h3 class="text-lg font-bold text-slate-800">ロゴ設定</h3>
                           <template x-if="qrOptions.logo">
-                            <button @click="removeLogo()" class="text-xs font-medium text-rose-500 hover:text-rose-600 hover:underline">ロゴを削除</button>
+                            <button @click="removeLogo()" aria-label="ロゴを削除する" class="text-xs font-medium text-rose-500 hover:text-rose-600 hover:underline">ロゴを削除</button>
                           </template>
                         </div>
 
@@ -745,9 +774,9 @@
                               </div>
 
                               <!-- スキャン安全性インジケーター -->
-                              <div class="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full border bg-white px-2 py-1 text-[10px] font-bold shadow-sm" :class="qrOptions.imageOptions.imageSize > 0.4 ? 'border-amber-200 text-amber-700' : 'border-green-200 text-green-700'">
-                                <div class="h-2 w-2 rounded-full" :class="qrOptions.imageOptions.imageSize > 0.4 ? 'bg-amber-500' : 'bg-green-500'"></div>
-                                <span x-text="qrOptions.imageOptions.imageSize > 0.4 ? '読み取り注意' : 'サイズ良好'"></span>
+                              <div class="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full border bg-white px-2 py-1 text-[10px] font-bold shadow-sm" :class="qrOptions.imageOptions.imageSize > 0.35 ? 'border-amber-200 text-amber-700' : 'border-green-200 text-green-700'">
+                                <div class="h-2 w-2 rounded-full" :class="qrOptions.imageOptions.imageSize > 0.35 ? 'bg-amber-500' : 'bg-green-500'"></div>
+                                <span x-text="qrOptions.imageOptions.imageSize > 0.35 ? '読み取り注意' : 'サイズ良好'"></span>
                               </div>
                             </div>
 
@@ -761,11 +790,11 @@
                                 </div>
                                 <!-- Maxを0.5(50%)に制限して安全性を担保 -->
                                 <div class="relative flex items-center">
-                                  <input type="range" x-model.number="qrOptions.imageOptions.imageSize" min="0.1" max="0.5" step="0.05" @input.debounce.50ms="updateQrCode(false)" @change="updateQrCode(true)" class="h-2 w-full cursor-pointer rounded-lg bg-slate-200 accent-primary focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                                  <input type="range" x-model.number="qrOptions.imageOptions.imageSize" min="0.1" max="0.4" step="0.05" @input.debounce.50ms="updateQrCode(false)" @change="updateQrCode(true)" class="h-2 w-full cursor-pointer rounded-lg bg-slate-200 accent-primary focus:outline-none focus:ring-2 focus:ring-primary/30" />
                                 </div>
                                 <div class="flex justify-between px-1 text-[10px] font-medium text-slate-400">
                                   <span>小</span>
-                                  <span>推奨最大(50%)</span>
+                                  <span>最大(40%)</span>
                                 </div>
                               </div>
 
@@ -908,14 +937,20 @@
                             </div>
                             <div>
                               <label class="mb-2 block text-sm font-medium text-slate-700">ブランドカラー</label>
-                              <div class="grid grid-cols-2 gap-4">
+                              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
                                   <label for="brand-main-color" class="mb-1 block text-xs text-slate-500">メインカラー</label>
-                                  <input id="brand-main-color" type="color" x-model="brandKit.colors[0]" @input.debounce.300ms="saveBrandKit(false)" class="w-full rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                  <div class="flex items-center gap-3">
+                                    <input id="brand-main-color" type="color" x-model="brandKit.colors[0]" @input.debounce.300ms="saveBrandKit(false)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                    <input type="text" x-model="brandKit.colors[0]" @input.debounce.300ms="saveBrandKit(false)" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  </div>
                                 </div>
                                 <div>
                                   <label for="brand-bg-color" class="mb-1 block text-xs text-slate-500">背景色</label>
-                                  <input id="brand-bg-color" type="color" x-model="brandKit.colors[1]" @input.debounce.300ms="saveBrandKit(false)" class="w-full rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                  <div class="flex items-center gap-3">
+                                    <input id="brand-bg-color" type="color" x-model="brandKit.colors[1]" @input.debounce.300ms="saveBrandKit(false)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                    <input type="text" x-model="brandKit.colors[1]" @input.debounce.300ms="saveBrandKit(false)" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -955,12 +990,12 @@
                         </button>
                       </div>
                       <div class="h-6 w-px bg-slate-200"></div>
-                      <button @click="undo()" :disabled="historyIndex <= 0" class="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300">
+                      <button @click="undo()" :disabled="historyIndex <= 0" aria-label="元に戻す" class="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.5">
                           <use href="icons-sprite.svg#outline-arrow-uturn-left"></use>
                         </svg>
                       </button>
-                      <button @click="redo()" :disabled="historyIndex >= history.length - 1" class="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300">
+                      <button @click="redo()" :disabled="historyIndex >= history.length - 1" aria-label="やり直す" class="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.5">
                           <use href="icons-sprite.svg#outline-arrow-uturn-right"></use>
                         </svg>
@@ -1102,19 +1137,19 @@
               <div class="hidden rounded-lg bg-slate-100 px-6 py-3 text-left text-sm font-semibold text-slate-600 md:grid md:grid-cols-12 md:gap-4">
                 <button @click="sortBy('name')" class="col-span-5 flex items-center gap-1">
                   <span>QRコード名</span>
-                  <svg x-show="sortKey === 'name'" :class="sortOrder === 'asc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                  <svg x-show="sortKey === 'name'" :class="sortOrder === 'desc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.78a.75.75 0 11-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 11-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd"></path>
                   </svg>
                 </button>
                 <button @click="sortBy('scans')" class="col-span-2 flex items-center justify-center gap-1">
                   <span>スキャン</span>
-                  <svg x-show="sortKey === 'scans'" :class="sortOrder === 'asc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                  <svg x-show="sortKey === 'scans'" :class="sortOrder === 'desc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.78a.75.75 0 11-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 11-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd"></path>
                   </svg>
                 </button>
                 <button @click="sortBy('createdAt')" class="col-span-2 flex items-center gap-1">
                   <span>作成日</span>
-                  <svg x-show="sortKey === 'createdAt'" :class="sortOrder === 'asc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                  <svg x-show="sortKey === 'createdAt'" :class="sortOrder === 'desc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.78a.75.75 0 11-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 11-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd"></path>
                   </svg>
                 </button>
@@ -1129,7 +1164,7 @@
                         <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
                           <img :src="qr.previewSvgUrl" class="h-full w-full object-contain" />
                         </div>
-                        <div>
+                        <div class="min-w-0 flex-1">
                           <p class="font-semibold text-slate-800 truncate max-w-full" x-text="qr.name" :title="qr.name"></p>
                           <p class="text-sm text-slate-500" x-text="qrTypes.find(t => t.id === qr.type)?.title || '不明'"></p>
                         </div>
@@ -1269,7 +1304,7 @@
         <button @click="if(hasUnsavedEdit && !confirm('未保存の変更があります。移動してよろしいですか？')) return; hasUnsavedEdit = false; currentView = 'dashboard'" class="flex flex-col items-center justify-center w-full py-2 rounded-2xl transition-all" :class="currentView === 'dashboard' ? 'text-primary scale-105' : 'text-slate-400 active:bg-slate-100'">
           <div class="relative">
             <svg class="h-6 w-6 mb-0.5" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-folder"></use></svg>
-            <span x-show="savedQRCodes.length > 0" class="absolute -top-1 -right-2 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-rose-500 text-[8px] font-black text-white" x-text="savedQRCodes.length"></span>
+            <span x-show="savedQRCodes.length > 0" class="absolute -top-1 -right-2 flex h-4 min-w-[1rem] px-1 items-center justify-center rounded-full border-2 border-white bg-rose-500 text-[8px] font-black text-white" x-text="savedQRCodes.length"></span>
           </div>
           <span class="text-[10px] font-black tracking-wide">管理</span>
         </button>
@@ -1286,7 +1321,7 @@
       <div x-show="showSaveModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-md transform-gpu rounded-t-3xl sm:rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <h3 class="text-xl font-black text-slate-900 mb-2" x-text="editingQRCodeId ? 'QRコードの変更を保存' : 'QRコードを保存'"></h3>
         <p class="text-sm text-slate-500 mb-6">管理ダッシュボードに保存し、後から編集可能にします。</p>
-        <form @submit.prevent="saveToGrind()">
+        <form @submit.prevent="saveToGrind(true)">
           <input type="text" x-model="saveName" placeholder="QRコードの名前" required class="mb-6 block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
           <div class="flex gap-3">
             <button type="button" @click="showSaveModal = false" class="flex-1 py-3.5 rounded-2xl bg-slate-100 font-bold text-slate-700 active:scale-95 transition-transform">キャンセル</button>
@@ -1406,7 +1441,7 @@
           <div class="bg-white px-4 pb-4 pt-5 sm:p-6">
             <h3 class="text-lg font-medium leading-6 text-slate-900" id="modal-title">利用シーンをプレビュー</h3>
             <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
-              <div class="space-y-6 md:col-span-1">
+              <div class="space-y-6 md:col-span-1 order-last md:order-first">
                 <div>
                   <label for="scene-upload" class="block text-sm font-medium text-slate-700">背景をアップロード</label>
                   <input id="scene-upload" type="file" @change="handleSceneBackgroundUpload" accept="image/*" class="mt-1 block w-full cursor-pointer text-sm text-slate-500 transition file:mr-4 file:rounded-lg file:border file:border-slate-300 file:bg-slate-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-slate-700 hover:file:bg-slate-100" />
@@ -1449,7 +1484,7 @@
                 </div>
                 <button @click="resetSceneOptions()" type="button" class="w-full rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-200">設定をリセット</button>
               </div>
-              <div class="flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-slate-100 md:col-span-2" :style="{ backgroundImage: `url('${mainSceneBackgroundUrl}')`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }">
+              <div class="flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-slate-100 md:col-span-2 order-first md:order-last" :style="{ backgroundImage: `url('${mainSceneBackgroundUrl}')`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }">
                 <div class="relative h-full w-full">
                   <div class="absolute left-0 top-0 flex h-full w-full items-center justify-center transition-transform duration-100" :style="{ transform: `translateX(${mainSceneOptions.x}%) translateY(${mainSceneOptions.y}%)` }">
                     <div x-ref="modalQrCanvas" class="flex items-center justify-center transition-transform duration-100" :style="{ transform: `scale(${mainSceneOptions.scale}) rotate(${mainSceneOptions.rotation}deg)`, width: '50%', height: '50%' }"></div>
