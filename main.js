@@ -638,6 +638,8 @@ function qrCodeGenerator() {
     previewUpdateTimeout: null,
     editingQRCodeId: null, // 編集中のQRコードID
     saveName: "", // 保存時のQRコード名
+    saveMemo: "", // 保存時のメモ
+    saveTags: "", // 保存時のタグ（カンマ区切り文字列）
     qrToShare: {}, // 共有モーダルで使うデータ
 
     // --- QRコードやアプリケーションのデータを管理する変数 ---
@@ -662,6 +664,7 @@ function qrCodeGenerator() {
     sortOrder: "desc",
     itemsPerPage: 5,
     currentPage: 1,
+    searchQuery: "", // ダッシュボードの検索フィルタ用
 
     // --- アプリケーション内で使用する固定データ ---
     presetLogos: ["ICON_EMAIL.png", "ICON_FACEBOOK.png", "ICON_INSTAGRAM.png", "ICON_TIKTOK.png", "ICON_X.png", "ICON_ZOOM.png"],
@@ -890,10 +893,24 @@ function qrCodeGenerator() {
     presetTemplateGroups: [],
 
     // --- Computed Properties (算出プロパティ) ---
+    // 検索クエリでフィルタリングされたリスト
+    get filteredQRCodes() {
+      if (!this.savedQRCodes) return [];
+      let filtered = this.savedQRCodes;
+      if (this.searchQuery.trim() !== "") {
+        const query = this.searchQuery.toLowerCase().trim();
+        filtered = filtered.filter(qr => {
+          const nameMatch = qr.name && qr.name.toLowerCase().includes(query);
+          const memoMatch = qr.memo && qr.memo.toLowerCase().includes(query);
+          const tagsMatch = qr.tags && qr.tags.some(tag => tag.toLowerCase().includes(query));
+          return nameMatch || memoMatch || tagsMatch;
+        });
+      }
+      return filtered;
+    },
     // 表示するアイテムをソート・ページネーションして計算
     get displayedItems() {
-      if (!this.savedQRCodes) return [];
-      const sorted = [...this.savedQRCodes].sort((a, b) => {
+      const sorted = [...this.filteredQRCodes].sort((a, b) => {
         let valA = a[this.sortKey];
         let valB = b[this.sortKey];
 
@@ -915,7 +932,7 @@ function qrCodeGenerator() {
     },
     // 全ページ数を計算
     get totalPages() {
-      return Math.ceil(this.savedQRCodes.length / this.itemsPerPage);
+      return Math.max(1, Math.ceil(this.filteredQRCodes.length / this.itemsPerPage));
     },
     // ページネーションに表示するページ番号の配列を計算
     get pageNumbers() {
@@ -1667,10 +1684,15 @@ function qrCodeGenerator() {
       const copiedOptions = JSON.parse(JSON.stringify(restOptions));
       copiedOptions.logo = logo;
 
+      // タグを配列に変換（カンマ区切りで分割し、前後の空白を除去、空文字をフィルタリング）
+      const tagsArray = this.saveTags ? this.saveTags.split(',').map(t => t.trim()).filter(t => t) : [];
+
       const isNew = !this.editingQRCodeId;
       const newQr = {
         id: this.editingQRCodeId || this.generateUniqueId(),
         name: this.saveName,
+        memo: this.saveMemo,
+        tags: tagsArray,
         type: this.selectedType,
         formData: JSON.parse(JSON.stringify(this.formData)),
         qrOptions: copiedOptions,
@@ -1678,7 +1700,6 @@ function qrCodeGenerator() {
         frame: JSON.parse(JSON.stringify(this.frame)),
         createdAt: originalQr ? originalQr.createdAt : new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        scans: originalQr ? originalQr.scans : Math.floor(Math.random() * 100),
         previewSvgUrl: await this.getPreviewSvgUrl(previewOptions),
       };
 
@@ -3008,6 +3029,8 @@ function qrCodeGenerator() {
     resetGenerator() {
       this.editingQRCodeId = null;
       this.saveName = "";
+      this.saveMemo = "";
+      this.saveTags = "";
       this.selectedType = "url";
       this.formData = JSON.parse(JSON.stringify(defaultFormData));
       this.resetQrOptions(false);
@@ -3154,11 +3177,27 @@ function qrCodeGenerator() {
 
       this.currentView = this.savedQRCodes.length > 0 ? "dashboard" : "generator";
     },
+    async updateInlineMemo(qr, newMemo) {
+      qr.memo = newMemo;
+      qr.updatedAt = new Date().toISOString();
+      await this.persistSavedQRCodes();
+      if (typeof setDirty === 'function') setDirty(true);
+      this.showFlashNotification("メモを更新しました。");
+    },
+    async updateInlineTags(qr, newTagsStr) {
+      qr.tags = newTagsStr.split(',').map(t => t.trim()).filter(t => t);
+      qr.updatedAt = new Date().toISOString();
+      await this.persistSavedQRCodes();
+      if (typeof setDirty === 'function') setDirty(true);
+      this.showFlashNotification("タグを更新しました。");
+    },
     editQRCode(id) {
       const qrToEdit = this.savedQRCodes.find((qr) => qr.id === id);
       if (qrToEdit) {
         this.editingQRCodeId = id;
         this.saveName = qrToEdit.name;
+        this.saveMemo = qrToEdit.memo || "";
+        this.saveTags = qrToEdit.tags ? qrToEdit.tags.join(', ') : "";
         this.selectedType = qrToEdit.type;
         this.formData = JSON.parse(JSON.stringify(qrToEdit.formData));
         this.qrOptions = JSON.parse(JSON.stringify(qrToEdit.qrOptions));
@@ -3205,8 +3244,9 @@ function qrCodeGenerator() {
 
         newQr.id = this.generateUniqueId();
         newQr.name = `${originalQr.name} (コピー)`;
+        newQr.memo = originalQr.memo || "";
+        newQr.tags = originalQr.tags ? [...originalQr.tags] : [];
         newQr.createdAt = new Date().toISOString();
-        newQr.scans = 0;
         const dataStringContext = {
           selectedType: newQr.type,
           formData: newQr.formData,

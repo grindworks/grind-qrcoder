@@ -1125,77 +1125,115 @@
 
           <div class="space-y-6">
             <div x-show="savedQRCodes.length > 0">
-              <div class="flex items-center gap-x-2">
-                <label for="itemsPerPage" class="text-sm font-medium text-slate-600">表示件数:</label>
-                <select x-model.number="itemsPerPage" @change="currentPage = 1" id="itemsPerPage" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-base md:text-sm text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20">
-                  <option value="5">5</option>
-                  <option value="10">10</option>
-                  <option value="20">20</option>
-                </select>
+              <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+                <div class="flex items-center gap-x-2">
+                  <label for="itemsPerPage" class="text-sm font-medium text-slate-600">表示件数:</label>
+                  <select x-model.number="itemsPerPage" @change="currentPage = 1" id="itemsPerPage" class="rounded-md border border-slate-300 bg-white px-3 py-2 text-base md:text-sm text-slate-700 shadow-sm focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20">
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                  </select>
+                </div>
+
+                <!-- 検索フィルター -->
+                <div class="relative w-full sm:w-64 shrink-0">
+                  <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2">
+                      <use href="icons-sprite.svg#outline-magnifying-glass"></use>
+                    </svg>
+                  </div>
+                  <input type="text" x-model="searchQuery" @input="currentPage = 1" placeholder="名前・メモ・タグで検索..." class="block w-full rounded-lg border border-slate-300 bg-white p-2 pl-9 pr-8 text-base md:text-sm text-slate-900 shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                  <button x-show="searchQuery" @click="searchQuery = ''; currentPage = 1" x-cloak class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2">
+                      <use href="icons-sprite.svg#outline-x-mark"></use>
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               <div class="hidden rounded-lg bg-slate-100 px-6 py-3 text-left text-sm font-semibold text-slate-600 md:grid md:grid-cols-12 md:gap-4">
-                <button @click="sortBy('name')" class="col-span-5 flex items-center gap-1">
+                <button @click="sortBy('name')" class="col-span-4 flex items-center gap-1">
                   <span>QRコード名</span>
                   <svg x-show="sortKey === 'name'" :class="sortOrder === 'desc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.78a.75.75 0 11-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 11-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd"></path>
                   </svg>
                 </button>
-                <button @click="sortBy('scans')" class="col-span-2 flex items-center justify-center gap-1">
-                  <span>スキャン</span>
-                  <svg x-show="sortKey === 'scans'" :class="sortOrder === 'desc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.78a.75.75 0 11-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 11-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd"></path>
-                  </svg>
-                </button>
-                <button @click="sortBy('createdAt')" class="col-span-2 flex items-center gap-1">
-                  <span>作成日</span>
-                  <svg x-show="sortKey === 'createdAt'" :class="sortOrder === 'desc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.78a.75.75 0 11-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 11-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd"></path>
-                  </svg>
-                </button>
-                <span class="col-span-3"></span>
+                <div class="col-span-4">メモ / タグ</div>
+                <div class="col-span-4 flex items-center justify-end gap-4">
+                  <button @click="sortBy('createdAt')" class="flex items-center gap-1">
+                    <span>作成日</span>
+                    <svg x-show="sortKey === 'createdAt'" :class="sortOrder === 'desc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.78a.75.75 0 11-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 11-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd"></path>
+                    </svg>
+                  </button>
+                  <div class="w-[108px]"></div>
+                </div>
               </div>
 
               <div class="space-y-4">
                 <template x-for="qr in displayedItems" :key="qr.id">
                   <div x-data="{ dropdownOpen: false }" class="relative rounded-xl bg-white shadow-md ring-1 ring-slate-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" :class="dropdownOpen ? 'z-10' : 'z-0'">
                     <div class="grid items-center gap-y-4 p-4 md:grid-cols-12 md:gap-x-4 md:p-6">
-                      <div class="col-span-12 flex items-center gap-4 md:col-span-5">
-                        <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
+                      <div class="col-span-12 flex items-center gap-4 md:col-span-4">
+                        <button @click="editQRCode(qr.id)" class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white p-1 shadow-sm transition-all hover:scale-105 hover:border-primary/50 hover:shadow-md" title="編集する">
                           <img :src="qr.previewSvgUrl" class="h-full w-full object-contain" />
-                        </div>
+                        </button>
                         <div class="min-w-0 flex-1">
                           <p class="font-semibold text-slate-800 truncate max-w-full" x-text="qr.name" :title="qr.name"></p>
                           <p class="text-sm text-slate-500" x-text="qrTypes.find(t => t.id === qr.type)?.title || '不明'"></p>
                         </div>
                       </div>
 
-                      <div class="col-span-12 flex items-center justify-between md:col-span-2 md:justify-center md:text-center">
-                        <span class="font-medium text-slate-500 md:hidden">スキャン</span>
-                        <span class="text-base font-semibold text-slate-800" x-text="qr.scans.toLocaleString()"></span>
+                      <div class="col-span-12 flex flex-col md:col-span-4 md:block" x-data="{ editingMemo: false, editingTags: false, tempMemo: qr.memo || '', tempTags: (qr.tags || []).join(', ') }">
+                        <span class="font-medium text-slate-500 md:hidden mb-2">メモ / タグ</span>
+
+                        <!-- メモのインライン編集 -->
+                        <div class="relative group" @click.outside="if(editingMemo) { updateInlineMemo(qr, tempMemo); editingMemo = false; }">
+                          <div x-show="!editingMemo" @click="editingMemo = true; tempMemo = qr.memo || ''; $nextTick(() => $refs.memoInput.focus())" class="cursor-text rounded border border-transparent hover:border-slate-200 hover:bg-slate-50 p-1 -mx-1 min-h-[1.75rem] transition-colors" title="クリックしてメモを編集">
+                            <p class="text-sm text-slate-600 line-clamp-2" x-text="qr.memo || 'メモを追加...'" :class="{'text-slate-400 italic': !qr.memo}"></p>
+                          </div>
+                          <textarea x-show="editingMemo" x-cloak x-ref="memoInput" x-model="tempMemo" @keydown.enter.prevent="updateInlineMemo(qr, tempMemo); editingMemo = false;" @keydown.escape="editingMemo = false; tempMemo = qr.memo || ''" rows="3" class="absolute -top-1 -left-1 z-10 w-[calc(100%+0.5rem)] rounded-lg border border-primary bg-white p-2 text-sm shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/20" placeholder="メモを入力... (Enterで保存)"></textarea>
+                        </div>
+
+                        <!-- タグのインライン編集 -->
+                        <div class="relative group mt-1" @click.outside="if(editingTags) { updateInlineTags(qr, tempTags); editingTags = false; }">
+                          <div x-show="!editingTags" @click="editingTags = true; tempTags = (qr.tags || []).join(', '); $nextTick(() => $refs.tagsInput.focus())" class="cursor-text flex min-h-[1.75rem] flex-wrap items-center gap-1 rounded border border-transparent hover:border-slate-200 hover:bg-slate-50 p-1 -mx-1 transition-colors" title="クリックしてタグを編集">
+                            <template x-if="!qr.tags || qr.tags.length === 0">
+                              <span class="text-[11px] text-slate-400 italic">タグを追加...</span>
+                            </template>
+                            <template x-for="tag in qr.tags" :key="tag">
+                              <span class="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary" x-text="tag"></span>
+                            </template>
+                          </div>
+                          <input type="text" x-show="editingTags" x-cloak x-ref="tagsInput" x-model="tempTags" @keydown.enter.prevent="updateInlineTags(qr, tempTags); editingTags = false;" @keydown.escape="editingTags = false; tempTags = (qr.tags || []).join(', ')" class="absolute -top-1 -left-1 z-10 w-[calc(100%+0.5rem)] rounded-lg border border-primary bg-white p-2 text-sm shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/20" placeholder="タグ1, タグ2... (Enterで保存)" />
+                        </div>
                       </div>
 
-                      <div class="col-span-12 flex items-center justify-between md:col-span-2 md:block">
-                        <span class="font-medium text-slate-500 md:hidden">作成日</span>
+                      <!-- スマホ用の作成日表示 -->
+                      <div class="col-span-12 flex items-center justify-between md:hidden">
+                        <span class="font-medium text-slate-500">作成日</span>
                         <p class="text-sm text-slate-500" x-text="new Date(qr.createdAt).toLocaleDateString()"></p>
                       </div>
 
-                      <div class="col-span-12 flex items-center justify-end gap-2 md:col-span-3">
-                        <button @click="prepareDownloadFromDashboard(qr)" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" title="ダウンロード">
-                          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
-                            <use href="icons-sprite.svg#outline-arrow-down-tray"></use>
-                          </svg>
-                        </button>
-                        <button @click="openShareModal(qr)" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" title="共有">
-                          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
-                            <use href="icons-sprite.svg#outline-share"></use>
-                          </svg>
-                        </button>
-                        <button @click="dropdownOpen = !dropdownOpen" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" title="その他">
-                          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
-                            <use href="icons-sprite.svg#outline-ellipsis-vertical"></use>
-                          </svg>
-                        </button>
+                      <div class="col-span-12 flex items-center justify-end gap-4 md:col-span-4">
+                        <p class="hidden text-sm text-slate-500 md:block whitespace-nowrap" x-text="new Date(qr.createdAt).toLocaleDateString()"></p>
+                        <div class="flex items-center justify-end gap-2">
+                          <button @click="prepareDownloadFromDashboard(qr)" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" title="ダウンロード">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
+                              <use href="icons-sprite.svg#outline-arrow-down-tray"></use>
+                            </svg>
+                          </button>
+                          <button @click="openShareModal(qr)" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" title="共有">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
+                              <use href="icons-sprite.svg#outline-share"></use>
+                            </svg>
+                          </button>
+                          <button @click="dropdownOpen = !dropdownOpen" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" title="その他">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
+                              <use href="icons-sprite.svg#outline-ellipsis-vertical"></use>
+                            </svg>
+                          </button>
+                        </div>
                       </div>
 
                       <div x-show="dropdownOpen" @click.outside="dropdownOpen = false" x-cloak x-transition class="absolute right-4 top-16 z-20 mt-2 w-48 origin-top-right rounded-xl bg-white py-2 shadow-lg ring-1 ring-black/5">
@@ -1223,6 +1261,16 @@
                 </template>
               </div>
 
+              <!-- 検索結果が0件の場合の表示 -->
+              <div x-show="displayedItems.length === 0 && searchQuery" x-cloak class="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 py-12 text-center">
+                <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <use href="icons-sprite.svg#outline-magnifying-glass"></use>
+                </svg>
+                <h3 class="mt-4 text-lg font-semibold text-slate-900">一致するQRコードが見つかりません</h3>
+                <p class="mt-2 text-sm text-slate-500">「<span x-text="searchQuery" class="font-bold"></span>」に一致する結果がありませんでした。<br>別のキーワードをお試しください。</p>
+                <button @click="searchQuery = ''; currentPage = 1" class="mt-4 rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300">検索をクリア</button>
+              </div>
+
               <nav x-show="totalPages > 1" class="flex items-center justify-between rounded-lg bg-slate-100 px-4 py-3 sm:px-6">
                 <div class="flex flex-1 justify-between sm:hidden">
                   <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1" class="relative inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">前へ</button>
@@ -1232,11 +1280,11 @@
                   <div>
                     <p class="text-sm text-slate-700">
                       全
-                      <span x-text="savedQRCodes.length"></span>
+                      <span x-text="filteredQRCodes.length"></span>
                       件中
                       <span x-text="(currentPage - 1) * itemsPerPage + 1"></span>
                       -
-                      <span x-text="Math.min(currentPage * itemsPerPage, savedQRCodes.length)"></span>
+                      <span x-text="Math.min(currentPage * itemsPerPage, filteredQRCodes.length)"></span>
                       件を表示
                     </p>
                   </div>
@@ -1322,7 +1370,11 @@
         <h3 class="text-xl font-black text-slate-900 mb-2" x-text="editingQRCodeId ? 'QRコードの変更を保存' : 'QRコードを保存'"></h3>
         <p class="text-sm text-slate-500 mb-6">管理ダッシュボードに保存し、後から編集可能にします。</p>
         <form @submit.prevent="saveToGrind(true)">
-          <input type="text" x-model="saveName" placeholder="QRコードの名前" required class="mb-6 block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+          <div class="space-y-4 mb-6">
+            <input type="text" x-model="saveName" placeholder="QRコードの名前" required class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+            <textarea x-model="saveMemo" placeholder="メモ（任意）" rows="2" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+            <input type="text" x-model="saveTags" placeholder="タグ（カンマ区切りで複数入力可・任意）" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+          </div>
           <div class="flex gap-3">
             <button type="button" @click="showSaveModal = false" class="flex-1 py-3.5 rounded-2xl bg-slate-100 font-bold text-slate-700 active:scale-95 transition-transform">キャンセル</button>
             <button type="submit" class="flex-1 py-3.5 rounded-2xl bg-primary font-bold text-white active:scale-95 transition-transform" x-text="editingQRCodeId ? '変更を保存' : '保存する'"></button>
