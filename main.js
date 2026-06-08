@@ -2564,7 +2564,7 @@ function qrCodeGenerator() {
         // 1. アイコン・緑
         {
           name: "LINE",
-          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#4cc764"/></g><image x="35" y="35" width="30" height="30" href="${iconGreenUrl}" /></svg>`,
+          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#4cc764"/></g><image x="30" y="30" width="40" height="40" href="${iconGreenUrl}" /></svg>`,
           options: {
             ...defaultQrOptions,
             errorCorrectionLevel: "H",
@@ -2577,7 +2577,7 @@ function qrCodeGenerator() {
             cornerColor: "#4cc764",
             cornerDotColor: "#4cc764",
             cornersDotStyle: "extra-rounded",
-            imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 4, crossOrigin: "anonymous" },
+            imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 6, crossOrigin: "anonymous" },
           },
         },
         // 2. 文字ロゴ・緑
