@@ -2963,6 +2963,10 @@ function qrCodeGenerator() {
       this.mainSceneOptions.y = preset.y;
       this.mainSceneOptions.rotation = preset.rotation;
       this.mainSceneBackgroundUrl = preset.backgroundUrl;
+
+      // ファイルインプットの表示をリセット
+      const fileInput = document.getElementById("scene-upload");
+      if (fileInput) fileInput.value = "";
     },
     resetSceneOptions() {
       // 古いBlob URLが存在すればメモリを解放する
@@ -2978,12 +2982,17 @@ function qrCodeGenerator() {
       };
       this.previewScene = "custom";
       this.mainSceneBackgroundUrl = "";
+
+      // ファイルインプットの表示をリセット
+      const fileInput = document.getElementById("scene-upload");
+      if (fileInput) fileInput.value = "";
     },
     handleSceneBackgroundUpload(event) {
       const file = event.target.files[0];
       if (file) {
         if (file.size > 5 * 1024 * 1024) {
           this.showFlashNotification("背景画像は5MB以下のファイルを選択してください。");
+          event.target.value = null;
           return;
         }
         // 古い Blob URL が存在する場合はメモリリークを防ぐため解放する
@@ -2995,7 +3004,6 @@ function qrCodeGenerator() {
         this.scenePresets.custom.backgroundUrl = newUrl;
         this.previewScene = "custom";
       }
-      event.target.value = null;
     },
     resetQrOptions(recordHistory = true) {
       this.qrOptions = JSON.parse(JSON.stringify(defaultQrOptions));
@@ -3423,6 +3431,9 @@ function qrCodeGenerator() {
       this.logoFileName = "";
       this.updateQrCode();
       this.saveBrandKit();
+
+      const fileInput = document.getElementById("brand-logo-upload");
+      if (fileInput) fileInput.value = "";
     },
     handleBrandLogoUpload(event) {
       const file = event.target.files[0];
@@ -3449,7 +3460,6 @@ function qrCodeGenerator() {
         this.saveBrandKit();
       };
       reader.readAsDataURL(file);
-      event.target.value = null;
     },
     saveBrandKit(showNotification = true) {
       try {

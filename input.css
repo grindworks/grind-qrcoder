@@ -4,10 +4,20 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-primary: #0f62fe;
-  --color-primary-hover: #0353e9;
-  --color-primary-50: #eff4ff;
-  --font-sans: "Inter", "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+  /* Premium Primary Color (Vibrant Blue) */
+  --color-primary: #0052ff;
+  --color-primary-hover: #0040cc;
+  --color-primary-50: #f0f5ff;
+  --color-primary-100: #e0ebff;
+  
+  /* Premium Soft Shadows */
+  --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.06);
+  --shadow-softer: 0 4px 20px -5px rgba(0, 0, 0, 0.04);
+  --shadow-glow: 0 0 24px -4px rgba(0, 82, 255, 0.3);
+  --shadow-inner-soft: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+  
+  /* Typography */
+  --font-sans: "Inter", "Noto Sans JP", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   /* ダークモード用サーフェスカラー */
   --color-dark-bg: #0b0f1a;
@@ -19,17 +29,17 @@
   --color-dark-text-secondary: #94a3b8;
 
   /* アニメーション定義 */
-  --animate-modal-in: modalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  --animate-modal-overlay: modalOverlay 0.2s ease-out forwards;
-  --animate-toast-in: toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  --animate-toast-out: toastOut 0.3s ease-in forwards;
-  --animate-glow-pulse: glowPulse 2s ease-in-out infinite;
-  --animate-fade-in: fadeIn 0.3s ease-out forwards;
-  --animate-slide-up: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  --animate-block-enter: blockEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  --animate-float: float 6s ease-in-out infinite;
-  --animate-success-flash: successFlash 0.6s ease-out;
-  --animate-ripple: ripple 0.6s ease-out;
+  --animate-modal-in: modalIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-modal-overlay: modalOverlay 0.3s ease-out forwards;
+  --animate-toast-in: toastIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-toast-out: toastOut 0.4s ease-in forwards;
+  --animate-glow-pulse: glowPulse 3s ease-in-out infinite;
+  --animate-fade-in: fadeIn 0.4s ease-out forwards;
+  --animate-slide-up: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-block-enter: blockEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-float: float 8s ease-in-out infinite;
+  --animate-success-flash: successFlash 0.8s ease-out;
+  --animate-ripple: ripple 0.8s ease-out;
 }
 
 /* 1. クラス名の抽出対象ファイルを明示的に指定 */
@@ -99,10 +109,10 @@
 @keyframes glowPulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(15, 98, 254, 0);
+    box-shadow: 0 0 0 0 rgba(0, 82, 255, 0);
   }
   50% {
-    box-shadow: 0 0 20px 4px rgba(15, 98, 254, 0.15);
+    box-shadow: 0 0 24px 8px rgba(0, 82, 255, 0.15);
   }
 }
 
