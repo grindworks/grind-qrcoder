@@ -63,7 +63,7 @@ async function decryptData(encryptedData, password) {
     const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, data);
     return new Uint8Array(decrypted);
   } catch (e) {
-    throw new Error("パスワードが間違っているか、ファイルが破損しています。");
+    throw new Error("Incorrect password or corrupted file.");
   }
 }
 
@@ -89,7 +89,7 @@ function setDirty(state) {
 
 async function processQRCoderFile(file) {
   if (file.size > 20 * 1024 * 1024) {
-    alert("ファイルサイズが大きすぎます。正しい .qrcoder ファイルを選択してください。");
+    alert("File size is too large. Please select a valid .qrcoder file.");
     return;
   }
 
@@ -115,7 +115,7 @@ async function processQRCoderFile(file) {
             if (pwInput) pwInput.value = password;
           }
         } catch (err) {
-          const msg = attempt > 0 ? "❌ パスワードが間違っています。もう一度入力してください:" : "ファイルは暗号化されています。解除パスワードを入力してください:";
+          const msg = attempt > 0 ? "❌ Incorrect password. Please try again:" : "The file is encrypted. Enter the password to decrypt:";
           password = await appPrompt(msg);
           if (password === null) return;
           attempt++;
@@ -133,17 +133,17 @@ async function processQRCoderFile(file) {
     // データ消失を防ぐ安全装置（フェイルセーフ）
     if (component.savedQRCodes && component.savedQRCodes.length > 0) {
       const shouldMerge = window.confirm(
-        "現在のダッシュボードにQRコードが保存されています。\n" +
-        "読み込んだバックアップデータを、既存のリストに「追加 (マージ)」しますか？\n\n" +
-        "[OK] = 既存のデータに追加する\n" +
-        "[キャンセル] = 上書き、または読み込みを中止する"
+        "QR codes are currently saved in the dashboard.\n" +
+        "Do you want to \"merge\" the loaded backup data with the existing list?\n\n" +
+        "[OK] = Add to existing data\n" +
+        "[Cancel] = Overwrite or cancel loading"
       );
 
       if (!shouldMerge) {
         const shouldOverwrite = window.confirm(
-          "⚠️ 警告: 現在のデータをすべて削除し、バックアップの内容で「上書き」しますか？\n\n" +
-          "[OK] = 上書きする (現在のデータは完全に消えます)\n" +
-          "[キャンセル] = 読み込みを中止する"
+          "⚠️ Warning: Do you want to delete all current data and \"overwrite\" with the backup content?\n\n" +
+          "[OK] = Overwrite (current data will be completely lost)\n" +
+          "[Cancel] = Cancel loading"
         );
 
         if (shouldOverwrite) {
@@ -172,21 +172,21 @@ async function processQRCoderFile(file) {
     await component.persistSavedQRCodes();
 
     setDirty(false);
-    component.showFlashNotification(`ファイル "${file.name}" を読み込みました`);
+    component.showFlashNotification(`Loaded file "${file.name}"`);
     component.currentView = 'dashboard';
   } catch (err) {
     console.error(err);
-    alert("ファイルの読み込みに失敗しました。ファイルが破損しているか形式が違います。");
+    alert("Failed to load the file. It may be corrupted or in an invalid format.");
   }
 }
 
 async function loadQRCoderFile() {
   const app = window.$app;
   if (app && app.hasUnsavedEdit) {
-    if (!confirm("エディタに未保存の変更があります。破棄してファイルを読み込みますか？")) return;
+    if (!confirm("You have unsaved changes in the editor. Discard them and load the file?")) return;
   }
   if (isDirty) {
-    if (!confirm("未保存の変更（ダッシュボード）があります。変更を破棄して別のバックアップを読み込みますか？")) return;
+    if (!confirm("You have unsaved changes (dashboard). Discard them and load another backup?")) return;
   }
   try {
     let file;
@@ -212,7 +212,7 @@ async function loadQRCoderFile() {
   } catch (err) {
     if (err.name === 'AbortError') return; // キャンセル時は何もしない
     console.error(err);
-    alert("ファイルの読み込みに失敗しました。ファイルが破損しているか形式が違います。");
+    alert("Failed to load the file. It may be corrupted or in an invalid format.");
   }
 }
 
@@ -221,7 +221,7 @@ async function saveQRCoderFile() {
 
   // データ容量オーバー時は、ショートカットからの強行保存をブロック
   if (component && component.qrQuality.issues.some(i => i.id === 'capacity_error')) {
-    component.showFlashNotification("データ量が限界を超えているため保存できません。");
+    component.showFlashNotification("Cannot save because the data size exceeds the limit.");
     component.hapticFeedback('error');
     return;
   }
@@ -234,7 +234,7 @@ async function saveQRCoderFile() {
     } else {
       // 新規作成の場合は名前を付けさせるためモーダルを開き、ファイル保存は一旦中断
       component.showSaveModal = true;
-      component.showFlashNotification("まずはダッシュボードへ保存するための名前を入力してください。");
+      component.showFlashNotification("First, enter a name to save it to the dashboard.");
       return;
     }
   }
@@ -312,18 +312,18 @@ async function saveQRCoderFile() {
     setDirty(false);
 
     if (component && component.hapticFeedback) component.hapticFeedback('success');
-    component.showFlashNotification("バックアップを保存しました。");
+    component.showFlashNotification("Backup saved.");
   } catch (err) {
     console.error(err);
-    alert("保存に失敗しました。");
+    alert("Failed to save.");
   }
 }
 
 let isCommandPaletteOpen = false;
 let selectedCommandIndex = 0;
 const commandsList = [
-  { id: "save", icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>', title: "バックアップを保存 (Save)", action: () => saveQRCoderFile() },
-  { id: "open", icon: '<svg class="w-5 h-5"><use href="icons-sprite.svg#outline-folder"></use></svg>', title: "バックアップを読み込む (Open)", action: () => loadQRCoderFile() }
+  { id: "save", icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>', title: "Save Backup", action: () => saveQRCoderFile() },
+  { id: "open", icon: '<svg class="w-5 h-5"><use href="icons-sprite.svg#outline-folder"></use></svg>', title: "Open Backup", action: () => loadQRCoderFile() }
 ];
 
 function togglePasswordVisibility() {
@@ -389,7 +389,7 @@ function renderCommandList(query = "") {
   const filtered = commandsList.filter(c => terms.every(term => c.title.toLowerCase().includes(term) || c.id.includes(term)));
 
   if (filtered.length === 0) {
-    list.innerHTML = `<div class="px-4 py-8 text-center text-slate-400 text-sm">見つかりませんでした</div>`;
+    list.innerHTML = `<div class="px-4 py-8 text-center text-slate-400 text-sm">No results found</div>`;
     return;
   }
 
@@ -490,8 +490,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // 画面外への誤ドロップによる強制画面遷移（データロスト）を防止
-  window.addEventListener("dragover", (e) => e.preventDefault());
-  window.addEventListener("drop", (e) => e.preventDefault());
+  window.addEventListener("dragover", (e) => {
+    e.preventDefault();
+  });
+  window.addEventListener("drop", (e) => {
+    e.preventDefault();
+    // もしドラッグされたファイルが .qrcoder なら、魔法のように自動インポートを開始
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      if (file.name.endsWith('.qrcoder')) {
+        fileHandle = { name: file.name };
+        if (window.$app && typeof processQRCoderFile === 'function') {
+          processQRCoderFile(file);
+        }
+      }
+    }
+  });
 
   // PWA File Handling API (ファイルをダブルクリックして起動した時の処理)
   if ('launchQueue' in window) {
@@ -517,11 +531,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }
           } else if (attempts > maxAttempts) {
             clearInterval(checkAppReady);
-            console.error("アプリの初期化タイムアウトにより、ファイルの読み込みを中止しました。");
+            console.error("Failed to auto-load file due to timeout.");
           }
         }, 100);
       } catch (e) {
-        console.error("ファイルの自動ロードに失敗しました", e);
+        console.error("Failed to auto-load file", e);
       }
     });
   }
@@ -671,62 +685,62 @@ function qrCodeGenerator() {
     qrTypes: [
       {
         id: "url",
-        title: "ウェブサイトURL",
-        description: "任意のウェブサイトにリンクします。",
+        title: "Website URL",
+        description: "Link to any website.",
         icon: "link",
       },
       {
         id: "text",
-        title: "テキスト",
-        description: "プレーンテキストを表示します。",
+        title: "Text",
+        description: "Display plain text.",
         icon: "bars-3-bottom-left",
       },
       {
         id: "wifi",
         title: "Wi-Fi",
-        description: "ネットワークに接続します。",
+        description: "Connect to a network.",
         icon: "wifi",
       },
       {
         id: "vcard",
-        title: "連絡先 (vCard)",
-        description: "連絡先情報を共有します。",
+        title: "Contact (vCard)",
+        description: "Share contact information.",
         icon: "user-circle",
       },
       {
         id: "event",
-        title: "カレンダー",
-        description: "イベントを共有します。",
+        title: "Calendar",
+        description: "Share an event.",
         icon: "calendar-days",
       },
       {
         id: "email",
-        title: "Eメール",
-        description: "メール作成を促します。",
+        title: "Email",
+        description: "Prompt email creation.",
         icon: "envelope",
       },
       {
         id: "geo",
-        title: "位置情報",
-        description: "特定の場所を共有します。",
+        title: "Location",
+        description: "Share a specific location.",
         icon: "map-pin",
       },
       {
         id: "sns",
         title: "SNS",
-        description: "SNSプロフィールを共有します。",
+        description: "Share SNS profile.",
         icon: "share",
       },
       {
         id: "images",
-        title: "画像ギャラリー",
-        description: "Googleフォト等の共有アルバムリンクをQRコード化します。",
+        title: "Image Gallery",
+        description: "Convert shared album links from Google Photos etc. into a QR code.",
         icon: "photo",
       },
       {
         id: "video",
-        title: "ビデオ",
-        description: "YouTubeなどの動画共有リンクをQRコード化します。",
+        title: "Video",
+        description: "Convert video sharing links from YouTube etc. into a QR code.",
         icon: "video-camera",
       },
     ],
@@ -745,17 +759,17 @@ function qrCodeGenerator() {
     frameStyles: [
       {
         id: "scan-me-1",
-        name: "テキスト",
+        name: "Text",
         preview: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDE4MCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjE4MCIgaGVpZ2h0PSIxODAiIGZpbGw9IiNmMmY0ZjkiLz48dGV4dCB4PSI5MCIgeT0iMTkwIiBkb21pbmFudC1iYXNlbGluZT0iY2VudHJhbCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjMWUyOTNiIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5DVEFURVhUPC90ZXh0Pjwvc3ZnPg==",
       },
       {
         id: "scan-me-2",
-        name: "ボックス",
+        name: "Box",
         preview: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjIyMCIgdmlld0JveD0iMCAwIDE4MCAyMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjE4MCIgaGVpZ2h0PSIxODAiIGZpbGw9IiNmMmY0ZjkiLz48cmVjdCB4PSIzMCIgeT0iMTgwIiB3aWR0aD0iMTIwIiBoZWlnaHQ9IjMwIiByeD0iOCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjMWUyOTNiIiBzdHJva2Utd2lkdGg9IjIiLz48dGV4dCB4PSI5MCIgeT0iMTk1IiBkb21pbmFudC1iYXNlbGluZT0iY2VudHJhbCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjMWUyOTNiIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5DVEFURVhUPC90ZXh0Pjwvc3ZnPg==",
       },
       {
         id: "scan-me-3",
-        name: "背景付き",
+        name: "With Background",
         preview: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjIyMCIgdmlld0JveD0iMCAwIDE4MCAyMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjE4MCIgaGVpZ2h0PSIxODAiIGZpbGw9IiNmMmY0ZjkiLz48cmVjdCB4PSIwIiB5PSIxODAiIHdpZHRoPSIxODAiIGhlaWdodD0iNDAiIGZpbGw9IiMxZTI5M2IiLz48dGV4dCB4PSI5MCIgeT0iMjAwIiBkb21pbmFudC1iYXNlbGluZT0iY2VudHJhbCIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTYiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSIjRkZGIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIj5DVEFURVhUPC90ZXh0Pjwvc3ZnPg==",
       },
     ],
@@ -788,103 +802,103 @@ function qrCodeGenerator() {
         x: 0,
         y: 0,
         rotation: 0,
-        backgroundUrl: `data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3e%3crect width='380' height='380' x='10' y='10' fill='%23f1f5f9' stroke='%239ca3af' stroke-width='2' stroke-dasharray='8 8' rx='15'/%3e%3ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='20px' fill='%2364748b'%3eここに写真をアップロード%3c/text%3e%3c/svg%3e`,
+        backgroundUrl: `data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3e%3crect width='380' height='380' x='10' y='10' fill='%23f1f5f9' stroke='%239ca3af' stroke-width='2' stroke-dasharray='8 8' rx='15'/%3e%3ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='20px' fill='%2364748b'%3eUpload Photo Here%3c/text%3e%3c/svg%3e`,
       },
     },
     dotStyles: [
       {
         id: "square",
-        name: "四角",
+        name: "Square",
         svg: '<svg width="32" height="32" viewBox="0 0 100 100"><rect width="100" height="100" fill="currentColor"/></svg>',
       },
       {
         id: "rounded",
-        name: "角丸",
+        name: "Rounded",
         svg: '<svg width="32" height="32" viewBox="0 0 100 100"><rect width="100" height="100" rx="30" fill="currentColor"/></svg>',
       },
       {
         id: "dots",
-        name: "ドット",
+        name: "Dots",
         svg: '<svg width="32" height="32" viewBox="0 0 100 100"><circle cx="50" cy="50" r="50" fill="currentColor"/></svg>',
       },
       {
         id: "classy",
-        name: "クラシック",
+        name: "Classy",
         svg: '<svg width="42" height="42" viewBox="0 0 100 100"><path d="M50 0A50 50 0 0 0 0 50A50 50 0 0 0 50 100A50 50 0 0 0 100 50A50 50 0 0 0 50 0M50 15A35 35 0 0 1 85 50A35 35 0 0 1 50 85A35 35 0 0 1 15 50A35 35 0 0 1 50 15" fill-rule="evenodd" fill="currentColor"/></svg>',
       },
       {
         id: "classy-rounded",
-        name: "クラシック(丸)",
+        name: "Classy (Rounded)",
         svg: '<svg width="42" height="42" viewBox="0 0 100 100"><path d="M50 0A50 50 0 0 0 0 50A50 50 0 0 0 50 100A50 50 0 0 0 100 50A50 50 0 0 0 50 0M50 25A25 25 0 0 1 75 50A25 25 0 0 1 50 75A25 25 0 0 1 25 50A25 25 0 0 1 50 25" fill-rule="evenodd" fill="currentColor"/></svg>',
       },
       {
         id: "extra-rounded",
-        name: "丸",
+        name: "Extra Rounded",
         svg: '<svg width="32" height="32" viewBox="0 0 100 100"><rect width="100" height="100" rx="50" fill="currentColor"/></svg>',
       },
     ],
     cornerStyles: [
       {
         id: "square",
-        name: "四角",
+        name: "Square",
         svg: '<svg width="32" height="32" viewBox="0 0 100 100"><rect width="90" height="90" x="5" y="5" stroke-width="10" stroke="currentColor" fill="none"/></svg>',
       },
       {
         id: "dot",
-        name: "ドット",
+        name: "Dot",
         svg: '<svg width="32" height="32" viewBox="0 0 100 100"><rect width="90" height="90" x="5" y="5" stroke-width="10" stroke="currentColor" fill="none" rx="45"/></svg>',
       },
       {
         id: "extra-rounded",
-        name: "丸",
+        name: "Rounded",
         svg: '<svg width="32" height="32" viewBox="0 0 100 100"><rect width="90" height="90" x="5" y="5" stroke-width="10" stroke="currentColor" fill="none" rx="25"/></svg>',
       },
     ],
     cornerDotStyles: [
       {
         id: "square",
-        name: "四角",
+        name: "Square",
         svg: '<svg width="32" height="32" viewBox="0 0 100 100"><rect width="50" height="50" x="25" y="25" fill="currentColor"/></svg>',
       },
       {
         id: "extra-rounded",
-        name: "角丸",
+        name: "Rounded",
         svg: '<svg width="32" height="32" viewBox="0 0 100 100"><rect width="50" height="50" x="25" y="25" rx="15" fill="currentColor"/></svg>',
       },
       {
         id: "dot",
-        name: "ドット",
+        name: "Dot",
         svg: '<svg width="32" height="32" viewBox="0 0 100 100"><circle cx="50" cy="50" r="25" fill="currentColor"/></svg>',
       },
     ],
     colorPalettes: [
       {
-        name: "標準",
+        name: "Default",
         fg: "#000000",
         bg: "#ffffff",
       },
       {
-        name: "スレート",
+        name: "Slate",
         fg: "#475569",
         bg: "#ffffff",
       },
       {
-        name: "ダーク",
+        name: "Dark",
         fg: "#ffffff",
         bg: "#1e293b",
       },
       {
-        name: "インディゴ",
+        name: "Indigo",
         fg: "#3c366b",
         bg: "#f5f3ff",
       },
       {
-        name: "ローズ",
+        name: "Rose",
         fg: "#9f1239",
         bg: "#fff1f2",
       },
       {
-        name: "グリーン",
+        name: "Green",
         fg: "#065f46",
         bg: "#ecfdf5",
       },
@@ -922,7 +936,7 @@ function qrCodeGenerator() {
 
         let comparison = 0;
         if (typeof valA === 'string' && typeof valB === 'string') {
-          comparison = valA.localeCompare(valB, 'ja', { numeric: true });
+          comparison = valA.localeCompare(valB, 'en', { numeric: true });
         } else {
           if (valA > valB) comparison = 1;
           else if (valA < valB) comparison = -1;
@@ -1115,7 +1129,7 @@ function qrCodeGenerator() {
 
       // --- 過去のバグで保存された無効なロゴ（相対パスなど）を除外してエラーを防ぐ ---
       if (this.qrOptions.logo && !this.qrOptions.logo.startsWith("data:")) {
-        console.warn("無効なロゴを検出したため除外しました:", this.qrOptions.logo);
+        console.warn("Excluded invalid logo detected:", this.qrOptions.logo);
         this.qrOptions.logo = "";
         this.logoFileName = "";
       }
@@ -1169,7 +1183,7 @@ function qrCodeGenerator() {
         this.qrQuality.issues.push({
           id: 'capacity_error',
           status: "bad",
-          message: "データ量がQRコードの限界を超えています。テキストを減らすか、動的QR（短縮URL）をご利用ください。"
+          message: "Data size exceeds QR code limits. Reduce text or use a dynamic QR (short URL)."
         });
         this.hapticFeedback('error');
         return;
@@ -1244,12 +1258,12 @@ function qrCodeGenerator() {
       const file = event.target.files[0];
       if (!file) return;
       if (file.type === "image/svg+xml" && file.size > 500 * 1024) {
-        this.showFlashNotification("SVGロゴは複雑すぎると処理が重くなるため、500KB以下のファイルを選択してください。");
+        this.showFlashNotification("SVG logos can be heavy to process if too complex. Please select a file smaller than 500KB.");
         event.target.value = "";
         return;
       }
       if (file.size > 2 * 1024 * 1024) {
-        this.showFlashNotification("ロゴ画像は2MB以下のファイルを選択してください。");
+        this.showFlashNotification("Please select a logo image smaller than 2MB.");
         return;
       }
       this.logoFileName = file.name;
@@ -1258,7 +1272,7 @@ function qrCodeGenerator() {
         this.qrOptions.logo = e.target.result;
         if (["L", "M"].includes(this.qrOptions.errorCorrectionLevel)) {
           this.qrOptions.errorCorrectionLevel = "H";
-          this.showFlashNotification("ロゴの読み取り精度を保つため、誤り訂正レベルを「最高」に設定しました。");
+          this.showFlashNotification("Set Error Correction Level to 'High' to maintain logo readability.");
         }
         this.updateQrCode();
       };
@@ -1272,7 +1286,7 @@ function qrCodeGenerator() {
       if (!this.qrCodeInstance) return;
 
       if (!window.ClipboardItem) {
-        this.showFlashNotification("お使いのブラウザは画像のコピーに対応していません。ダウンロードをご利用ください。");
+        this.showFlashNotification("Your browser does not support copying images. Please use download.");
         return;
       }
 
@@ -1375,7 +1389,7 @@ function qrCodeGenerator() {
                   continue; // SVGのインライン化に成功した場合はここで次のループへ
                 }
               } catch (e) {
-                console.warn("SVGのフルベクター展開に失敗しました。フォールバックします。", e);
+                console.warn("Failed to inline vector SVG. Falling back.", e);
               }
             }
 
@@ -1429,14 +1443,14 @@ function qrCodeGenerator() {
         });
         await navigator.clipboard.write([clipboardItem]);
         if (hasInvalidImage) {
-          this.showFlashNotification("無効なロゴを除外して画像をクリップボードにコピーしました。");
+          this.showFlashNotification("Excluded an invalid logo and copied the image to the clipboard.");
         } else {
-          this.showFlashNotification("画像をクリップボードにコピーしました！");
+          this.showFlashNotification("Copied the image to the clipboard!");
         }
         this.hapticFeedback('success');
       } catch (err) {
-        console.error("コピーに失敗しました", err);
-        this.showFlashNotification("画像の生成に失敗しました。");
+        console.error("Copy failed", err);
+        this.showFlashNotification("Failed to generate image.");
       }
     },
 
@@ -1549,7 +1563,7 @@ function qrCodeGenerator() {
                   continue; // SVGのインライン化に成功した場合はここで次のループへ
                 }
               } catch (e) {
-                console.warn("SVGのフルベクター展開に失敗しました。フォールバックします。", e);
+                console.warn("Failed to inline vector SVG. Falling back.", e);
               }
             }
 
@@ -1612,7 +1626,7 @@ function qrCodeGenerator() {
           } catch (err) {
             if (err.name !== "AbortError") {
               console.error("Save cancelled or failed.", err);
-              this.showFlashNotification("画像の保存に失敗しました。");
+              this.showFlashNotification("Failed to save the image.");
             }
             return; // ユーザーがキャンセルした場合は中止
           }
@@ -1632,14 +1646,14 @@ function qrCodeGenerator() {
 
         this.showDownloadModal = false;
         if (hasInvalidImage) {
-          this.showFlashNotification("無効なロゴを除外してダウンロードしました。");
+          this.showFlashNotification("Downloaded excluding an invalid logo.");
         } else {
-          this.showFlashNotification("ダウンロードしました。");
+          this.showFlashNotification("Downloaded successfully.");
         }
         this.hapticFeedback('success');
       } catch (err) {
-        console.error("ダウンロードに失敗しました", err);
-        this.showFlashNotification("画像の生成に失敗しました。");
+        console.error("Download failed", err);
+        this.showFlashNotification("Failed to generate image.");
       } finally {
         if (svgBlobUrl) setTimeout(() => URL.revokeObjectURL(svgBlobUrl), 100);
       }
@@ -1652,7 +1666,7 @@ function qrCodeGenerator() {
       const conflictingQr = this.savedQRCodes.find((qr) => qr.name.trim() === this.saveName.trim() && qr.id !== this.editingQRCodeId);
 
       if (conflictingQr) {
-        const isConfirmed = window.confirm("同じ名前のQRコードが既に存在します。上書きしてよろしいですか？");
+        const isConfirmed = window.confirm("A QR code with the same name already exists. Do you want to overwrite it?");
         if (!isConfirmed) {
           return;
         }
@@ -1713,11 +1727,11 @@ function qrCodeGenerator() {
         } else {
           this.savedQRCodes.unshift(newQr);
         }
-        this.showFlashNotification("QRコードの設定を更新しました。");
+        this.showFlashNotification("QR code settings updated.");
       } else {
         this.savedQRCodes.unshift(newQr);
         this.editingQRCodeId = newQr.id; // 新規保存からシームレスに編集モードへ移行
-        this.showFlashNotification("QRコードを保存しました。");
+        this.showFlashNotification("QR code saved.");
         this.hapticFeedback('success');
         // 保存した名前をダウンロード時のデフォルトファイル名にも同期する
         this.download.fileName = this.saveName;
@@ -1758,7 +1772,7 @@ function qrCodeGenerator() {
             return String(str).replace(/([\\;:,])/g, "\\$1");
           };
           if (ssid) {
-            const encType = encryption === "WPA/WPA2" ? "WPA" : (encryption === "なし" ? "nopass" : encryption);
+            const encType = encryption === "WPA/WPA2" ? "WPA" : (encryption === "None" ? "nopass" : encryption);
             data = `WIFI:T:${encType};S:${escapeWifiStr(ssid)};P:${escapeWifiStr(password)};;`;
           }
           break;
@@ -1786,7 +1800,14 @@ function qrCodeGenerator() {
           break;
         case "event":
           const { summary, location, start, end, description } = this.formData.event;
-          const formatDT = (dt) => (dt ? dt.replace(/[-:]/g, "") + "00" : "");
+          const formatDT = (dt) => {
+            if (!dt) return "";
+            let clean = String(dt).replace(/[-:]/g, "");
+            if (clean.length === 13) {
+              clean += "00";
+            }
+            return clean.substring(0, 15);
+          };
           const escapeICal = (str) => {
             if (!str) return "";
             return String(str).replace(/[\\;,]/g, "\\$&").replace(/\r?\n/g, "\\n");
@@ -1929,20 +1950,20 @@ function qrCodeGenerator() {
       if (invalidColor) {
         this.qrQuality.issues.push({
           status: "bad",
-          message: "無効な色コードです。",
+          message: "Invalid color code.",
         });
         score -= 50;
       } else {
         if (minContrast < 3) {
           this.qrQuality.issues.push({
             status: "bad",
-            message: `コントラスト比が低すぎ (${minContrast.toFixed(1)}:1)`,
+            message: `Contrast ratio is too low (${minContrast.toFixed(1)}:1)`,
           });
           score -= 50;
         } else if (minContrast < 4.5) {
           this.qrQuality.issues.push({
             status: "warning",
-            message: `コントラスト比が低め (${minContrast.toFixed(1)}:1)`,
+            message: `Contrast ratio is slightly low (${minContrast.toFixed(1)}:1)`,
           });
           score -= 25;
         }
@@ -1965,7 +1986,7 @@ function qrCodeGenerator() {
         if (isNegative) {
           this.qrQuality.issues.push({
             status: "bad",
-            message: "背景よりドットが明るい「明暗逆転」になっています。多くのリーダーで読み取れません。",
+            message: "Dark-on-light color inversion. Most readers cannot scan this.",
             // グラデーション時は自動スワップでロジックが破綻するためボタンを非表示にする
             action: this.qrOptions.colorType === "single" ? () => {
               // 背景色と前景色のスワップ（反転）
@@ -1986,12 +2007,12 @@ function qrCodeGenerator() {
       if (currentDataStr.length > 100) {
         this.qrQuality.issues.push({
           status: "warning",
-          message: `データ量が多いためドットが細かくなっています。読み取り環境にご注意ください。`,
+          message: `Data size is large, making dots very fine. Ensure a good scanning environment.`,
           // ロゴが設定されていない、かつ訂正レベルがL（低）でない場合のみ、自動修正を提案
           action: (!this.qrOptions.logo && this.qrOptions.errorCorrectionLevel !== "L") ? () => {
             this.qrOptions.errorCorrectionLevel = "L";
             this.updateQrCode();
-            this.showFlashNotification("ドットを大きくするため、誤り訂正レベルを「低」に変更しました。");
+            this.showFlashNotification("Changed error correction to 'Low' to enlarge dots.");
           } : null
         });
         score -= 15;
@@ -2000,7 +2021,7 @@ function qrCodeGenerator() {
       if (!this.includeQuietZone) {
         this.qrQuality.issues.push({
           status: "warning",
-          message: "外側の余白がありません。印刷時に注意が必要です。",
+          message: "No outer margin. Be careful when printing.",
         });
         score -= 20;
       }
@@ -2011,7 +2032,7 @@ function qrCodeGenerator() {
         if (this.qrOptions.errorCorrectionLevel !== "H") {
           this.qrQuality.issues.push({
             status: "warning",
-            message: `ロゴ使用時は訂正レベル「最高」を推奨`,
+            message: `'High' error correction recommended when using a logo.`,
             action: () => {
               this.qrOptions.errorCorrectionLevel = "H";
               this.updateQrCode();
@@ -2032,7 +2053,7 @@ function qrCodeGenerator() {
         if (totalCoverageRatio > 0.45) {
           this.qrQuality.issues.push({
             status: "warning",
-            message: "ロゴと余白の合計範囲が大きすぎます。読み取りエラーの原因になります。",
+            message: "Logo and margin area is too large. May cause scanning errors.",
             action: () => {
               // 改善アクション：サイズと余白の両方を少し小さくする
               this.qrOptions.imageOptions.imageSize = Math.max(0.2, this.qrOptions.imageOptions.imageSize - 0.1);
@@ -2047,7 +2068,7 @@ function qrCodeGenerator() {
         if (this.qrOptions.imageOptions.margin < 2) {
           this.qrQuality.issues.push({
             status: "warning",
-            message: "ロゴの余白が狭すぎます。ドットと同化する恐れがあります。",
+            message: "Logo margin is too narrow. It might blend with the dots.",
             action: () => {
               this.qrOptions.imageOptions.margin = 4;
               this.updateQrCode();
@@ -2057,7 +2078,7 @@ function qrCodeGenerator() {
         } else if (this.qrOptions.imageOptions.margin > 18) {
           this.qrQuality.issues.push({
             status: "warning",
-            message: "ロゴの余白が広すぎます。データが欠損する恐れがあります。",
+            message: "Logo margin is too wide. Data might be lost.",
           });
           score -= 10;
         }
@@ -2128,73 +2149,37 @@ function qrCodeGenerator() {
       // 基本のテンプレート群
       const basicTemplates = [
         {
-          name: "シンプル",
+          name: "Simple", // 1
           preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><rect x="10" y="10" width="80" height="80" rx="8" fill="#000"/></svg>`,
           options: { ...defaultQrOptions, colorType: "single", foregroundColor: "#000000", backgroundColor: "#ffffff", dotsStyle: "rounded", cornersStyle: "extra-rounded", cornerColor: "#000000", cornerDotColor: "#000000" },
         },
         {
-          name: "モダン",
+          name: "Minimal", // 2
+          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#ffffff"/><rect x="15" y="15" width="70" height="70" rx="10" fill="#64748b"/></svg>`,
+          options: { ...defaultQrOptions, colorType: "single", foregroundColor: "#64748b", cornerColor: "#64748b", cornerDotColor: "#64748b", backgroundColor: "#ffffff", dotsStyle: "rounded", cornersStyle: "extra-rounded", cornersDotStyle: "square" },
+        },
+        {
+          name: "Modern", // 3
           preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><circle cx="50" cy="50" r="40" fill="#4338CA"/></svg>`,
           options: { ...defaultQrOptions, colorType: "single", foregroundColor: "#4338CA", cornerColor: "#4338CA", cornerDotColor: "#4338CA", backgroundColor: "#ffffff", dotsStyle: "dots", cornersStyle: "dot", cornersDotStyle: "dot" },
         },
         {
-          name: "エレガント",
+          name: "Elegant",
           preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#F1F5F9"/><path d="M50 10 A 40 40 0 0 1 90 50 A 40 40 0 0 1 50 90 A 40 40 0 0 1 10 50 A 40 40 0 0 1 50 10 M50 25 A 25 25 0 0 0 25 50 A 25 25 0 0 0 50 75 A 25 25 0 0 0 75 50 A 25 25 0 0 0 50 25" fill="#1F2937"/></svg>`,
           options: { ...defaultQrOptions, colorType: "single", foregroundColor: "#1F2937", cornerColor: "#1F2937", cornerDotColor: "#1F2937", backgroundColor: "#F1F5F9", dotsStyle: "classy", cornersStyle: "square" },
         },
         {
-          name: "ダーク",
+          name: "Dark", // 5
           preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#1e293b"/><rect x="10" y="10" width="80" height="80" rx="8" fill="#E2E8F0"/></svg>`,
           options: { ...defaultQrOptions, colorType: "single", foregroundColor: "#E2E8F0", cornerColor: "#E2E8F0", cornerDotColor: "#E2E8F0", backgroundColor: "#1e293b", dotsStyle: "rounded", cornersStyle: "extra-rounded" },
         },
         {
-          name: "ポップ",
+          name: "Pop", // 6
           preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#FCE7F3"/><circle cx="50" cy="50" r="40" fill="#DB2777"/></svg>`,
           options: { ...defaultQrOptions, colorType: "single", foregroundColor: "#DB2777", cornerColor: "#DB2777", cornerDotColor: "#DB2777", backgroundColor: "#FCE7F3", dotsStyle: "extra-rounded", cornersStyle: "dot", cornersDotStyle: "dot" },
         },
         {
-          name: "オーガニック",
-          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#F0FDF4"/><rect x="15" y="15" width="70" height="70" rx="35" fill="#15803D"/></svg>`,
-          options: { ...defaultQrOptions, colorType: "single", foregroundColor: "#15803D", cornerColor: "#15803D", cornerDotColor: "#15803D", backgroundColor: "#F0FDF4", dotsStyle: "rounded", cornersStyle: "dot", cornersDotStyle: "dot" },
-        },
-        {
-          name: "テクノ",
-          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g-techno" gradientTransform="rotate(45)"><stop offset="0%" stop-color="#2563EB"/><stop offset="100%" stop-color="#9333EA"/></linearGradient></defs><rect width="100" height="100" fill="#111827"/><rect x="10" y="10" width="80" height="80" fill="url(#g-techno)"/></svg>`,
-          options: {
-            ...defaultQrOptions,
-            colorType: "gradient",
-            gradient: {
-              type: "linear",
-              rotation: "45",
-              color1: "#2563EB",
-              color2: "#9333EA",
-            },
-            backgroundColor: "#111827",
-            dotsStyle: "square",
-            cornersStyle: "square",
-            cornersDotStyle: "square",
-          },
-        },
-        {
-          name: "ラグジュアリー",
-          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g-luxury" gradientTransform="rotate(45)"><stop offset="0%" stop-color="#FBBF24"/><stop offset="100%" stop-color="#D97706"/></linearGradient></defs><rect width="100" height="100" fill="#FFFBEB"/><path d="M50 10 A 40 40 0 0 1 90 50 A 40 40 0 0 1 50 90 A 40 40 0 0 1 10 50 A 40 40 0 0 1 50 10 M50 25 A 25 25 0 0 0 25 50 A 25 25 0 0 0 50 75 A 25 25 0 0 0 75 50 A 25 25 0 0 0 50 25" fill="url(#g-luxury)"/></svg>`,
-          options: {
-            ...defaultQrOptions,
-            colorType: "gradient",
-            gradient: {
-              type: "linear",
-              rotation: "45",
-              color1: "#FBBF24",
-              color2: "#D97706",
-            },
-            backgroundColor: "#FFFBEB",
-            dotsStyle: "classy-rounded",
-            cornersStyle: "extra-rounded",
-            cornersDotStyle: "dot",
-          },
-        },
-        {
-          name: "サンセット",
+          name: "Sunset", // 7
           preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g-sunset" gradientTransform="rotate(135)"><stop offset="0%" stop-color="#f43f5e"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient></defs><rect width="100" height="100" fill="#fff7ed"/><rect x="10" y="10" width="80" height="80" rx="20" fill="url(#g-sunset)"/></svg>`,
           options: {
             ...defaultQrOptions,
@@ -2212,12 +2197,7 @@ function qrCodeGenerator() {
           },
         },
         {
-          name: "ミニマル",
-          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#ffffff"/><rect x="15" y="15" width="70" height="70" rx="10" fill="#64748b"/></svg>`,
-          options: { ...defaultQrOptions, colorType: "single", foregroundColor: "#64748b", cornerColor: "#64748b", cornerDotColor: "#64748b", backgroundColor: "#ffffff", dotsStyle: "rounded", cornersStyle: "extra-rounded", cornersDotStyle: "square" },
-        },
-        {
-          name: "オーシャン",
+          name: "Ocean", // 8
           preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g-ocean" gradientTransform="rotate(90)"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect width="100" height="100" fill="#ecfeff"/><path d="M50 10 A 40 40 0 0 1 90 50 A 40 40 0 0 1 50 90 A 40 40 0 0 1 10 50 A 40 40 0 0 1 50 10 M50 25 A 25 25 0 0 0 25 50 A 25 25 0 0 0 50 75 A 25 25 0 0 0 75 50 A 25 25 0 0 0 50 25" fill="url(#g-ocean)"/></svg>`,
           options: {
             ...defaultQrOptions,
@@ -2235,7 +2215,25 @@ function qrCodeGenerator() {
           },
         },
         {
-          name: "サイバーパンク",
+          name: "Techno", // 9
+          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g-techno" gradientTransform="rotate(45)"><stop offset="0%" stop-color="#2563EB"/><stop offset="100%" stop-color="#9333EA"/></linearGradient></defs><rect width="100" height="100" fill="#111827"/><rect x="10" y="10" width="80" height="80" fill="url(#g-techno)"/></svg>`,
+          options: {
+            ...defaultQrOptions,
+            colorType: "gradient",
+            gradient: {
+              type: "linear",
+              rotation: "45",
+              color1: "#2563EB",
+              color2: "#9333EA",
+            },
+            backgroundColor: "#111827",
+            dotsStyle: "square",
+            cornersStyle: "square",
+            cornersDotStyle: "square",
+          },
+        },
+        {
+          name: "Cyberpunk", // 10
           preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g-cyber" gradientTransform="rotate(45)"><stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#db2777"/></linearGradient></defs><rect width="100" height="100" fill="#0f172a"/><circle cx="50" cy="50" r="40" fill="url(#g-cyber)"/></svg>`,
           options: {
             ...defaultQrOptions,
@@ -2249,6 +2247,29 @@ function qrCodeGenerator() {
             backgroundColor: "#0f172a",
             dotsStyle: "dots",
             cornersStyle: "dot",
+            cornersDotStyle: "dot",
+          },
+        },
+        {
+          name: "Organic", // 11
+          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#F0FDF4"/><rect x="15" y="15" width="70" height="70" rx="35" fill="#15803D"/></svg>`,
+          options: { ...defaultQrOptions, colorType: "single", foregroundColor: "#15803D", cornerColor: "#15803D", cornerDotColor: "#15803D", backgroundColor: "#F0FDF4", dotsStyle: "rounded", cornersStyle: "dot", cornersDotStyle: "dot" },
+        },
+        {
+          name: "Luxury", // 12
+          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g-luxury" gradientTransform="rotate(45)"><stop offset="0%" stop-color="#FBBF24"/><stop offset="100%" stop-color="#D97706"/></linearGradient></defs><rect width="100" height="100" fill="#FFFBEB"/><path d="M50 10 A 40 40 0 0 1 90 50 A 40 40 0 0 1 50 90 A 40 40 0 0 1 10 50 A 40 40 0 0 1 50 10 M50 25 A 25 25 0 0 0 25 50 A 25 25 0 0 0 50 75 A 25 25 0 0 0 75 50 A 25 25 0 0 0 50 25" fill="url(#g-luxury)"/></svg>`,
+          options: {
+            ...defaultQrOptions,
+            colorType: "gradient",
+            gradient: {
+              type: "linear",
+              rotation: "45",
+              color1: "#FBBF24",
+              color2: "#D97706",
+            },
+            backgroundColor: "#FFFBEB",
+            dotsStyle: "classy-rounded",
+            cornersStyle: "extra-rounded",
             cornersDotStyle: "dot",
           },
         },
@@ -2938,7 +2959,7 @@ function qrCodeGenerator() {
         },
         // 2. 文字ロゴ・緑
         {
-          name: "LINE文字",
+          name: "LINE (Text)",
           preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#4cc764"/></g><image x="20" y="40" width="60" height="20" href="${textGreenUrl}" /></svg>`,
           options: {
             ...defaultQrOptions,
@@ -2961,49 +2982,49 @@ function qrCodeGenerator() {
       // カテゴリごとにテンプレートをグループ化
       this.presetTemplateGroups = [
         {
-          name: "スタイル・パターン",
+          name: "Styles & Patterns",
           templates: basicTemplates
         },
         {
-          name: "SNS・コミュニケーション",
+          name: "SNS & Communication",
           templates: [
-            lineTemplates[0],
-            lineTemplates[1],
-            instagramTemplate,
-            xTemplate,
             facebookTemplate,
+            whatsappTemplate,
+            instagramTemplate,
             tiktokTemplate,
+            xTemplate,
+            telegramTemplate,
+            discordTemplate,
             threadsTemplate,
             pinterestTemplate,
-            telegramTemplate,
-            whatsappTemplate,
-            discordTemplate,
-            twitchTemplate
+            twitchTemplate,
+            lineTemplates[0],
+            lineTemplates[1]
           ]
         },
         {
-          name: "ビジネス・ツール",
+          name: "Business & Tools",
           templates: [
-            youtubeTemplate,
-            githubTemplate,
             linkedinTemplate,
-            notionTemplate,
-            googleDriveTemplate,
-            zoomTemplate,
             gmailTemplate,
-            paypalTemplate,
-            paypayTemplate,
+            googleDriveTemplate,
+            dropboxTemplate,
             slackTemplate,
+            zoomTemplate,
+            notionTemplate,
             figmaTemplate,
-            dropboxTemplate
+            githubTemplate,
+            youtubeTemplate,
+            paypalTemplate,
+            paypayTemplate
           ]
         },
         {
-          name: "エンタメ・メディア",
+          name: "Entertainment & Media",
           templates: [
+            netflixTemplate,
             spotifyTemplate,
             appleMusicTemplate,
-            netflixTemplate,
             soundcloudTemplate,
             steamTemplate,
             noteTemplate
@@ -3040,16 +3061,16 @@ function qrCodeGenerator() {
         line: "grinds",
         youtube: "grinds_channel",
         tiktok: "grinds.official",
-        threads: "ユーザー名 (例: grinds_official)",
-        linkedin: "ユーザー名 (例: taro-yamada)",
-        pinterest: "ユーザー名 (例: grinds)",
-        whatsapp: "電話番号 (国番号付 例: 819012345678)",
-        telegram: "ユーザー名 (例: grinds)",
-        github: "ユーザー名 (例: octocat)",
-        discord: "サーバー招待コード または URL",
-        twitch: "チャンネル名 (例: grinds_channel)",
-        paypal: "PayPal.me のID (例: grinds)",
-        paypay: "決済リンクURL (例: https://qr.paypay.ne.jp/...)",
+        threads: "Username (e.g. grinds_official)",
+        linkedin: "Username (e.g. john-doe)",
+        pinterest: "Username (e.g. grinds)",
+        whatsapp: "Phone number with country code (e.g. 1234567890)",
+        telegram: "Username (e.g. grinds)",
+        github: "Username (e.g. octocat)",
+        discord: "Server invite code or URL",
+        twitch: "Channel name (e.g. grinds_channel)",
+        paypal: "PayPal.me ID (e.g. grinds)",
+        paypay: "Payment link URL (e.g. https://qr.paypay.ne.jp/...)",
       };
       return placeholders[this.formData.sns.service] || "";
     },
@@ -3100,7 +3121,7 @@ function qrCodeGenerator() {
       const url = this.formData.url.address || "";
       this.isUrlLong = url.length > 80;
       if (url.trim() === "") {
-        this.urlError = "URLは必須項目です。";
+        this.urlError = "URL is required.";
       } else {
         try {
           let fullUrl = url;
@@ -3110,7 +3131,7 @@ function qrCodeGenerator() {
           new URL(fullUrl);
           this.urlError = "";
         } catch (_) {
-          this.urlError = "有効なURL形式ではありません。";
+          this.urlError = "Invalid URL format.";
         }
       }
       this.updateQrCode();
@@ -3341,8 +3362,8 @@ function qrCodeGenerator() {
       const file = event.target.files[0];
       if (file) {
         if (file.size > 5 * 1024 * 1024) {
-          this.showFlashNotification("背景画像は5MB以下のファイルを選択してください。");
-          event.target.value = null;
+          this.showFlashNotification("Please select a background image smaller than 5MB.");
+          event.target.value = "";
           return;
         }
         // 古い Blob URL が存在する場合はメモリリークを防ぐため解放する
@@ -3437,7 +3458,7 @@ function qrCodeGenerator() {
       } catch(e) {
         console.error("Failed to save to IndexedDB", e);
         try { localStorage.setItem("grindsSavedQRCodes", JSON.stringify(this.savedQRCodes)); }
-        catch(e2) { this.showFlashNotification("容量制限により保存できませんでした。"); }
+        catch(e2) { this.showFlashNotification("Could not save due to storage limits."); }
       }
     },
     async loadSavedQRCodes() {
@@ -3494,7 +3515,7 @@ function qrCodeGenerator() {
               } else { this.savedQRCodes = []; }
             } else { this.savedQRCodes = []; }
           } catch (e) {
-            console.warn("localStorage のデータが破損しています", e);
+            console.warn("localStorage data is corrupted.", e);
             this.savedQRCodes = [];
           }
         }
@@ -3533,7 +3554,7 @@ function qrCodeGenerator() {
               needsSave = true;
             }
           } catch (e) {
-            console.warn("サムネイルの自動修復に失敗しました", e);
+            console.warn("Failed to auto-repair thumbnails.", e);
           }
         }
       });
@@ -3548,14 +3569,14 @@ function qrCodeGenerator() {
       qr.updatedAt = new Date().toISOString();
       await this.persistSavedQRCodes();
       if (typeof setDirty === 'function') setDirty(true);
-      this.showFlashNotification("メモを更新しました。");
+      this.showFlashNotification("Memo updated.");
     },
     async updateInlineTags(qr, newTagsStr) {
       qr.tags = newTagsStr.split(',').map(t => t.trim()).filter(t => t);
       qr.updatedAt = new Date().toISOString();
       await this.persistSavedQRCodes();
       if (typeof setDirty === 'function') setDirty(true);
-      this.showFlashNotification("タグを更新しました。");
+      this.showFlashNotification("Tags updated.");
     },
     editQRCode(id) {
       const qrToEdit = this.savedQRCodes.find((qr) => qr.id === id);
@@ -3583,7 +3604,7 @@ function qrCodeGenerator() {
       }
     },
     async deleteQRCode(id) {
-      const isConfirmed = window.confirm("このQRコードを本当に削除しますか？\nこの操作は元に戻せません。");
+      const isConfirmed = window.confirm("Are you sure you want to delete this QR code?\nThis action cannot be undone.");
       if (isConfirmed) {
         this.savedQRCodes = this.savedQRCodes.filter((qr) => qr.id !== id);
         await this.persistSavedQRCodes();
@@ -3593,7 +3614,7 @@ function qrCodeGenerator() {
           this.currentPage = Math.max(1, this.totalPages);
         }
 
-        this.showFlashNotification("QRコードを削除しました。");
+        this.showFlashNotification("QR code deleted.");
       }
     },
     async duplicateQRCode(id) {
@@ -3609,7 +3630,7 @@ function qrCodeGenerator() {
         newQr.qrOptions.logo = logo;
 
         newQr.id = this.generateUniqueId();
-        newQr.name = `${originalQr.name} (コピー)`;
+        newQr.name = `${originalQr.name} (Copy)`;
         newQr.memo = originalQr.memo || "";
         newQr.tags = originalQr.tags ? [...originalQr.tags] : [];
         newQr.createdAt = new Date().toISOString();
@@ -3649,7 +3670,7 @@ function qrCodeGenerator() {
         this.savedQRCodes.unshift(newQr);
         await this.persistSavedQRCodes();
         if (typeof setDirty === 'function') setDirty(true);
-        this.showFlashNotification("QRコードを複製しました。");
+        this.showFlashNotification("QR code duplicated.");
       }
     },
     prepareDownloadFromDashboard(qr) {
@@ -3671,16 +3692,16 @@ function qrCodeGenerator() {
           if (navigator.canShare({ files: [file] })) {
             await navigator.share({
               title: qr.name,
-              text: `「${qr.name}」のQRコード`,
+              text: `QR code for "${qr.name}"`,
               files: [file],
             });
             return; // 共有成功時はモーダルを開かずに終了
           }
         } catch (error) {
           if (error.name !== 'AbortError') {
-             console.error("画像共有に失敗しました", error);
+             console.error("Image sharing failed", error);
           } else {
-             return; // ユーザーキャンセル時
+             return; // User cancelled
           }
         }
       }
@@ -3745,7 +3766,7 @@ function qrCodeGenerator() {
     },
     async copyShareImage(qr) {
       if (!window.ClipboardItem) {
-        this.showFlashNotification("お使いのブラウザは画像のコピーに対応していません。");
+        this.showFlashNotification("Your browser does not support copying images.");
         return;
       }
       try {
@@ -3753,11 +3774,11 @@ function qrCodeGenerator() {
           "image/png": this.svgDataUrlToPngBlob(qr.previewSvgUrl, 512)
         });
         await navigator.clipboard.write([clipboardItem]);
-        this.showFlashNotification("画像をクリップボードにコピーしました！");
+        this.showFlashNotification("Copied the image to the clipboard!");
         this.hapticFeedback('success');
       } catch (e) {
-        console.error("画像コピー失敗", e);
-        this.showFlashNotification("画像のコピーに失敗しました。");
+        console.error("Image copy failed", e);
+        this.showFlashNotification("Failed to copy the image.");
       }
     },
     toggleQuietZone() {
@@ -3779,8 +3800,8 @@ function qrCodeGenerator() {
         };
         reader.readAsDataURL(blob);
       } catch (error) {
-        console.error("ロゴの取得に失敗しました", error);
-        this.showFlashNotification("ロゴの読み込みに失敗しました。");
+        console.error("Failed to fetch logo", error);
+        this.showFlashNotification("Failed to load the logo.");
       }
     },
     removeBrandLogo() {
@@ -3795,14 +3816,14 @@ function qrCodeGenerator() {
       if (!file) return;
 
       if (file.type === "image/svg+xml" && file.size > 500 * 1024) {
-        this.showFlashNotification("SVGロゴは複雑すぎると処理が重くなるため、500KB以下のファイルを選択してください。");
-        event.target.value = null;
+        this.showFlashNotification("SVG logos can be heavy to process if too complex. Please select a file smaller than 500KB.");
+        event.target.value = "";
         return;
       }
 
       if (file.size > 2 * 1024 * 1024) {
-        this.showFlashNotification("ブランドロゴは2MB以下のファイルを選択してください。");
-        event.target.value = null;
+        this.showFlashNotification("Please select a brand logo smaller than 2MB.");
+        event.target.value = "";
         return;
       }
 
@@ -3820,10 +3841,10 @@ function qrCodeGenerator() {
       try {
         localStorage.setItem("qrBrandKit", JSON.stringify(this.brandKit));
         if (showNotification) {
-          this.showFlashNotification("ブランドキットを更新しました。");
+          this.showFlashNotification("Updated brand kit.");
         }
       } catch (e) {
-        this.showFlashNotification("容量制限のため、ブランド設定を保存できませんでした。");
+        this.showFlashNotification("Could not save brand settings due to storage limits.");
       }
     },
     loadBrandKit() {
@@ -3838,14 +3859,14 @@ function qrCodeGenerator() {
           }
         }
       } catch (e) {
-        console.warn("ブランドキットの読み込みに失敗しました", e);
+        console.warn("Failed to load brand kit", e);
         localStorage.removeItem("qrBrandKit");
       }
     },
     applyBrandKit() {
       if (this.brandKit.logo) {
         this.qrOptions.logo = this.brandKit.logo;
-        this.logoFileName = "ブランドロゴ";
+        this.logoFileName = "Brand Logo";
       }
       this.qrOptions.colorType = "single";
       this.qrOptions.foregroundColor = this.brandKit.colors[0];

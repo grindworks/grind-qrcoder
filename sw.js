@@ -1,5 +1,5 @@
 // 💡 アップデート時はここを書き換えることで更新が発火します
-const CACHE_NAME = "grindqrcoder-v93";
+const CACHE_NAME = "grindqrcoder-v95";
 const urlsToCache = [
   "./",
   "./index.html",
@@ -46,13 +46,13 @@ self.addEventListener("install", (event) => {
             await cache.put(request, response);
           } else {
             console.error(
-              "外部リソースの取得に失敗したためキャッシュをスキップしました:",
+              "Skipped caching because external resource fetch failed:",
               response.status,
               url,
             );
           }
         } catch (error) {
-          console.error("外部リソースのキャッシュに失敗しました:", url, error);
+          console.error("Failed to cache external resource:", url, error);
         }
       }
     }),
@@ -68,7 +68,7 @@ self.addEventListener("activate", (event) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
             if (cacheName !== CACHE_NAME) {
-              console.log("古いキャッシュを削除しました:", cacheName);
+              console.log("Deleted old cache:", cacheName);
               return caches.delete(cacheName);
             }
           }),
@@ -106,7 +106,7 @@ self.addEventListener("fetch", (event) => {
             event.request.mode === "navigate" ||
             (event.request.headers.get("accept") && event.request.headers.get("accept").includes("text/html"))
           ) {
-            const fallbackHtml = `\n            <!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>QR Coder - 通知</title><style>body { font-family: sans-serif; background-color: #fafafa; color: #333; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; padding: 20px; } h1 { font-size: 20px; color: #111827; margin-bottom: 16px; font-weight: bold; } p { font-size: 15px; color: #4b5563; line-height: 1.6; margin-bottom: 24px; } .icon { font-size: 48px; margin-bottom: 16px; }</style></head><body><div class="icon">💡</div><h1>ブラウザのキャッシュがクリアされたようです</h1><p>データはあなたのPCに安全に保存されています。<br><br>アプリを再びオフラインで使うには、一度インターネットに接続した状態でアクセスし直してください。</p></body></html>\n          `;
+            const fallbackHtml = `\n            <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>QR Coder - Notification</title><style>body { font-family: sans-serif; background-color: #fafafa; color: #333; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; padding: 20px; } h1 { font-size: 20px; color: #111827; margin-bottom: 16px; font-weight: bold; } p { font-size: 15px; color: #4b5563; line-height: 1.6; margin-bottom: 24px; } .icon { font-size: 48px; margin-bottom: 16px; }</style></head><body><div class="icon">💡</div><h1>Browser cache seems to have been cleared.</h1><p>Your data is safely stored on your PC.<br><br>To use the app offline again, please connect to the internet and access it once.</p></body></html>\n          `;
             return new Response(fallbackHtml, {
               headers: { "Content-Type": "text/html; charset=utf-8" },
             });

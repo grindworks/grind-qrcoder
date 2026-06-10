@@ -1,63 +1,70 @@
 # QR Coder 📱
 
-**完全オフラインで動作する、プライバシーファーストの高機能QRコードジェネレーター。**
+**A privacy-first, highly functional QR code generator that works completely offline.**
 
 [![Demo](https://img.shields.io/badge/Demo-Play_Now-blue?style=for-the-badge)](https://grindworks.github.io/grind-qrcoder/)
 
 <img src="./grind-qrcoder.jpg" width="800" alt="QR Coder Hero Image" />
 
-**QR Coder** は、URL、Wi-Fi設定、SNSプロフィールなど、あらゆる共有リンクを高品質なQRコードに瞬時に変換するアプリケーション（PWA）です。
-入力されたデータや設定履歴はすべてブラウザの IndexedDB にローカル保存されるため、外部へのデータ通信を必要とせず、完全なオフライン環境で動作します。
+**QR Coder** is a PWA (Progressive Web App) that instantly converts any shared link—such as URLs, Wi-Fi settings, and SNS profiles—into high-quality QR codes.
+All entered data and configuration history are saved locally in the browser's IndexedDB. Therefore, it requires no external data communication and operates in a completely offline environment.
 
-## 哲学と特徴 (Philosophy & Features)
+## Philosophy & Features
 
-### 1. プライバシー・バイ・デザイン (No SaaS, No Subscriptions)
-本アプリケーションは、ユーザーのデータを外部サーバーへ一切送信しません。
-機能を純粋なQRコード生成に特化させることで、セキュアで軽量な動作環境を実現し、ユーザーのデータプライバシーを完全に保護します。
-**ソースコードはオープンソースとして公開されており、高い透明性と安全性が担保されています。**
+### 1. Privacy by Design (No SaaS, No Subscriptions)
+This application does not send user data to any external servers.
+By strictly specializing in QR code generation, it provides a secure, lightweight operating environment and perfectly protects user data privacy.
+**The source code is published as open-source, ensuring high transparency and security.**
 
-### 2. オフラインファースト・アーキテクチャ (PWA)
-サーバーサイドの処理や外部データベースへの依存はありません。
-一度ブラウザから「アプリとしてインストール」を行うことで、必要なリソースがすべて端末にキャッシュされます。ネットワーク接続が一切ない環境でも、遅延なく瞬時に起動・動作します。
+### 2. Offline-First Architecture (PWA)
+There are no server-side processes or dependencies on external databases.
+Once you "Install as App" from your browser, all necessary resources are cached on your device. It launches and operates instantly without any delay, even in an environment with absolutely no network connection.
 
-### 3. 洗練されたデザインと品質管理 (Advanced Design & Quality Control)
-- **高度なカスタマイズ:** グラデーションカラー、ドットや四隅の形状変更、ロゴの配置、「SCAN ME」などのカスタムフレームの追加が可能です。
-- **QRコード品質スコア:** コントラスト比の不足や、ロゴによるデータ欠損率、URLの長さをリアルタイムで判定し、読み取りエラー（事故）を未然に防ぐ品質チェック機能を搭載しています。
-- **洗練されたUX:** デバイス特有の挙動（iOSのズームバグなど）を防止し、高品質なフォーカスリングや滑らかなアニメーションなど、ネイティブアプリに匹敵する操作感を提供します。
+### 3. Advanced Design & Quality Control
+- **Advanced Customization:** You can apply gradient colors, change dot and corner shapes, place logos, and add custom frames like "SCAN ME".
+- **Brand Kit & Preset Templates:** Save your frequently used logos and brand colors to apply them instantly. Alternatively, choose from a wide variety of beautifully crafted, one-click preset templates (including styles tailored for popular social media and services).
+- **QR Code Quality Score:** It evaluates inadequate contrast ratios, data loss rates due to logos, and URL lengths in real time to prevent scanning errors (accidents) before they happen.
+- **Refined UX:** It prevents device-specific behaviors (such as the iOS zoom bug) and offers an operational feel comparable to native apps, featuring high-quality focus rings and smooth animations.
 
-### 4. 強固な暗号化とシームレスなファイル管理
-OSのローカルにあるデータベースファイル（`.qrcoder`）をブラウザから直接読み書きします。OS上でファイルをダブルクリックするだけでアプリが起動し、自動でデータを読み込みます（File Handling API）。
-保存時には Web Crypto API を用いた `AES-256-GCM` による強力な暗号化が施されるため、万が一ファイルが流出してもパスワードがない限り絶対に解読されません。
+### 4. Smart Dashboard Management
+- **Local Persistence:** Manage all generated QR codes seamlessly in the built-in dashboard.
+- **Organize & Search:** Add tags and memos to your QR codes. Click on any tag to instantly filter your list, and seamlessly update details using inline editing.
+- **Diverse Formats:** Supports a wide range of data types including URLs, Wi-Fi, vCards, Calendar Events, Geo-locations, and Email generation.
 
-- **🚨 警告:** パスワードを忘れた場合、暗号化の仕組み上、データの復元は技術的に100%不可能です。パスワードの管理には十分ご注意ください。
-- **💡 推奨ブラウザ:** 直接の上書き保存（File System Access API）をフルサポートしている **Chrome** または **Edge** のご利用を強く推奨します（Safari/Firefoxでは毎回ダウンロード保存となります）。
+### 5. Strong Encryption & Seamless File Management
+Directly read and write local database files (`.qrcoder`) on your OS from the browser. Simply double-click the file on your OS to launch the app and automatically load the data (File Handling API).
+Alternatively, just **drag and drop** a `.qrcoder` backup file anywhere on the screen to instantly restore your workspace.
+When saving, strong encryption via `AES-256-GCM` using the Web Crypto API can be applied. Even if the file is leaked, it can never be decrypted without the password.
 
-### 5. 洗練されたキーボードナビゲーション (Grind & Polish)
-- **コマンドパレット (Cmd+K / Ctrl+K):** マウスを使用せず、データの保存や読み込み、各種設定機能へ瞬時にアクセス可能です。
-- **堅牢なフェイルセーフ:** 編集中の未保存状態を即座に検知し、誤ったタブのクローズや操作ミスによるデータロストを未然に防ぎます。
+- **🚨 Warning:** If you forget your password, due to the nature of encryption, data recovery is technically 100% impossible. Please manage your password carefully.
+- **💡 Recommended Browsers:** We strongly recommend using **Chrome** or **Edge**, which fully support direct overwrite saving (File System Access API). (In Safari/Firefox, it will be downloaded and saved as a new file each time).
 
-## 使い方 (How to Use)
+### 6. Refined Keyboard Navigation (Grind & Polish)
+- **Command Palette (Cmd+K / Ctrl+K):** Instantly access data saving, loading, and various setting functions without using a mouse.
+- **Robust Fail-Safe:** It instantly detects unsaved editing states, preventing data loss caused by accidental tab closures or operational mistakes.
 
-1. セキュリティの都合上、必ず **HTTPS環境**（GitHub Pages, Vercel等）またはローカルの `localhost` で `index.html` にアクセスしてください。
-2. アドレスバーのアイコン、または画面のボタンから、PWAとして「アプリをインストール」します。
-3. 以降はPCやスマートフォンのアプリケーションとして完全にオフラインで利用できます。
+## How to Use
 
-## ファイル構成 (File Structure)
+1. For security reasons, be sure to access `index.html` in an **HTTPS environment** (GitHub Pages, Vercel, etc.) or locally via `localhost`.
+2. Click the icon in the address bar or the button on the screen to "Install App" as a PWA.
+3. From then on, you can use it completely offline as a standalone application on your PC or smartphone.
 
-- `index.html` : UIおよびアプリケーションロジック（Alpine.js, IndexedDB制御, 暗号化機能）を含む本体
-- `styles.css` : Tailwind CSS によって生成されたスタイルファイル
-- `sw.js` : PWA用の Service Worker（完全オフライン化、キャッシュコントロール）
-- `manifest.json` : PWAマニフェスト
+## File Structure
 
-## 免責事項 (Disclaimer)
+- `index.html`: The main file including UI and application logic (Alpine.js, IndexedDB control, encryption features).
+- `styles.css`: The style file generated by Tailwind CSS.
+- `sw.js`: Service Worker for the PWA (Full offline capability, cache control).
+- `manifest.json`: PWA Manifest.
 
-本ソフトウェアは「ローカルファースト」のアーキテクチャを採用しており、データはすべてお使いのPC（またはブラウザのIndexedDB）内に保存されます。
-外部サーバーへの自動バックアップは行われないため、PCの故障、ブラウザのキャッシュクリア、予期せぬエラーなどによりデータが消失するリスクがあります。
+## Disclaimer
 
-**本ソフトウェアを使用したことによるデータの消失や、それによって生じた損害について、作者は一切の責任を負いません。**
+This software adopts a "local-first" architecture, and all data is stored within your PC (or your browser's IndexedDB).
+Since automatic backups to external servers are not performed, there is a risk of data loss due to PC failure, browser cache clearance, or unexpected errors.
 
-日々の入力が完了した際は、こまめに保存（Cmd+S / Ctrl+S）を行い、出力された `.qrcoder` ファイルをGoogle DriveやDropboxなどの外部ストレージにバックアップ（退避）することを強く推奨します。
+**The author takes no responsibility for any data loss or damages caused by using this software.**
 
-## ライセンス (License)
+We strongly recommend saving frequently (Cmd+S / Ctrl+S) when your daily entries are complete, and backing up the output `.qrcoder` file to external storage such as Google Drive or Dropbox.
+
+## License
 
 MIT License
