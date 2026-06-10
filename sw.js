@@ -1,5 +1,5 @@
 // 💡 アップデート時はここを書き換えることで更新が発火します
-const CACHE_NAME = "grindqrcoder-v87";
+const CACHE_NAME = "grindqrcoder-v90";
 const urlsToCache = [
   "./",
   "./index.html",

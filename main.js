@@ -1831,13 +1831,22 @@ function qrCodeGenerator() {
               case "tiktok":
                 data = `https://www.tiktok.com/@${encodeURIComponent(cleanId)}`;
                 break;
+              case "threads":
+                data = `https://www.threads.net/@${encodeURIComponent(cleanId)}`;
+                break;
               case "linkedin":
                 // URLや 'in/' が含まれていない場合は自動付与
                 const lnId = cleanId.replace(/^in\//i, '');
                 data = `https://www.linkedin.com/in/${encodeURIComponent(lnId)}`;
                 break;
+              case "pinterest":
+                data = `https://www.pinterest.com/${encodeURIComponent(cleanId)}/`;
+                break;
               case "whatsapp":
                 data = `https://wa.me/${encodeURIComponent(cleanId.replace(/[^0-9]/g, ''))}`;
+                break;
+              case "telegram":
+                data = `https://t.me/${encodeURIComponent(cleanId)}`;
                 break;
               case "github":
                 data = `https://github.com/${encodeURIComponent(cleanId)}`;
@@ -1855,6 +1864,9 @@ function qrCodeGenerator() {
                 break;
               case "paypay":
                 data = identifier.trim();
+                break;
+              case "twitch":
+                data = `https://www.twitch.tv/${encodeURIComponent(cleanId)}`;
                 break;
             }
           }
@@ -2170,15 +2182,74 @@ function qrCodeGenerator() {
             cornersDotStyle: "dot",
           },
         },
+        {
+          name: "サンセット",
+          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g-sunset" gradientTransform="rotate(135)"><stop offset="0%" stop-color="#f43f5e"/><stop offset="100%" stop-color="#f59e0b"/></linearGradient></defs><rect width="100" height="100" fill="#fff7ed"/><rect x="10" y="10" width="80" height="80" rx="20" fill="url(#g-sunset)"/></svg>`,
+          options: {
+            ...defaultQrOptions,
+            colorType: "gradient",
+            gradient: {
+              type: "linear",
+              rotation: "135",
+              color1: "#f43f5e",
+              color2: "#f59e0b",
+            },
+            backgroundColor: "#fff7ed",
+            dotsStyle: "rounded",
+            cornersStyle: "extra-rounded",
+            cornersDotStyle: "extra-rounded",
+          },
+        },
+        {
+          name: "ミニマル",
+          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#ffffff"/><rect x="15" y="15" width="70" height="70" rx="10" fill="#64748b"/></svg>`,
+          options: { ...defaultQrOptions, colorType: "single", foregroundColor: "#64748b", cornerColor: "#64748b", cornerDotColor: "#64748b", backgroundColor: "#ffffff", dotsStyle: "rounded", cornersStyle: "extra-rounded", cornersDotStyle: "square" },
+        },
+        {
+          name: "オーシャン",
+          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g-ocean" gradientTransform="rotate(90)"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#10b981"/></linearGradient></defs><rect width="100" height="100" fill="#ecfeff"/><path d="M50 10 A 40 40 0 0 1 90 50 A 40 40 0 0 1 50 90 A 40 40 0 0 1 10 50 A 40 40 0 0 1 50 10 M50 25 A 25 25 0 0 0 25 50 A 25 25 0 0 0 50 75 A 25 25 0 0 0 75 50 A 25 25 0 0 0 50 25" fill="url(#g-ocean)"/></svg>`,
+          options: {
+            ...defaultQrOptions,
+            colorType: "gradient",
+            gradient: {
+              type: "linear",
+              rotation: "90",
+              color1: "#0ea5e9",
+              color2: "#10b981",
+            },
+            backgroundColor: "#ecfeff",
+            dotsStyle: "classy",
+            cornersStyle: "extra-rounded",
+            cornersDotStyle: "dot",
+          },
+        },
+        {
+          name: "サイバーパンク",
+          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g-cyber" gradientTransform="rotate(45)"><stop offset="0%" stop-color="#06b6d4"/><stop offset="100%" stop-color="#db2777"/></linearGradient></defs><rect width="100" height="100" fill="#0f172a"/><circle cx="50" cy="50" r="40" fill="url(#g-cyber)"/></svg>`,
+          options: {
+            ...defaultQrOptions,
+            colorType: "gradient",
+            gradient: {
+              type: "linear",
+              rotation: "45",
+              color1: "#06b6d4",
+              color2: "#db2777",
+            },
+            backgroundColor: "#0f172a",
+            dotsStyle: "dots",
+            cornersStyle: "dot",
+            cornersDotStyle: "dot",
+          },
+        },
       ];
 
       // 1. 吹き出しアイコン (Speech Bubble)
       const lineIconSvgInner = `<circle cx="160" cy="160" fill="#4cc764" r="160"/><path d="m266.7 150.68c0-47.8-47.92-86.68-106.81-86.68s-106.81 38.89-106.81 86.68c0 42.85 38 78.73 89.33 85.52 3.48.75 8.21 2.29 9.41 5.27 1.08 2.7.7 6.93.35 9.66 0 0-1.25 7.54-1.52 9.14-.47 2.7-2.15 10.56 9.25 5.76s61.51-36.22 83.92-62.01c15.48-16.98 22.9-34.2 22.9-53.33z" fill="#fff"/><g fill="#4cc764"><path d="m231.17 178.28c1.13 0 2.04-.91 2.04-2.04v-7.58c0-1.12-.92-2.04-2.04-2.04h-20.39v-7.87h20.39c1.13 0 2.04-.91 2.04-2.04v-7.57c0-1.12-.92-2.04-2.04-2.04h-20.39v-7.87h20.39c1.13 0 2.04-.91 2.04-2.04v-7.57c0-1.12-.92-2.04-2.04-2.04h-30.01c-1.13 0-2.04.91-2.04 2.04v.04 46.54.04c0 1.13.91 2.04 2.04 2.04z"/><path d="m120.17 178.28c1.13 0 2.04-.91 2.04-2.04v-7.58c0-1.12-.92-2.04-2.04-2.04h-20.39v-37c0-1.12-.92-2.04-2.04-2.04h-7.58c-1.13 0-2.04.91-2.04 2.04v46.58.04c0 1.13.91 2.04 2.04 2.04z"/><rect height="50.69" rx="2.04" width="11.65" x="128.62" y="127.58"/><path d="m189.8 127.58h-7.58c-1.13 0-2.04.91-2.04 2.04v27.69l-21.33-28.8c-.05-.07-.11-.14-.16-.21 0 0 0 0-.01-.01-.04-.04-.08-.09-.12-.13-.01-.01-.03-.02-.04-.03-.04-.03-.07-.06-.11-.09-.02-.01-.04-.03-.06-.04-.03-.03-.07-.05-.11-.07-.02-.01-.04-.03-.06-.04-.04-.02-.07-.04-.11-.06-.02-.01-.04-.02-.06-.03-.04-.02-.08-.04-.12-.05-.02 0-.04-.02-.07-.02-.04-.01-.08-.03-.12-.04-.02 0-.05-.01-.07-.02-.04 0-.08-.02-.12-.03-.03 0-.06 0-.09-.01-.04 0-.07-.01-.11-.01s-.07 0-.11 0c-.02 0-.05 0-.07 0h-7.53c-1.13 0-2.04.91-2.04 2.04v46.62c0 1.13.91 2.04 2.04 2.04h7.58c1.13 0 2.04-.91 2.04-2.04v-27.68l21.35 28.84c.15.21.33.38.53.51 0 0 .02.01.02.02.04.03.08.05.13.08.02.01.04.02.06.03.03.02.07.03.1.05s.07.03.1.04c.02 0 .04.02.06.02.05.02.09.03.14.04h.03c.17.04.35.07.53.07h7.53c1.13 0 2.04-.91 2.04-2.04v-46.62c0-1.13-.91-2.04-2.04-2.04z"/></g>`;
-      const lineIconSvg = `<svg viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">${lineIconSvgInner}</svg>`;
+      const lineIconSvg = `<svg width="320" height="320" viewBox="0 0 320 320" xmlns="http://www.w3.org/2000/svg">${lineIconSvgInner}</svg>`;
 
       // 2. 文字ロゴ (Text Logo)
       const lineTextSvgInner = `<g fill="#4cc764"><path d="m143.05 50.69c1.13 0 2.04-.91 2.04-2.04v-7.58c0-1.12-.92-2.04-2.04-2.04h-20.39v-7.87h20.39c1.13 0 2.04-.91 2.04-2.04v-7.57c0-1.12-.92-2.04-2.04-2.04h-20.39v-7.87h20.39c1.13 0 2.04-.91 2.04-2.04v-7.56c0-1.12-.92-2.04-2.04-2.04h-30.01c-1.13 0-2.04.91-2.04 2.04v.04 46.54.04c0 1.13.91 2.04 2.04 2.04h30.01z"/><path d="m32.05 50.69c1.13 0 2.04-.91 2.04-2.04v-7.58c0-1.12-.92-2.04-2.04-2.04h-20.4v-36.99c0-1.12-.91-2.04-2.04-2.04h-7.57c-1.13 0-2.04.91-2.04 2.04v46.58.04c0 1.13.91 2.04 2.04 2.04h30.01z"/><rect height="50.69" rx="2.04" width="11.65" x="40.5"/><path d="m101.68 0h-7.58c-1.13 0-2.04.91-2.04 2.04v27.69l-21.32-28.81c-.05-.07-.11-.14-.16-.21 0 0 0 0-.01-.01-.04-.04-.08-.09-.12-.13-.01-.01-.03-.02-.04-.03-.04-.03-.07-.06-.11-.09-.02-.01-.04-.03-.06-.04-.03-.03-.07-.05-.11-.07-.02-.01-.04-.03-.06-.04-.04-.02-.07-.04-.11-.06-.02-.01-.04-.02-.06-.03-.04-.02-.08-.04-.12-.05-.02 0-.04-.02-.07-.02-.04-.01-.08-.03-.12-.04-.02 0-.05-.01-.07-.02-.04 0-.08-.02-.12-.03-.03 0-.06 0-.09-.01-.04 0-.07-.01-.11-.01s-.07 0-.11 0c-.02 0-.05 0-.07 0h-7.53c-1.13 0-2.04.91-2.04 2.04v46.62c0 1.13.91 2.04 2.04 2.04h7.58c1.13 0 2.04-.91 2.04-2.04v-27.68l21.35 28.84c.15.21.33.38.53.51 0 0 .02.01.02.02.04.03.08.05.13.08l.06.03c.03.02.07.03.1.05s.07.03.1.04c.02 0 .04.02.06.02.05.02.09.03.14.04h.03c.17.04.35.07.53.07h7.53c1.13 0 2.04-.91 2.04-2.04v-46.63c0-1.13-.91-2.04-2.04-2.04z"/></g>`;
-      const lineTextSvg = `<svg viewBox="0 0 145.09 50.69" xmlns="http://www.w3.org/2000/svg">${lineTextSvgInner}</svg>`;
+      const lineTextSvg = `<svg width="146" height="51" viewBox="0 0 145.09 50.69" xmlns="http://www.w3.org/2000/svg">${lineTextSvgInner}</svg>`;
 
       // Data URLの生成
       const iconGreenUrl = `data:image/svg+xml;base64,${btoa(lineIconSvg)}`;
@@ -2465,6 +2536,98 @@ function qrCodeGenerator() {
         },
       };
 
+      // Netflix テンプレート定義
+      const netflixSvg = `<svg width="551" height="1000" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" id="Netflix_Symbol_RGB" version="1.1" viewBox="0 0 551.111 1000"><defs id="defs4"><linearGradient id="linearGradient35887"><stop id="stop35883" offset="0" style="stop-color:#b1060f;stop-opacity:1"/><stop id="stop36053" offset=".625" style="stop-color:#7b010c;stop-opacity:1"/><stop id="stop35885" offset="1" style="stop-color:#b1060f;stop-opacity:0"/></linearGradient><linearGradient id="linearGradient19332"><stop id="stop19328" offset="0" style="stop-color:#b1060f;stop-opacity:1"/><stop id="stop19560" offset=".546" style="stop-color:#7b010c;stop-opacity:1"/><stop id="stop19330" offset="1" style="stop-color:#e50914;stop-opacity:0"/></linearGradient><linearGradient xlink:href="#linearGradient19332" id="linearGradient13368" x1="78.234" x2="221.663" y1="423.767" y2="365.092" gradientUnits="userSpaceOnUse"/><linearGradient xlink:href="#linearGradient35887" id="linearGradient35889" x1="456.365" x2="309.676" y1="521.56" y2="583.495" gradientUnits="userSpaceOnUse"/><style id="style2">.cls-1{fill:#e50914}</style></defs><path id="path6055" d="M-1.152-1.152 2.305 1002.67c73.273-14.111 130.892-12.569 195.924-18.44V0Z" style="fill:url(#linearGradient13368);stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1"/><path id="path678" d="M353.816 0h199.381l2.305 1000.365-202.839-33.422z" style="fill:url(#linearGradient35889);stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;fill-opacity:1"/><path id="path362" d="M1.152 0c4.61 11.525 345.749 981.925 345.749 981.925 56.056-.4 131.219 8.754 205.144 17.288L197.077 0Z" style="fill:#e50914;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"/></svg>`;
+      const netflixLogoUrl = `data:image/svg+xml;base64,${btoa(netflixSvg)}`;
+
+      const netflixTemplate = {
+        name: "Netflix",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#E50914"/></g><image x="37.5" y="25" width="25" height="50" href="${netflixLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: netflixLogoUrl,
+          colorType: "single",
+          foregroundColor: "#E50914",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#E50914",
+          cornerDotColor: "#E50914",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10, crossOrigin: "anonymous" },
+        },
+      };
+
+      // SoundCloud テンプレート定義
+      const soundcloudSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="75" height="34" viewBox="0 0 75 33.51"><g id="Layer_2" data-name="Layer 2"><g id="Orange" fill="#FF5500"><path d="M75,23.6a10.5,10.5,0,0,1-10.63,9.91H38.82a2.14,2.14,0,0,1-2.12-2.13V3.87a2.34,2.34,0,0,1,1.41-2.24S40.46,0,45.41,0A16.74,16.74,0,0,1,54,2.36a17,17,0,0,1,8,11.08,9.8,9.8,0,0,1,2.71-.37A10.23,10.23,0,0,1,75,23.6Z"/><path d="M33.51,5.61a.83.83,0,1,0-1.65,0c-.7,9.25-1.24,17.92,0,27.14a.83.83,0,0,0,1.65,0C34.84,23.45,34.28,14.94,33.51,5.61Z"/><path d="M28.35,8.81a.87.87,0,0,0-1.73,0,103.7,103.7,0,0,0,0,23.95.87.87,0,0,0,1.72,0A93.2,93.2,0,0,0,28.35,8.81Z"/><path d="M23.16,8a.84.84,0,0,0-1.67,0c-.79,8.44-1.19,16.32,0,24.74a.83.83,0,0,0,1.66,0C24.38,24.21,24,16.55,23.16,8Z"/><path d="M18,10.41a.86.86,0,0,0-1.72,0,87.61,87.61,0,0,0,0,22.36.85.85,0,0,0,1.69,0A81.68,81.68,0,0,0,18,10.41Z"/><path d="M12.79,16a.85.85,0,0,0-1.7,0c-1.23,5.76-.65,11,.05,16.83a.81.81,0,0,0,1.6,0C13.51,26.92,14.1,21.8,12.79,16Z"/><path d="M7.62,15.12a.88.88,0,0,0-1.75,0C4.78,21,5.14,26.18,5.9,32.05c.08.89,1.59.88,1.69,0C8.43,26.09,8.82,21.06,7.62,15.12Z"/><path d="M2.4,18A.88.88,0,0,0,.65,18c-1,3.95-.69,7.22.07,11.18a.82.82,0,0,0,1.63,0C3.23,25.14,3.66,21.94,2.4,18Z"/></g></g></svg>`;
+      const soundcloudLogoUrl = `data:image/svg+xml;base64,${btoa(soundcloudSvg)}`;
+
+      const soundcloudTemplate = {
+        name: "SoundCloud",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#FF5500"/></g><image x="25" y="40" width="50" height="20" href="${soundcloudLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: soundcloudLogoUrl,
+          colorType: "single",
+          foregroundColor: "#FF5500",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#FF5500",
+          cornerDotColor: "#FF5500",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Steam テンプレート定義
+      const steamSvg = `<svg width="65" height="65" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 65 65" fill="#fff"><use xlink:href="#B" x=".5" y=".5"/><defs><linearGradient id="A" x2="50%" x1="50%" y2="100%" y1="0%"><stop stop-color="#111d2e" offset="0%"/><stop stop-color="#051839" offset="21.2%"/><stop stop-color="#0a1b48" offset="40.7%"/><stop stop-color="#132e62" offset="58.1%"/><stop stop-color="#144b7e" offset="73.8%"/><stop stop-color="#136497" offset="87.3%"/><stop stop-color="#1387b8" offset="100%"/></linearGradient></defs><symbol id="B"><g><path d="M1.305 41.202C5.259 54.386 17.488 64 31.959 64c17.673 0 32-14.327 32-32s-14.327-32-32-32C15.001 0 1.124 13.193.028 29.874c2.074 3.477 2.879 5.628 1.275 11.328z" fill="url(#A)"/><path d="M30.31 23.985l.003.158-7.83 11.375c-1.268-.058-2.54.165-3.748.662a8.14 8.14 0 0 0-1.498.8L.042 29.893s-.398 6.546 1.26 11.424l12.156 5.016c.6 2.728 2.48 5.12 5.242 6.27a8.88 8.88 0 0 0 11.603-4.782 8.89 8.89 0 0 0 .684-3.656L42.18 36.16l.275.005c6.705 0 12.155-5.466 12.155-12.18s-5.44-12.16-12.155-12.174c-6.702 0-12.155 5.46-12.155 12.174zm-1.88 23.05c-1.454 3.5-5.466 5.147-8.953 3.694a6.84 6.84 0 0 1-3.524-3.362l3.957 1.64a5.04 5.04 0 0 0 6.591-2.719 5.05 5.05 0 0 0-2.715-6.601l-4.1-1.695c1.578-.6 3.372-.62 5.05.077 1.7.703 3 2.027 3.696 3.72s.692 3.56-.01 5.246M42.466 32.1a8.12 8.12 0 0 1-8.098-8.113 8.12 8.12 0 0 1 8.098-8.111 8.12 8.12 0 0 1 8.1 8.111 8.12 8.12 0 0 1-8.1 8.113m-6.068-8.126a6.09 6.09 0 0 1 6.08-6.095c3.355 0 6.084 2.73 6.084 6.095a6.09 6.09 0 0 1-6.084 6.093 6.09 6.09 0 0 1-6.081-6.093z"/></g></symbol></svg>`;
+      const steamLogoUrl = `data:image/svg+xml;base64,${btoa(steamSvg)}`;
+
+      const steamTemplate = {
+        name: "Steam",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#171a21"/></g><image x="30" y="30" width="40" height="40" href="${steamLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: steamLogoUrl,
+          colorType: "single",
+          foregroundColor: "#171a21",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#171a21",
+          cornerDotColor: "#171a21",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8, crossOrigin: "anonymous" },
+        },
+      };
+
+      // note テンプレート定義
+      const noteSvg = `<svg width="493" height="493" viewBox="0 0 493 493" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="490.2" height="490.2" rx="104" fill="white"/><path d="M139.2 141.7C180.4 141.7 236.8 139.6 277.3 140.7C331.6 142.1 352.1 165.8 352.8 224.2C353.5 257.3 352.8 351.9 352.8 351.9H294C294 269.1 294.3 255.4 294 229.3C293.3 206.3 286.8 195.4 269.1 193.3C250.4 191.2 198 193 198 193V352H139.2V141.7Z" fill="#040000"/><rect x="1" y="1" width="490.2" height="490.2" rx="104" stroke="#EBEBEB" stroke-width="2"/></svg>`;
+      const noteLogoUrl = `data:image/svg+xml;base64,${btoa(noteSvg)}`;
+
+      const noteTemplate = {
+        name: "note",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#41C9B4"/></g><image x="30" y="30" width="40" height="40" href="${noteLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: noteLogoUrl,
+          colorType: "single",
+          foregroundColor: "#41C9B4",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#41C9B4",
+          cornerDotColor: "#41C9B4",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8, crossOrigin: "anonymous" },
+        },
+      };
+
       // WhatsApp テンプレート定義
       const whatsappSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="360" height="362" fill="none" viewBox="0 0 360 362"><path fill="#25D366" fill-rule="evenodd" d="M307.546 52.566C273.709 18.684 228.706.017 180.756 0 81.951 0 1.538 80.404 1.504 179.235c-.017 31.594 8.242 62.432 23.928 89.609L0 361.736l95.024-24.925c26.179 14.285 55.659 21.805 85.655 21.814h.077c98.788 0 179.21-80.413 179.244-179.244.017-47.898-18.608-92.926-52.454-126.807v-.008Zm-126.79 275.788h-.06c-26.73-.008-52.952-7.194-75.831-20.765l-5.44-3.231-56.391 14.791 15.05-54.981-3.542-5.638c-14.912-23.721-22.793-51.139-22.776-79.286.035-82.14 66.867-148.973 149.051-148.973 39.793.017 77.198 15.53 105.328 43.695 28.131 28.157 43.61 65.596 43.593 105.398-.035 82.149-66.867 148.982-148.982 148.982v.008Zm81.719-111.577c-4.478-2.243-26.497-13.073-30.606-14.568-4.108-1.496-7.09-2.243-10.073 2.243-2.982 4.487-11.568 14.577-14.181 17.559-2.613 2.991-5.226 3.361-9.704 1.117-4.477-2.243-18.908-6.97-36.02-22.226-13.313-11.878-22.304-26.54-24.916-31.027-2.613-4.486-.275-6.91 1.959-9.136 2.011-2.011 4.478-5.234 6.721-7.847 2.244-2.613 2.983-4.486 4.478-7.469 1.496-2.991.748-5.603-.369-7.847-1.118-2.243-10.073-24.289-13.812-33.253-3.636-8.732-7.331-7.546-10.073-7.692-2.613-.13-5.595-.155-8.586-.155-2.991 0-7.839 1.118-11.947 5.604-4.108 4.486-15.677 15.324-15.677 37.361s16.047 43.344 18.29 46.335c2.243 2.991 31.585 48.225 76.51 67.632 10.684 4.615 19.029 7.374 25.535 9.437 10.727 3.412 20.49 2.931 28.208 1.779 8.604-1.289 26.498-10.838 30.228-21.298 3.73-10.46 3.73-19.433 2.613-21.298-1.117-1.865-4.108-2.991-8.586-5.234l.008-.017Z" clip-rule="evenodd"/></svg>`;
       const whatsappLogoUrl = `data:image/svg+xml;base64,${btoa(whatsappSvg)}`;
@@ -2580,6 +2743,167 @@ function qrCodeGenerator() {
         },
       };
 
+      // Slack テンプレート定義
+      const slackSvg = `<svg width="2448" height="2453" enable-background="new 0 0 2447.6 2452.5" viewBox="0 0 2447.6 2452.5" xmlns="http://www.w3.org/2000/svg"><g clip-rule="evenodd" fill-rule="evenodd"><path d="m897.4 0c-135.3.1-244.8 109.9-244.7 245.2-.1 135.3 109.5 245.1 244.8 245.2h244.8v-245.1c.1-135.3-109.5-245.1-244.9-245.3.1 0 .1 0 0 0m0 654h-652.6c-135.3.1-244.9 109.9-244.8 245.2-.2 135.3 109.4 245.1 244.7 245.3h652.7c135.3-.1 244.9-109.9 244.8-245.2.1-135.4-109.5-245.2-244.8-245.3z" fill="#36c5f0"/><path d="m2447.6 899.2c.1-135.3-109.5-245.1-244.8-245.2-135.3.1-244.9 109.9-244.8 245.2v245.3h244.8c135.3-.1 244.9-109.9 244.8-245.3zm-652.7 0v-654c.1-135.2-109.4-245-244.7-245.2-135.3.1-244.9 109.9-244.8 245.2v654c-.2 135.3 109.4 245.1 244.7 245.3 135.3-.1 244.9-109.9 244.8-245.3z" fill="#2eb67d"/><path d="m1550.1 2452.5c135.3-.1 244.9-109.9 244.8-245.2.1-135.3-109.5-245.1-244.8-245.2h-244.8v245.2c-.1 135.2 109.5 245 244.8 245.2zm0-654.1h652.7c135.3-.1 244.9-109.9 244.8-245.2.2-135.3-109.4-245.1-244.7-245.3h-652.7c-135.3.1-244.9 109.9-244.8 245.2-.1 135.4 109.4 245.2 244.7 245.3z" fill="#ecb22e"/><path d="m0 1553.2c-.1 135.3 109.5 245.1 244.8 245.2 135.3-.1 244.9-109.9 244.8-245.2v-245.2h-244.8c-135.3.1-244.9 109.9-244.8 245.2zm652.7 0v654c-.2 135.3 109.4 245.1 244.7 245.3 135.3-.1 244.9-109.9 244.8-245.2v-653.9c.2-135.3-109.4-245.1-244.7-245.3-135.4 0-244.9 109.8-244.8 245.1 0 0 0 .1 0 0" fill="#e01e5a"/></g></svg>`;
+      const slackLogoUrl = `data:image/svg+xml;base64,${btoa(slackSvg)}`;
+
+      const slackTemplate = {
+        name: "Slack",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#000000"/></g><image x="30" y="30" width="40" height="40" href="${slackLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: slackLogoUrl,
+          colorType: "single",
+          foregroundColor: "#000000",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#000000",
+          cornerDotColor: "#000000",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Figma テンプレート定義
+      const figmaSvg = `<svg width="54" height="80" viewBox="0 0 54 80" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_912_3)"><path d="M13.3333 80.0002C20.6933 80.0002 26.6667 74.0268 26.6667 66.6668V53.3335H13.3333C5.97333 53.3335 0 59.3068 0 66.6668C0 74.0268 5.97333 80.0002 13.3333 80.0002Z" fill="#0ACF83"/><path d="M0 39.9998C0 32.6398 5.97333 26.6665 13.3333 26.6665H26.6667V53.3332H13.3333C5.97333 53.3332 0 47.3598 0 39.9998Z" fill="#A259FF"/><path d="M0 13.3333C0 5.97333 5.97333 0 13.3333 0H26.6667V26.6667H13.3333C5.97333 26.6667 0 20.6933 0 13.3333Z" fill="#F24E1E"/><path d="M26.6667 0H40.0001C47.3601 0 53.3334 5.97333 53.3334 13.3333C53.3334 20.6933 47.3601 26.6667 40.0001 26.6667H26.6667V0Z" fill="#FF7262"/><path d="M53.3334 39.9998C53.3334 47.3598 47.3601 53.3332 40.0001 53.3332C32.6401 53.3332 26.6667 47.3598 26.6667 39.9998C26.6667 32.6398 32.6401 26.6665 40.0001 26.6665C47.3601 26.6665 53.3334 32.6398 53.3334 39.9998Z" fill="#1ABCFE"/></g><defs><clipPath id="clip0_912_3"><rect width="53.3333" height="80" fill="white"/></clipPath></defs></svg>`;
+      const figmaLogoUrl = `data:image/svg+xml;base64,${btoa(figmaSvg)}`;
+
+      const figmaTemplate = {
+        name: "Figma",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#000000"/></g><image x="35" y="25" width="30" height="50" href="${figmaLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: figmaLogoUrl,
+          colorType: "single",
+          foregroundColor: "#000000",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#000000",
+          cornerDotColor: "#000000",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Dropbox テンプレート定義
+      const dropboxSvg = `<svg role="img" width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Dropbox</title><path fill="#0061FF" d="M6 1.807L0 5.629l6 3.822 6.001-3.822L6 1.807zM18 1.807l-6 3.822 6 3.822 6-3.822-6-3.822zM0 13.274l6 3.822 6.001-3.822L6 9.452l-6 3.822zM18 9.452l-6 3.822 6 3.822 6-3.822-6-3.822zM6 18.371l6.001 3.822 6-3.822-6-3.822L6 18.371z"/></svg>`;
+      const dropboxLogoUrl = `data:image/svg+xml;base64,${btoa(dropboxSvg)}`;
+
+      const dropboxTemplate = {
+        name: "Dropbox",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#0061FF"/></g><image x="30" y="30" width="40" height="40" href="${dropboxLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: dropboxLogoUrl,
+          colorType: "single",
+          foregroundColor: "#0061FF",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#0061FF",
+          cornerDotColor: "#0061FF",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Threads テンプレート定義
+      const threadsSvg = `<svg width="24" height="24" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Threads</title><path d="M12.186 24h-.007c-3.581-.024-6.334-1.205-8.184-3.509C2.35 18.44 1.5 15.586 1.472 12.01v-.017c.03-3.579.879-6.43 2.525-8.482C5.845 1.205 8.6.024 12.18 0h.014c2.746.02 5.043.725 6.826 2.098 1.677 1.29 2.858 3.13 3.509 5.467l-2.04.569c-1.104-3.96-3.898-5.984-8.304-6.015-2.91.022-5.11.936-6.54 2.717C4.307 6.504 3.616 8.914 3.589 12c.027 3.086.718 5.496 2.057 7.164 1.43 1.783 3.631 2.698 6.54 2.717 2.623-.02 4.358-.631 5.8-2.045 1.647-1.613 1.618-3.593 1.09-4.798-.31-.71-.873-1.3-1.634-1.75-.192 1.352-.622 2.446-1.284 3.272-.886 1.102-2.14 1.704-3.73 1.79-1.202.065-2.361-.218-3.259-.801-1.063-.689-1.685-1.74-1.752-2.964-.065-1.19.408-2.285 1.33-3.082.88-.76 2.119-1.207 3.583-1.291a13.853 13.853 0 0 1 3.02.142c-.126-.742-.375-1.332-.75-1.757-.513-.586-1.308-.883-2.359-.89h-.029c-.844 0-1.992.232-2.721 1.32L7.734 7.847c.98-1.454 2.568-2.256 4.478-2.256h.044c3.194.02 5.097 1.975 5.287 5.388.108.046.216.094.321.142 1.49.7 2.58 1.761 3.154 3.07.797 1.82.871 4.79-1.548 7.158-1.85 1.81-4.094 2.628-7.277 2.65Zm1.003-11.69c-.242 0-.487.007-.739.021-1.836.103-2.98.946-2.916 2.143.067 1.256 1.452 1.839 2.784 1.767 1.224-.065 2.818-.543 3.086-3.71a10.5 10.5 0 0 0-2.215-.221z"/></svg>`;
+      const threadsLogoUrl = `data:image/svg+xml;base64,${btoa(threadsSvg)}`;
+
+      const threadsTemplate = {
+        name: "Threads",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#000000"/></g><image x="30" y="30" width="40" height="40" href="${threadsLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: threadsLogoUrl,
+          colorType: "single",
+          foregroundColor: "#000000",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#000000",
+          cornerDotColor: "#000000",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Telegram テンプレート定義
+      const telegramSvg = `<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" width="256" height="256" preserveAspectRatio="xMidYMid"><defs><linearGradient id="a" x1="50%" x2="50%" y1="0%" y2="100%"><stop offset="0%" stop-color="#2AABEE"/><stop offset="100%" stop-color="#229ED9"/></linearGradient></defs><path fill="url(#a)" d="M128 0C94.06 0 61.48 13.494 37.5 37.49A128.038 128.038 0 0 0 0 128c0 33.934 13.5 66.514 37.5 90.51C61.48 242.506 94.06 256 128 256s66.52-13.494 90.5-37.49c24-23.996 37.5-56.576 37.5-90.51 0-33.934-13.5-66.514-37.5-90.51C194.52 13.494 161.94 0 128 0Z"/><path fill="#FFF" d="M57.94 126.648c37.32-16.256 62.2-26.974 74.64-32.152 35.56-14.786 42.94-17.354 47.76-17.441 1.06-.017 3.42.245 4.96 1.49 1.28 1.05 1.64 2.47 1.82 3.467.16.996.38 3.266.2 5.038-1.92 20.24-10.26 69.356-14.5 92.026-1.78 9.592-5.32 12.808-8.74 13.122-7.44.684-13.08-4.912-20.28-9.63-11.26-7.386-17.62-11.982-28.56-19.188-12.64-8.328-4.44-12.906 2.76-20.386 1.88-1.958 34.64-31.748 35.26-34.45.08-.338.16-1.598-.6-2.262-.74-.666-1.84-.438-2.64-.258-1.14.256-19.12 12.152-54 35.686-5.1 3.508-9.72 5.218-13.88 5.128-4.56-.098-13.36-2.584-19.9-4.708-8-2.606-14.38-3.984-13.82-8.41.28-2.304 3.46-4.662 9.52-7.072Z"/></svg>`;
+      const telegramLogoUrl = `data:image/svg+xml;base64,${btoa(telegramSvg)}`;
+
+      const telegramTemplate = {
+        name: "Telegram",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#24A1DE"/></g><image x="30" y="30" width="40" height="40" href="${telegramLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: telegramLogoUrl,
+          colorType: "single",
+          foregroundColor: "#24A1DE",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#24A1DE",
+          cornerDotColor: "#24A1DE",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Pinterest テンプレート定義
+      const pinterestSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 256 256"><path fill="#CB1F27" d="M0 128.002c0 52.414 31.518 97.442 76.619 117.239c-.36-8.938-.064-19.668 2.228-29.393c2.461-10.391 16.47-69.748 16.47-69.748s-4.089-8.173-4.089-20.252c0-18.969 10.994-33.136 24.686-33.136c11.643 0 17.268 8.745 17.268 19.217c0 11.704-7.465 29.211-11.304 45.426c-3.207 13.578 6.808 24.653 20.203 24.653c24.252 0 40.586-31.149 40.586-68.055c0-28.054-18.895-49.052-53.262-49.052c-38.828 0-63.017 28.956-63.017 61.3c0 11.152 3.288 19.016 8.438 25.106c2.368 2.797 2.697 3.922 1.84 7.134c-.614 2.355-2.024 8.025-2.608 10.272c-.852 3.242-3.479 4.401-6.409 3.204c-17.884-7.301-26.213-26.886-26.213-48.902c0-36.361 30.666-79.961 91.482-79.961c48.87 0 81.035 35.364 81.035 73.325c0 50.213-27.916 87.726-69.066 87.726c-13.819 0-26.818-7.47-31.271-15.955c0 0-7.431 29.492-9.005 35.187c-2.714 9.869-8.026 19.733-12.883 27.421a127.897 127.897 0 0 0 36.277 5.249c70.684 0 127.996-57.309 127.996-128.005C256.001 57.309 198.689 0 128.005 0C57.314 0 0 57.309 0 128.002"/></svg>`;
+      const pinterestLogoUrl = `data:image/svg+xml;base64,${btoa(pinterestSvg)}`;
+
+      const pinterestTemplate = {
+        name: "Pinterest",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#CB1F27"/></g><image x="30" y="30" width="40" height="40" href="${pinterestLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: pinterestLogoUrl,
+          colorType: "single",
+          foregroundColor: "#CB1F27",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#CB1F27",
+          cornerDotColor: "#CB1F27",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8, crossOrigin: "anonymous" },
+        },
+      };
+
+      // Twitch テンプレート定義
+      const twitchSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="2800" xml:space="preserve" viewBox="0 0 2400 2800"><path fill="#fff" d="m2200 1300-400 400h-400l-350 350v-350H600V200h1600z"/><g fill="#9146ff"><path d="M500 0 0 500v1800h600v500l500-500h400l900-900V0H500zm1700 1300-400 400h-400l-350 350v-350H600V200h1600v1100z"/><path d="M1700 550h200v600h-200zm-550 0h200v600h-200z"/></g></svg>`;
+      const twitchLogoUrl = `data:image/svg+xml;base64,${btoa(twitchSvg)}`;
+
+      const twitchTemplate = {
+        name: "Twitch",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#9146FF"/></g><image x="30" y="30" width="40" height="40" href="${twitchLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: twitchLogoUrl,
+          colorType: "single",
+          foregroundColor: "#9146FF",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#9146FF",
+          cornerDotColor: "#9146FF",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8, crossOrigin: "anonymous" },
+        },
+      };
+
       // LINE テンプレート定義
       const lineTemplates = [
         // 1. アイコン・緑
@@ -2638,8 +2962,12 @@ function qrCodeGenerator() {
             xTemplate,
             facebookTemplate,
             tiktokTemplate,
+            threadsTemplate,
+            pinterestTemplate,
+            telegramTemplate,
             whatsappTemplate,
-            discordTemplate
+            discordTemplate,
+            twitchTemplate
           ]
         },
         {
@@ -2653,14 +2981,21 @@ function qrCodeGenerator() {
             zoomTemplate,
             gmailTemplate,
             paypalTemplate,
-            paypayTemplate
+            paypayTemplate,
+            slackTemplate,
+            figmaTemplate,
+            dropboxTemplate
           ]
         },
         {
           name: "エンタメ・メディア",
           templates: [
             spotifyTemplate,
-            appleMusicTemplate
+            appleMusicTemplate,
+            netflixTemplate,
+            soundcloudTemplate,
+            steamTemplate,
+            noteTemplate
           ]
         }
       ];
@@ -2694,10 +3029,14 @@ function qrCodeGenerator() {
         line: "grinds",
         youtube: "grinds_channel",
         tiktok: "grinds.official",
+        threads: "ユーザー名 (例: grinds_official)",
         linkedin: "ユーザー名 (例: taro-yamada)",
+        pinterest: "ユーザー名 (例: grinds)",
         whatsapp: "電話番号 (国番号付 例: 819012345678)",
+        telegram: "ユーザー名 (例: grinds)",
         github: "ユーザー名 (例: octocat)",
         discord: "サーバー招待コード または URL",
+        twitch: "チャンネル名 (例: grinds_channel)",
         paypal: "PayPal.me のID (例: grinds)",
         paypay: "決済リンクURL (例: https://qr.paypay.ne.jp/...)",
       };
