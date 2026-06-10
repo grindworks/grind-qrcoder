@@ -264,9 +264,9 @@ async function saveQRCoderFile() {
     if ("showSaveFilePicker" in window) {
       try {
         // まだ保存先ファイルが決まっていない場合のみ、保存先選択ダイアログを開く
-        if (!fileHandle) {
+        if (!fileHandle || typeof fileHandle.createWritable !== 'function') {
           fileHandle = await window.showSaveFilePicker({
-            suggestedName: "Data.qrcoder",
+            suggestedName: fileHandle ? fileHandle.name : "Data.qrcoder",
             types: [{ description: "QR Coder Database", accept: { "application/json": [".qrcoder"] } }]
           });
         }
@@ -898,12 +898,15 @@ function qrCodeGenerator() {
       if (!this.savedQRCodes) return [];
       let filtered = this.savedQRCodes;
       if (this.searchQuery.trim() !== "") {
-        const query = this.searchQuery.toLowerCase().trim();
+        const searchTerms = this.searchQuery.toLowerCase().trim().split(/[\s　]+/).filter(Boolean);
         filtered = filtered.filter(qr => {
-          const nameMatch = qr.name && qr.name.toLowerCase().includes(query);
-          const memoMatch = qr.memo && qr.memo.toLowerCase().includes(query);
-          const tagsMatch = qr.tags && qr.tags.some(tag => tag.toLowerCase().includes(query));
-          return nameMatch || memoMatch || tagsMatch;
+          const nameStr = (qr.name || "").toLowerCase();
+          const memoStr = (qr.memo || "").toLowerCase();
+          const tagsStr = (qr.tags || []).join(" ").toLowerCase();
+          const combinedText = `${nameStr} ${memoStr} ${tagsStr}`;
+
+          // 入力されたすべてのキーワード（AND条件）がテキストに含まれているか判定
+          return searchTerms.every(term => combinedText.includes(term));
         });
       }
       return filtered;
@@ -1716,6 +1719,8 @@ function qrCodeGenerator() {
         this.editingQRCodeId = newQr.id; // 新規保存からシームレスに編集モードへ移行
         this.showFlashNotification("QRコードを保存しました。");
         this.hapticFeedback('success');
+        // 保存した名前をダウンロード時のデフォルトファイル名にも同期する
+        this.download.fileName = this.saveName;
       }
 
       await this.persistSavedQRCodes();
@@ -1982,6 +1987,12 @@ function qrCodeGenerator() {
         this.qrQuality.issues.push({
           status: "warning",
           message: `データ量が多いためドットが細かくなっています。読み取り環境にご注意ください。`,
+          // ロゴが設定されていない、かつ訂正レベルがL（低）でない場合のみ、自動修正を提案
+          action: (!this.qrOptions.logo && this.qrOptions.errorCorrectionLevel !== "L") ? () => {
+            this.qrOptions.errorCorrectionLevel = "L";
+            this.updateQrCode();
+            this.showFlashNotification("ドットを大きくするため、誤り訂正レベルを「低」に変更しました。");
+          } : null
         });
         score -= 15;
       }
@@ -3086,7 +3097,7 @@ function qrCodeGenerator() {
       };
     },
     validateUrl() {
-      const url = this.formData.url.address;
+      const url = this.formData.url.address || "";
       this.isUrlLong = url.length > 80;
       if (url.trim() === "") {
         this.urlError = "URLは必須項目です。";
@@ -3463,16 +3474,24 @@ function qrCodeGenerator() {
           }
         });
 
-        if (saved && Array.isArray(saved) && saved.length > 0) {
-          this.savedQRCodes = saved;
-        } else if (typeof saved === 'string' && JSON.parse(saved).length > 0) {
-          this.savedQRCodes = JSON.parse(saved);
+        let parsedSaved = null;
+        if (typeof saved === 'string') {
+          try { parsedSaved = JSON.parse(saved); } catch(e) { parsedSaved = []; }
+        } else {
+          parsedSaved = saved;
+        }
+
+        if (parsedSaved && Array.isArray(parsedSaved) && parsedSaved.length > 0) {
+          this.savedQRCodes = parsedSaved;
         } else {
           try {
             const lsSaved = localStorage.getItem("grindsSavedQRCodes");
-            if (lsSaved && JSON.parse(lsSaved).length > 0) {
-              this.savedQRCodes = JSON.parse(lsSaved);
-              await this.persistSavedQRCodes();
+            if (lsSaved) {
+              const parsedLs = JSON.parse(lsSaved);
+              if (Array.isArray(parsedLs) && parsedLs.length > 0) {
+                this.savedQRCodes = parsedLs;
+                await this.persistSavedQRCodes();
+              } else { this.savedQRCodes = []; }
             } else { this.savedQRCodes = []; }
           } catch (e) {
             console.warn("localStorage のデータが破損しています", e);
@@ -3766,9 +3785,6 @@ function qrCodeGenerator() {
     },
     removeBrandLogo() {
       this.brandKit.logo = null;
-      this.qrOptions.logo = "";
-      this.logoFileName = "";
-      this.updateQrCode();
       this.saveBrandKit();
 
       const fileInput = document.getElementById("brand-logo-upload");

@@ -1,5 +1,5 @@
 // 💡 アップデート時はここを書き換えることで更新が発火します
-const CACHE_NAME = "grindqrcoder-v90";
+const CACHE_NAME = "grindqrcoder-v93";
 const urlsToCache = [
   "./",
   "./index.html",
@@ -90,10 +90,13 @@ self.addEventListener("fetch", (event) => {
       const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.ok && (networkResponse.type === "basic" || networkResponse.type === "cors")) {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
+            // クエリパラメータ付きのリクエスト（Share Target 等）はキャッシュを肥大化させるため保存しない
+            if (!event.request.url.includes("?")) {
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
+            }
           }
           return networkResponse;
         })
