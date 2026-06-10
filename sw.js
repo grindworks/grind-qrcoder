@@ -1,5 +1,5 @@
-// 💡 アップデート時はここを書き換えることで更新が発火します
-const CACHE_NAME = "grindqrcoder-v95";
+// Update this version to trigger a cache update
+const CACHE_NAME = "grindqrcoder-v103";
 const urlsToCache = [
   "./",
   "./index.html",
@@ -26,22 +26,22 @@ const externalUrlsToCache = [
   "https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js"
 ];
 
-// インストール時にキャッシュを作成
+// Create cache on install
 self.addEventListener("install", (event) => {
-  // 新しいService Workerを即座にアクティブにする
+  // Activate new Service Worker immediately
   self.skipWaiting();
 
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
       console.log("Opened cache");
-      // ローカルファイルは通常通り一括追加
+      // Add local files to cache
       await cache.addAll(urlsToCache);
-      // 外部CDNファイルはCORS対応のため cors で個別に追加
+      // Add external CDN files individually with CORS
       for (const url of externalUrlsToCache) {
         try {
           const request = new Request(url, { mode: "cors" });
           const response = await fetch(request);
-          // 404エラーなどで壊れたキャッシュを保存しないための防波堤
+          // Prevent caching broken responses like 404 errors
           if (response.ok) {
             await cache.put(request, response);
           } else {
@@ -59,7 +59,7 @@ self.addEventListener("install", (event) => {
   );
 });
 
-// 古いキャッシュを削除
+// Delete old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
@@ -78,19 +78,19 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// fetchイベントでキャッシュを返す (Stale-while-revalidate 戦略に変更)
+// Return cache on fetch (Stale-while-revalidate strategy)
 self.addEventListener("fetch", (event) => {
-  // GETリクエスト以外はキャッシュ処理をバイパス
+  // Bypass cache for non-GET requests
   if (event.request.method !== "GET") return;
 
   event.respondWith(
-    // クエリパラメータを無視してWASMファイルなどを確実にキャッシュヒットさせる
+    // Ignore query parameters to ensure cache hits
     caches.match(event.request, { ignoreSearch: true }).then((response) => {
-      // ネットワークから最新リソースをフェッチし、成功すればキャッシュを更新する（裏側で実行）
+      // Fetch latest resources from network and update cache on success (background)
       const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.ok && (networkResponse.type === "basic" || networkResponse.type === "cors")) {
-            // クエリパラメータ付きのリクエスト（Share Target 等）はキャッシュを肥大化させるため保存しない
+            // Do not cache requests with query parameters (e.g., Share Target) to avoid bloat
             if (!event.request.url.includes("?")) {
               const responseToCache = networkResponse.clone();
               caches.open(CACHE_NAME).then((cache) => {
@@ -101,7 +101,7 @@ self.addEventListener("fetch", (event) => {
           return networkResponse;
         })
         .catch(() => {
-          // オフラインかつキャッシュにもない場合のフォールバック（HTMLへのアクセス時のみ）
+          // Fallback when offline and not in cache (only for HTML requests)
           if (
             event.request.mode === "navigate" ||
             (event.request.headers.get("accept") && event.request.headers.get("accept").includes("text/html"))
@@ -113,7 +113,10 @@ self.addEventListener("fetch", (event) => {
           }
         });
 
-      // キャッシュがあれば即座に返し、なければ fetchPromise の結果を待つ
+      // Silently absorb errors from asynchronous fetchPromise
+      fetchPromise.catch(() => {});
+
+      // Return cache immediately if available, otherwise wait for fetchPromise
       return response || fetchPromise;
     }),
   );

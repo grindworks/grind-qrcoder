@@ -4,14 +4,15 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <!-- Content Security Policy (サプライチェーン攻撃対策・多層防御) -->
+    <!-- Content Security Policy (Supply chain attack prevention, defense in depth) -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com ws://127.0.0.1:* ws://localhost:* data: blob:; object-src 'none'; base-uri 'self';">
     <title>GRINDS - Advanced QR Code Generator Pro</title>
 
-    <!-- OSのステータスバー色をテーマに合わせる -->
+    <!-- Sync OS status bar color with theme -->
     <meta id="meta-theme-color" name="theme-color" content="#f8fafc">
+    <meta name="color-scheme" content="light">
 
-    <!-- JavaScriptベースの Frame Busting (Clickjacking防御) -->
+    <!-- JavaScript-based Frame Busting (Clickjacking defense) -->
     <style id="antiClickjack">body{display:none !important;}</style>
     <script type="text/javascript">
       if (self === top) {
@@ -22,32 +23,32 @@
       }
     </script>
 
-    <!-- PWA化のための設定 (マニフェストとアイコン) -->
+    <!-- Setup for PWA (Manifest and Icons) -->
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-    <!-- Google Fonts (Inter + Noto Sans JP) -->
+    <!-- Load Google Fonts (Inter + Noto Sans JP) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+JP:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 
-    <!-- ビルド済みの Tailwind CSS を読み込む (プロジェクト標準) -->
+    <!-- Load pre-built Tailwind CSS (Project standard) -->
     <link rel="stylesheet" href="styles.css">
 
-    <!-- アプリケーションロジック (必ずAlpine.jsより前に読み込むこと) -->
+    <!-- Load application logic (Must be loaded before Alpine.js) -->
     <script defer src="main.js"></script>
 
-    <!-- QRコード生成に必要なライブラリ群 -->
+    <!-- Load required libraries for QR code generation -->
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.13.5/dist/cdn.min.js" integrity="sha256-K9XZcZtTfN2DuA4XH9cl2pzdr5lD1RD8tKwBQNs5pHo=" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.13.5/dist/cdn.min.js" integrity="sha256-II/pD4ncnDJ5Gp5RoPCWgay844r/wjeJLUDpJWHO7Cg=" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js" integrity="sha256-ygV4Me+b49juR+FAeAif0jgdx4ILS7f724WkkPW49ow=" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js" crossorigin="anonymous"></script>
 
-    <!-- ページ全体の基本的なスタイル設定 -->
+    <!-- Define basic global styles -->
     <style>
 
       [x-cloak] {
@@ -85,6 +86,8 @@
       .tooltip {
         position: relative;
         display: inline-block;
+        cursor: help;
+        -webkit-tap-highlight-color: transparent;
       }
 
       .tooltip .tooltiptext {
@@ -120,12 +123,11 @@
         border-color: #1f2937 transparent transparent transparent;
       }
 
-      @media (hover: hover) and (pointer: fine) {
-        .tooltip:hover .tooltiptext,
-        .tooltip:focus-within .tooltiptext {
-          visibility: visible;
-          opacity: 1;
-        }
+      .tooltip:hover .tooltiptext,
+      .tooltip:focus-within .tooltiptext,
+      .tooltip:active .tooltiptext {
+        visibility: visible;
+        opacity: 1;
       }
 
       .main-preview-bg {
@@ -139,7 +141,7 @@
         background-size: 20px 20px;
       }
 
-      /* カスタムスクロールバー */
+      /* Custom scrollbar */
       ::-webkit-scrollbar {
         width: 14px;
         height: 14px;
@@ -159,12 +161,12 @@
         border: 3px solid rgba(0, 0, 0, 0);
       }
 
-      /* アプリケーション全体での意図しないダブルタップズームを防止 */
+      /* Prevent unintended double-tap zoom across the application */
       button, input, select, a, .cursor-pointer {
         touch-action: manipulation;
       }
 
-      /* スライダー操作時の画面スクロールやスワイプバックをロック */
+      /* Lock screen scrolling and swipe-back during slider interaction */
       input[type="range"] {
         touch-action: pan-y;
       }
@@ -172,12 +174,12 @@
   </head>
 
   <body x-data="qrCodeGenerator()" x-init="init()" class="min-h-screen bg-[#fafbfc] text-slate-800 font-sans antialiased selection:bg-primary/20 selection:text-primary transition-colors duration-300" x-cloak>
-    <!-- メインコンテンツエリア -->
+    <!-- Main content area -->
     <main class="min-h-screen px-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 lg:px-8 w-full transition-all duration-300">
       <div class="mx-auto max-w-7xl px-2 py-6 pb-24 md:p-6 md:pb-6">
-        <!-- ヘッダー -->
+        <!-- Header -->
         <header class="z-50 sticky top-2 sm:top-4 flex lg:flex-row flex-col justify-between items-start lg:items-center gap-5 mb-10 bg-white/70 backdrop-blur-xl border border-slate-200/60 shadow-softer rounded-2xl p-4 transition-all duration-300 hover:shadow-soft hover:bg-white/90">
-          <!-- 左側：タイトル & ファイル名 -->
+          <!-- Left side: Title & Filename -->
           <div class="flex flex-col gap-1.5 min-w-0 max-w-full shrink-0">
             <h1 class="flex items-center gap-2.5 font-extrabold text-slate-900 text-2xl tracking-tight transition-colors">
               <span class="text-primary"><svg class="w-6 h-6">
@@ -191,9 +193,9 @@
             </div>
           </div>
 
-          <!-- 右側：各種コントロール群 -->
+          <!-- Right side: Control buttons -->
           <div class="flex flex-wrap justify-start lg:justify-end items-center gap-2 sm:gap-3 w-full lg:w-auto">
-            <!-- 暗号化パスワード入力 -->
+            <!-- Encryption password input -->
             <div class="relative flex items-center">
               <label for="file-password" class="sr-only">Encryption Password</label>
               <input type="password" id="file-password" placeholder="Encryption Password..." autocomplete="new-password"
@@ -219,19 +221,19 @@
               </svg>
             </button>
             <button id="btn-save" @click="saveQRCoderFile()"
-              :disabled="qrQuality.issues.some(i => i.id === 'capacity_error')"
+              :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')"
               class="relative bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-900 text-sm transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Save Backup"
               title="Backup to file">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5">
                 <use href="icons-sprite.svg#outline-arrow-down-tray"></use>
               </svg>
-              <!-- 未保存バッジ -->
+              <!-- Unsaved badge -->
               <span id="dirty-badge" class="hidden -top-1 -right-1 absolute w-3 h-3">
                 <span class="inline-flex relative bg-orange-500 shadow-[0_0_8px_var(--color-orange-500)] border-2 border-white rounded-full w-3 h-3"></span>
               </span>
             </button>
 
-            <!-- コマンドパレット呼び出しボタン -->
+            <!-- Command palette toggle button -->
             <button onclick="toggleCommandPalette()"
               class="flex items-center gap-2 bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-600 hover:text-slate-900 text-sm transition-colors cursor-pointer shrink-0" aria-label="Open Command Palette"
               title="Open Command Palette">
@@ -243,7 +245,7 @@
           </div>
         </header>
 
-        <!-- 「作成」と「管理」を切り替えるタブ -->
+        <!-- Toggle tabs for "Create" and "Manage" -->
         <div class="mb-8 flex items-center justify-between">
           <nav class="flex items-center gap-1 rounded-full bg-slate-200/60 p-1.5 shadow-inner-soft backdrop-blur-sm">
             <button @click="currentView = 'generator'" :class="currentView === 'generator' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'" class="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300">
@@ -269,9 +271,9 @@
           </button>
         </div>
 
-        <!-- QRコード作成画面 -->
+        <!-- QR code creation view -->
         <div x-show="currentView === 'generator'">
-          <!-- ステップ1: QRコードのタイプ選択 -->
+          <!-- Step 1: Select QR code type -->
           <div x-show="currentStep === 'typeSelection'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
             <div class="mb-10 rounded-2xl border border-white bg-white/50 p-6 shadow-softer backdrop-blur-md md:p-10">
               <div class="flex flex-col items-start gap-6 md:flex-row md:items-center">
@@ -306,7 +308,7 @@
             </div>
           </div>
 
-          <!-- ステップ2: コンテンツ入力とデザイン設定 -->
+          <!-- Step 2: Input content and customize design -->
           <div x-show="currentStep === 'contentEntry'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
             <div class="mb-8 flex items-center gap-5">
               <button @click="window.history.length > 1 ? window.history.back() : currentStep = 'typeSelection'" aria-label="Go back" class="group flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200/80 bg-white shadow-softer transition-all duration-300 hover:border-primary/30 hover:bg-slate-50 hover:shadow-soft">
@@ -323,7 +325,7 @@
             <div class="fixed bottom-24 md:bottom-6 right-6 z-50 transform rounded-xl bg-slate-900/95 px-5 py-4 text-white shadow-soft backdrop-blur-md transition-all" x-show="showNotification" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4" x-text="notificationMessage"></div>
 
             <div class="flex flex-col gap-8 xl:flex-row">
-              <!-- 左側: 設定パネル -->
+              <!-- Left side: Configuration panel -->
               <div class="w-full xl:flex-1">
                 <nav class="mb-8 flex items-center gap-1.5 rounded-2xl bg-slate-200/50 p-1.5 shadow-inner-soft backdrop-blur-sm">
                   <button @click="activeStepTab = 'content'" :class="activeStepTab === 'content' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:bg-white/50 hover:text-slate-800'" class="flex-1 rounded-xl px-4 py-3 text-sm font-bold transition-all duration-300">1. Content</button>
@@ -332,7 +334,7 @@
                 </nav>
 
                 <div class="space-y-8">
-                  <!-- パネル1: コンテンツ入力フォーム -->
+                  <!-- Panel 1: Content input form -->
                   <div x-show="activeStepTab === 'content'" x-transition class="space-y-6">
                     <div class="rounded-2xl border border-white bg-white p-6 shadow-softer ring-1 ring-slate-900/5 sm:p-8">
                       <div x-show="selectedType === 'url'">
@@ -342,8 +344,45 @@
                           Website URL
                           <span class="ml-2 inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600 ring-1 ring-inset ring-red-500/10">Required</span>
                         </label>
-                          <input type="text" id="website-url" x-model="formData.url.address" @input.debounce.300ms="validateUrl()" @blur="if(formData.url.address && !/^https?:\/\//i.test(formData.url.address.trim())) { formData.url.address = 'https://' + formData.url.address.trim(); updateQrCode(); }" placeholder="https://www.example.com" class="block w-full rounded-xl border-0 bg-slate-50/50 px-4 py-3.5 text-base md:text-sm text-slate-900 shadow-inner-soft ring-1 ring-inset transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset" :class="urlError ? 'ring-red-500 focus:ring-red-500' : 'ring-slate-200 focus:ring-primary'" />
+                          <input type="text" id="website-url" x-model="formData.url.address" @input.debounce.300ms="validateUrl()" placeholder="https://www.example.com" class="block w-full rounded-xl border-0 bg-slate-50/50 px-4 py-3.5 text-base md:text-sm text-slate-900 shadow-inner-soft ring-1 ring-inset transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset" :class="urlError ? 'ring-red-500 focus:ring-red-500' : 'ring-slate-200 focus:ring-primary'" />
                         <p x-show="urlError" x-text="urlError" class="mt-2 text-sm text-red-600"></p>
+                        <!-- UTM Parameters Builder -->
+                        <div x-data="{ showUtm: false }" class="mt-5 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 transition-all duration-300">
+                          <button @click="showUtm = !showUtm" class="flex w-full items-center justify-between px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none">
+                            <span class="flex items-center gap-2">
+                              <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-chart-bar"></use></svg>
+                              UTM Parameters Builder
+                            </span>
+                            <svg class="h-4 w-4 text-slate-400 transition-transform duration-300" :class="showUtm ? 'rotate-180' : ''"><use href="icons-sprite.svg#outline-chevron-down"></use></svg>
+                          </button>
+                          <div x-show="showUtm" x-collapse>
+                            <div class="space-y-3 border-t border-slate-200 p-4">
+                              <p class="mb-3 text-xs text-slate-500">Add tracking parameters to measure campaign performance in Google Analytics.</p>
+                              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                <div>
+                                  <label class="mb-1 block text-xs font-semibold text-slate-600">Source (utm_source) <span class="text-red-500">*</span></label>
+                                  <input type="text" x-model="formData.url.utm.source" @input.debounce.300ms="updateQrCode()" placeholder="e.g. google, newsletter" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                </div>
+                                <div>
+                                  <label class="mb-1 block text-xs font-semibold text-slate-600">Medium (utm_medium) <span class="text-red-500">*</span></label>
+                                  <input type="text" x-model="formData.url.utm.medium" @input.debounce.300ms="updateQrCode()" placeholder="e.g. cpc, email, flyer" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                </div>
+                                <div class="sm:col-span-2">
+                                  <label class="mb-1 block text-xs font-semibold text-slate-600">Campaign (utm_campaign) <span class="text-red-500">*</span></label>
+                                  <input type="text" x-model="formData.url.utm.campaign" @input.debounce.300ms="updateQrCode()" placeholder="e.g. summer_sale, spring_event" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                </div>
+                                <div>
+                                  <label class="mb-1 block text-xs font-semibold text-slate-600">Term (utm_term)</label>
+                                  <input type="text" x-model="formData.url.utm.term" @input.debounce.300ms="updateQrCode()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                </div>
+                                <div>
+                                  <label class="mb-1 block text-xs font-semibold text-slate-600">Content (utm_content)</label>
+                                  <input type="text" x-model="formData.url.utm.content" @input.debounce.300ms="updateQrCode()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                         <div x-show="isUrlLong" class="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
                           <div class="flex items-center justify-between">
                             <div>
@@ -357,9 +396,9 @@
                         <h3 class="mb-1 text-lg font-semibold text-slate-800">Text</h3>
                         <p class="mb-4 text-sm text-slate-500">Enter the text you want the QR code to display.</p>
                         <label for="text-content" class="mb-2 block text-sm font-medium text-slate-700">Text Content</label>
-                        <textarea id="text-content" x-model="formData.text.content" @input.debounce.300ms="updateQrCode()" rows="6" placeholder="Enter text here..." class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+                        <textarea id="text-content" x-model="formData.text.content" @input.debounce.300ms="updateQrCode()" rows="6" placeholder="Enter text here..." class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
                       </div>
-                      <!-- その他のコンテンツ入力フォーム (WiFi, vCard, Event, Email, Geo, SNS, Images, Video) は省略せず記述 -->
+                      <!-- Other content input forms (WiFi, vCard, Event, Email, Geo, SNS, Images, Video) -->
                       <div x-show="selectedType === 'wifi'">
                         <h3 class="mb-1 text-lg font-semibold text-slate-800">Wi-Fi</h3>
                         <p class="mb-4 text-sm text-slate-500">Create a QR code that connects to a Wi-Fi network just by scanning.</p>
@@ -448,7 +487,7 @@
                           </div>
                           <div>
                             <label for="event-description" class="mb-2 block text-sm font-medium text-slate-700">Description</label>
-                            <textarea id="event-description" x-model="formData.event.description" @input.debounce.300ms="updateQrCode()" rows="3" placeholder="Enter event details..." class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+                            <textarea id="event-description" x-model="formData.event.description" @input.debounce.300ms="updateQrCode()" rows="3" placeholder="Enter event details..." class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
                           </div>
                         </div>
                       </div>
@@ -469,7 +508,7 @@
                           </div>
                           <div>
                             <label for="email-body" class="mb-2 block text-sm font-medium text-slate-700">Body</label>
-                            <textarea id="email-body" x-model="formData.email.body" @input.debounce.300ms="updateQrCode()" rows="4" placeholder="Please enter your inquiry details." class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+                            <textarea id="email-body" x-model="formData.email.body" @input.debounce.300ms="updateQrCode()" rows="4" placeholder="Please enter your inquiry details." class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
                           </div>
                         </div>
                       </div>
@@ -555,13 +594,44 @@
                     </div>
                   </div>
 
-                  <!-- パネル2: デザイン設定 -->
+                  <!-- Panel 2: Design customization -->
                   <div x-show="activeStepTab === 'design'" x-transition class="space-y-8">
                     <div class="rounded-2xl border border-white bg-white shadow-softer ring-1 ring-slate-900/5">
+
                       <div class="p-6 sm:p-8">
-                        <h3 class="mb-2 text-xl font-bold text-slate-800">Design Templates</h3>
-                        <p class="mb-8 text-sm leading-relaxed text-slate-500">Apply professional designs with a single click.</p>
+                        <div class="mb-8 flex items-center justify-between">
+                          <div>
+                            <h3 class="mb-1 text-xl font-bold text-slate-800">Design Templates</h3>
+                            <p class="text-sm leading-relaxed text-slate-500">Apply professional designs or save your own.</p>
+                          </div>
+                          <button @click="saveCurrentAsTemplate()" class="flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-primary/20 active:scale-95">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-plus"></use></svg>
+                            <span class="hidden sm:inline">Save Current</span>
+                          </button>
+                        </div>
+
                         <div class="space-y-8">
+                          <!-- My Templates section -->
+                          <div x-show="myTemplates.length > 0" x-transition>
+                            <h4 class="mb-3 flex items-center gap-2 text-sm font-bold text-slate-700 border-b border-slate-200 pb-2">
+                              <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+                              My Templates
+                            </h4>
+                            <div class="grid grid-cols-2 gap-4 sm:grid-cols-6">
+                              <template x-for="tpl in myTemplates" :key="tpl.id">
+                                <div class="group relative space-y-2">
+                                  <button @click="applyMyTemplate(tpl)" class="relative w-full aspect-square transform overflow-hidden rounded-lg border-2 bg-slate-50 p-2 shadow-sm transition group-hover:scale-105 group-hover:border-primary group-hover:shadow-md" :class="isCurrentMyTemplate(tpl) ? 'border-primary ring-2 ring-primary/30' : 'border-slate-200'">
+                                    <img :src="tpl.preview" class="h-full w-full object-contain drop-shadow-sm" />
+                                  </button>
+                                  <p class="text-center text-xs font-semibold text-slate-700 truncate" x-text="tpl.name"></p>
+                                  <button @click.stop="deleteMyTemplate(tpl.id)" class="absolute -top-3 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm border border-slate-200 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100" title="Delete template">
+                                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-x-mark"></use></svg>
+                                  </button>
+                                </div>
+                              </template>
+                            </div>
+                          </div>
+
                           <template x-for="group in presetTemplateGroups" :key="group.name">
                             <div>
                               <h4 class="mb-3 text-sm font-bold text-slate-700 border-b border-slate-200 pb-2" x-text="group.name"></h4>
@@ -724,9 +794,9 @@
                     </div>
                   </div>
 
-                  <!-- パネル3: ロゴとフレーム設定 -->
+                  <!-- Panel 3: Logo and frame settings -->
                   <div x-show="activeStepTab === 'logo'" x-transition class="space-y-8">
-                    <!-- ロゴ設定 -->
+                    <!-- Logo settings -->
                     <div class="rounded-2xl border border-white bg-white shadow-softer ring-1 ring-slate-900/5">
                       <div class="p-6 sm:p-8">
                         <div class="mb-6 flex items-center justify-between">
@@ -736,7 +806,7 @@
                           </template>
                         </div>
 
-                        <!-- 1. ロゴ未設定時 -->
+                        <!-- 1. When logo is not set -->
                         <div x-show="!qrOptions.logo">
                           <label @dragover.prevent="$el.classList.add('border-primary', 'bg-primary-50')" @dragleave.prevent="$el.classList.remove('border-primary', 'bg-primary-50')" @drop.prevent="$el.classList.remove('border-primary', 'bg-primary-50'); handleDrop($event, 'handleLogoUpload')" class="group flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 py-8 transition-all hover:border-primary/50 hover:bg-primary-50/50">
                             <div class="flex flex-col items-center justify-center text-center pointer-events-none">
@@ -752,49 +822,49 @@
                           </label>
                         </div>
 
-                        <!-- 2. ロゴ設定済み -->
+                        <!-- 2. When logo is set -->
                         <template x-if="qrOptions.logo">
                           <div class="space-y-6">
-                            <!-- 高機能プレビューエリア -->
+                            <!-- Advanced preview area -->
                             <div class="relative flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-slate-50 py-8">
-                              <!-- 背景パターン -->
+                              <!-- Background pattern -->
                               <div class="absolute inset-0 opacity-40" style="background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 12px 12px"></div>
 
-                              <!-- ロゴ表示領域（視覚化） -->
+                              <!-- Logo display area (Visualization) -->
                               <div class="relative z-10">
-                                <!-- 余白（クリア領域）を示すボーダー -->
-                                <!-- marginの値に応じてパディングが変化し、破線で領域を可視化 -->
+                                <!-- Border indicating margin (Clear area) -->
+                                <!-- Adjust padding based on margin value to visualize area with dashed line -->
                                 <div class="group relative flex items-center justify-center border-2 border-dashed transition-all duration-200" :class="qrOptions.imageOptions.margin < 2 ? 'border-rose-300 bg-rose-50/30' : 'border-primary/30 bg-primary-50/30'" :style="{ padding: qrOptions.imageOptions.margin + 'px' }">
-                                  <!-- 余白ラベル（ホバー時や操作時に意味がわかるように） -->
+                                  <!-- Margin label (visible on hover/interaction) -->
                                   <div class="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-1.5 py-0.5 text-[10px] text-white opacity-0 transition-opacity group-hover:opacity-100">
                                     Clear Area:
                                     <span x-text="qrOptions.imageOptions.margin"></span>
                                     px
                                   </div>
 
-                                  <!-- ロゴ画像 -->
+                                  <!-- Logo image -->
                                   <div class="relative transition-all duration-200" :style="{ transform: `scale(${0.5 + (qrOptions.imageOptions.imageSize)})` }">
                                     <img :src="qrOptions.logo" class="h-16 w-auto max-w-[200px] object-contain drop-shadow-sm" />
                                   </div>
                                 </div>
                               </div>
 
-                              <!-- スキャン安全性インジケーター -->
+                              <!-- Scan safety indicator -->
                               <div class="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full border bg-white px-2 py-1 text-[10px] font-bold shadow-sm" :class="qrOptions.imageOptions.imageSize > 0.35 ? 'border-amber-200 text-amber-700' : 'border-green-200 text-green-700'">
                                 <div class="h-2 w-2 rounded-full" :class="qrOptions.imageOptions.imageSize > 0.35 ? 'bg-amber-500' : 'bg-green-500'"></div>
                                 <span x-text="qrOptions.imageOptions.imageSize > 0.35 ? 'Scan Warning' : 'Good Size'"></span>
                               </div>
                             </div>
 
-                            <!-- コントロールエリア -->
+                            <!-- Control area -->
                             <div class="grid gap-6 sm:grid-cols-2">
-                              <!-- サイズ調整 -->
+                              <!-- Adjust size -->
                               <div class="space-y-3">
                                 <div class="flex items-center justify-between">
                                   <label class="flex items-center gap-2 text-sm font-bold text-slate-700">Size</label>
                                   <span class="rounded bg-primary-50 px-2 py-0.5 font-mono text-xs font-bold text-primary" x-text="Math.round(qrOptions.imageOptions.imageSize * 100) + '%'"></span>
                                 </div>
-                                <!-- Maxを0.5(50%)に制限して安全性を担保 -->
+                                <!-- Limit max to 0.5 (50%) to ensure safety -->
                                 <div class="relative flex items-center">
                                   <input type="range" x-model.number="qrOptions.imageOptions.imageSize" min="0.1" max="0.4" step="0.05" @input.debounce.50ms="updateQrCode(false)" @change="updateQrCode(true)" class="h-2 w-full cursor-pointer rounded-lg bg-slate-200 accent-primary focus:outline-none focus:ring-2 focus:ring-primary/30" />
                                 </div>
@@ -804,7 +874,7 @@
                                 </div>
                               </div>
 
-                              <!-- 余白調整 -->
+                              <!-- Adjust margin -->
                               <div class="space-y-3">
                                 <div class="flex items-center justify-between">
                                   <label class="flex items-center gap-2 text-sm font-bold text-slate-700">Margin (Clear Area)</label>
@@ -812,19 +882,19 @@
                                 </div>
 
                                 <div class="relative flex items-center">
-                                  <!-- minを4に変更 -->
+                                  <!-- Change min to 4 -->
                                   <input type="range" x-model.number="qrOptions.imageOptions.margin" min="4" max="20" step="1" @input.debounce.50ms="updateQrCode(false)" @change="updateQrCode(true)" class="h-2 w-full cursor-pointer rounded-lg bg-slate-200 accent-primary focus:outline-none focus:ring-2 focus:ring-primary/30" />
                                 </div>
 
                                 <div class="flex justify-between px-1 text-[10px] font-medium text-slate-400">
-                                  <!-- 条件付きクラスや「なし(非推奨)」を削除し、単純なラベルに変更 -->
+                                  <!-- Remove conditional classes/unrecommended tags, use simple labels -->
                                   <span>Narrow</span>
                                   <span>Wide</span>
                                 </div>
                               </div>
                             </div>
 
-                            <!-- ガイドメッセージ -->
+                            <!-- Guide message -->
                             <p class="text-xs text-slate-500">
                               <span class="font-bold">Hint:</span>
                               The blue dotted frame is the "clear area" where QR code dots are removed. Adjust the margin so the frame doesn't overlap with the logo.
@@ -974,7 +1044,7 @@
                 </div>
               </div>
 
-              <!-- 右側: プレビューとダウンロード -->
+              <!-- Right side: Preview and download -->
               <div class="order-first xl:order-0 mb-8 xl:mb-0 top-[74px] h-fit w-full xl:sticky xl:w-[420px] xl:shrink-0">
                 <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-lg md:p-6 transition-all duration-300"
                      :class="{ 'ring-4 ring-primary/20 scale-[1.01] shadow-xl': isUpdatingPreview }">
@@ -1064,10 +1134,30 @@
                     </div>
                   </div>
 
+                  <!-- Raw Data Inspector -->
+                  <div class="mt-6 border-t border-slate-200 pt-6">
+                    <button @click="showRawData = !showRawData" class="flex w-full items-center justify-between text-sm font-bold text-slate-700 transition-colors hover:text-primary focus:outline-none">
+                      <span class="flex items-center gap-2">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-code-bracket"></use></svg>
+                        Inspect Raw Data
+                      </span>
+                      <svg class="h-4 w-4 transition-transform duration-300" :class="showRawData ? 'rotate-180' : ''"><use href="icons-sprite.svg#outline-chevron-down"></use></svg>
+                    </button>
+                    <div x-show="showRawData" x-collapse>
+                      <div class="relative mt-3 group rounded-lg bg-slate-900 p-4 shadow-inner">
+                        <button @click="if(rawDataString.trim()) { navigator.clipboard.writeText(rawDataString.trim()); copiedRaw = true; hapticFeedback('light'); setTimeout(() => copiedRaw = false, 2000); }" class="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-slate-700 p-1.5 text-slate-400 transition-colors hover:bg-slate-600 hover:text-white opacity-0 group-hover:opacity-100" title="Copy Raw Data">
+                          <svg x-show="!copiedRaw" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
+                          <svg x-show="copiedRaw" x-cloak class="h-3.5 w-3.5 text-green-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        </button>
+                        <pre class="scrollbar-hide max-h-32 overflow-y-auto overflow-x-hidden break-all whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-slate-300" x-text="rawDataString.trim() || '(No data)'"></pre>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="mt-6 space-y-4 border-t border-slate-200 pt-6">
                     <div>
                       <label for="file-name" class="mb-2 block text-sm font-semibold text-slate-700">File Name</label>
-                      <input type="text" id="file-name" x-model="download.fileName" @input='download.fileName = download.fileName.replace(/[\\/:*?"<>|]/g, "-")' class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                      <input type="text" id="file-name" x-model="download.fileName" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                     </div>
                     <div>
                       <label class="mb-2 block text-sm font-semibold text-slate-700">Format</label>
@@ -1085,24 +1175,29 @@
                     </div>
                     <div class="space-y-2">
                       <div class="flex gap-2">
-                        <button type="button" @click="showDownloadModal = true" :disabled="qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex flex-1 items-center justify-center gap-x-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-hover hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
+                        <button type="button" @click="showDownloadModal = true" :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex flex-1 items-center justify-center gap-x-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-hover hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
                           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                             <use href="icons-sprite.svg#outline-arrow-down-tray"></use>
                           </svg>
                           <span>PNG / SVG</span>
                         </button>
-                        <button type="button" @click="copyImageToClipboard()" :disabled="qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex items-center justify-center gap-x-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-200 hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50" title="Copy image to clipboard">
+                        <button type="button" @click="copyImageToClipboard()" :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex items-center justify-center gap-x-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-200 hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50" title="Copy image to clipboard">
                           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                             <use href="icons-sprite.svg#outline-clipboard-document"></use>
                           </svg>
                         </button>
                       </div>
-                      <button type="button" @click="showSaveModal = true" :disabled="qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex w-full items-center justify-center gap-x-2 rounded-lg border border-slate-300 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-100 hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
-                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
-                          <use href="icons-sprite.svg#outline-folder"></use>
-                        </svg>
-                        <span x-text="editingQRCodeId ? 'Save changes to Dashboard' : 'Save QR data to Dashboard'"></span>
-                      </button>
+                      <div class="flex gap-2 w-full">
+                        <button x-show="editingQRCodeId" type="button" @click="currentView = 'dashboard'; resetGenerator()" class="relative z-30 flex items-center justify-center gap-x-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:outline-none">
+                          Cancel
+                        </button>
+                        <button type="button" @click="showSaveModal = true; $nextTick(() => $refs.saveNameInput.focus())" :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex flex-1 items-center justify-center gap-x-2 rounded-lg border border-slate-300 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-100 hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
+                          <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
+                            <use href="icons-sprite.svg#outline-folder"></use>
+                          </svg>
+                          <span x-text="editingQRCodeId ? 'Save changes' : 'Save QR data to Dashboard'"></span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1111,7 +1206,7 @@
           </div>
         </div>
 
-        <!-- QRコード管理画面（ダッシュボード） -->
+        <!-- QR code management view (Dashboard) -->
         <div x-show="currentView === 'dashboard'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
           <div class="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
             <div class="flex flex-col items-start gap-6 md:flex-row md:items-center">
@@ -1141,7 +1236,7 @@
                   </select>
                 </div>
 
-                <!-- 検索フィルター -->
+                <!-- Search filter -->
                 <div class="relative w-full sm:w-64 shrink-0">
                   <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                     <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2">
@@ -1193,15 +1288,15 @@
                       <div class="col-span-12 flex flex-col md:col-span-4 md:block" x-data="{ editingMemo: false, editingTags: false, tempMemo: qr.memo || '', tempTags: (qr.tags || []).join(', ') }">
                         <span class="font-medium text-slate-500 md:hidden mb-2">Memo / Tag</span>
 
-                        <!-- メモのインライン編集 -->
+                        <!-- Inline edit memo -->
                         <div class="relative group" @click.outside="if(editingMemo) { updateInlineMemo(qr, tempMemo); editingMemo = false; }">
                           <div x-show="!editingMemo" @click="editingMemo = true; tempMemo = qr.memo || ''; $nextTick(() => $refs.memoInput.focus())" class="cursor-text rounded border border-transparent hover:border-slate-200 hover:bg-slate-50 p-1 -mx-1 min-h-7 transition-colors" title="Click to edit memo">
                             <p class="text-sm text-slate-600 line-clamp-2" x-text="qr.memo || 'Add memo...'" :class="{'text-slate-400 italic': !qr.memo}"></p>
                           </div>
-                          <textarea x-show="editingMemo" x-cloak x-ref="memoInput" x-model="tempMemo" @keydown.enter="if(!$event.isComposing && !$event.shiftKey) { $event.preventDefault(); updateInlineMemo(qr, tempMemo); editingMemo = false; }" @keydown.escape="editingMemo = false; tempMemo = qr.memo || ''" rows="3" class="absolute -top-1 -left-1 z-10 w-[calc(100%+0.5rem)] rounded-lg border border-primary bg-white p-2 text-sm shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/20" placeholder="Enter memo... (Enter to save / Shift+Enter for new line)"></textarea>
+                          <textarea x-show="editingMemo" x-cloak x-ref="memoInput" x-model="tempMemo" @keydown.enter="if(!$event.isComposing && !$event.shiftKey) { $event.preventDefault(); updateInlineMemo(qr, tempMemo); editingMemo = false; }" @keydown.escape="editingMemo = false; tempMemo = qr.memo || ''" rows="3" class="resize-y absolute -top-1 -left-1 z-10 w-[calc(100%+0.5rem)] rounded-lg border border-primary bg-white p-2 text-sm shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/20" placeholder="Enter memo... (Enter to save / Shift+Enter for new line)"></textarea>
                         </div>
 
-                        <!-- タグのインライン編集 -->
+                        <!-- Inline edit tags -->
                         <div class="relative group mt-1" @click.outside="if(editingTags) { updateInlineTags(qr, tempTags); editingTags = false; }">
                           <div x-show="!editingTags" @click="editingTags = true; tempTags = (qr.tags || []).join(', '); $nextTick(() => $refs.tagsInput.focus())" class="cursor-text flex min-h-7 flex-wrap items-center gap-1 rounded border border-transparent hover:border-slate-200 hover:bg-slate-50 p-1 -mx-1 transition-colors" title="Click to edit tags">
                             <template x-if="!qr.tags || qr.tags.length === 0">
@@ -1219,7 +1314,7 @@
                         </div>
                       </div>
 
-                      <!-- スマホ用の作成日表示 -->
+                      <!-- Display creation date for mobile -->
                       <div class="col-span-12 flex items-center justify-between md:hidden">
                         <span class="font-medium text-slate-500">Created At</span>
                         <p class="text-sm text-slate-500" x-text="new Date(qr.createdAt).toLocaleDateString()"></p>
@@ -1271,7 +1366,7 @@
                 </template>
               </div>
 
-              <!-- 検索結果が0件の場合の表示 -->
+              <!-- Show when no search results found -->
               <div x-show="displayedItems.length === 0 && searchQuery" x-cloak class="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 py-12 text-center">
                 <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.5">
                   <use href="icons-sprite.svg#outline-magnifying-glass"></use>
@@ -1354,7 +1449,7 @@
     <!-- Mobile Bottom Navigation -->
     <nav class="sm:hidden fixed bottom-0 left-0 z-40 w-full backdrop-blur-md bg-white/80 border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
       <div class="flex items-center justify-around px-2 py-1">
-        <button @click="currentView = 'generator'" class="flex flex-col items-center justify-center w-full py-2 rounded-2xl transition-all" :class="currentView === 'generator' ? 'text-primary scale-105' : 'text-slate-400 active:bg-slate-100'">
+        <button @click="if(currentView === 'generator') { if(hasUnsavedEdit && !confirm('Discard changes and start new?')) return; resetGenerator(); currentStep='typeSelection'; } else { currentView = 'generator'; }" class="flex flex-col items-center justify-center w-full py-2 rounded-2xl transition-all" :class="currentView === 'generator' ? 'text-primary scale-105' : 'text-slate-400 active:bg-slate-100'">
           <svg class="h-6 w-6 mb-0.5" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-qr-code"></use></svg>
           <span class="text-[10px] font-black tracking-wide">Create</span>
         </button>
@@ -1368,9 +1463,9 @@
       </div>
     </nav>
 
-    <!-- 各種操作で表示されるモーダルウィンドウ群 -->
+    <!-- Modal windows for various actions -->
 
-    <!-- 保存モーダル -->
+    <!-- Save Modal -->
     <div x-show="showSaveModal" @keydown.escape.window="showSaveModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showSaveModal">
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showSaveModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showSaveModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
@@ -1380,8 +1475,8 @@
         <p class="text-sm text-slate-500 mb-6">Save to the dashboard for later editing.</p>
         <form @submit.prevent="saveToGrind(true)">
           <div class="space-y-4 mb-6">
-            <input type="text" x-model="saveName" placeholder="QR Code Name" required class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
-            <textarea x-model="saveMemo" placeholder="Memo (Optional)" rows="2" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+            <input type="text" x-model="saveName" x-ref="saveNameInput" placeholder="QR Code Name" required class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+            <textarea x-model="saveMemo" placeholder="Memo (Optional)" rows="2" class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
             <input type="text" x-model="saveTags" placeholder="Tags (Comma separated, Optional)" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
           </div>
           <div class="flex gap-3">
@@ -1393,7 +1488,7 @@
       </div>
     </div>
 
-    <!-- 共有モーダル -->
+    <!-- Share Modal -->
     <div x-show="showShareModal" @keydown.escape.window="showShareModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showShareModal">
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showShareModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showShareModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
@@ -1444,7 +1539,7 @@
       </div>
     </div>
 
-    <!-- ダウンロード確認モーダル -->
+    <!-- Download confirmation Modal -->
     <div x-show="showDownloadModal" @keydown.escape.window="showDownloadModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showDownloadModal">
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showDownloadModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showDownloadModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
@@ -1493,7 +1588,7 @@
       </div>
     </div>
 
-    <!-- 利用シーンプレビューモーダル -->
+    <!-- Use case preview Modal -->
     <div x-show="showSceneModal" @keydown.escape.window="cancelSceneSettings()" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showSceneModal">
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showSceneModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="cancelSceneSettings()" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
@@ -1562,7 +1657,7 @@
       </div>
     </div>
 
-    <!-- カスタムプロンプトモーダル -->
+    <!-- Custom prompt modal -->
     <div x-show="showPromptModal" @keydown.escape.window="if(showPromptModal) { resolvePrompt(null); showPromptModal = false; }" class="fixed inset-0 z-60 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-cloak x-trap.noscroll="showPromptModal">
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showPromptModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="resolvePrompt(null); showPromptModal = false;" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
@@ -1570,7 +1665,7 @@
         <div x-show="showPromptModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-sm transform-gpu rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <h3 class="text-lg font-bold text-slate-900 mb-4" x-text="promptMessage"></h3>
           <form @submit.prevent="resolvePrompt(promptInput); showPromptModal = false;">
-            <input type="password" x-model="promptInput" x-ref="promptInputField" autocomplete="new-password" data-lpignore="true" spellcheck="false" class="mb-6 block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" autofocus />
+            <input :type="promptInputType" x-model="promptInput" x-ref="promptInputField" autocomplete="off" data-lpignore="true" spellcheck="false" class="mb-6 block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" autofocus />
             <div class="flex gap-3">
               <button type="button" @click="resolvePrompt(null); showPromptModal = false;" class="flex-1 py-3 rounded-xl bg-slate-100 font-bold text-slate-700 active:scale-95 transition-transform">Cancel</button>
               <button type="submit" class="flex-1 py-3 rounded-xl bg-primary font-bold text-white active:scale-95 transition-transform">OK</button>
@@ -1580,7 +1675,7 @@
       </div>
     </div>
 
-    <!-- コマンドパレット -->
+    <!-- Command palette -->
     <div id="cmd-palette" onclick="toggleCommandPalette()" class="hidden z-100 fixed inset-0 justify-center items-start bg-slate-900/30 backdrop-blur-md p-4 pt-4 md:pt-[15vh] transition-all duration-300 opacity-0" style="transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);">
       <div onclick="event.stopPropagation()" id="cmd-palette-content" class="flex flex-col bg-white/90 shadow-2xl backdrop-blur-xl rounded-xl ring-1 ring-white/50 w-full max-w-2xl overflow-hidden transition-all duration-300 scale-95" style="transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);">
         <div class="relative flex items-center gap-3 p-4 border-slate-200 border-b">
@@ -1595,12 +1690,28 @@
       </div>
     </div>
 
-    <!-- Service Workerの登録 (完全オフライン動作・アプリ化の要) -->
+    <!-- Register Service Worker (Required for full offline PWA) -->
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('sw.js').then(registration => {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
+
+            // Detect updates
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              newWorker.addEventListener('statechange', () => {
+                // Prompt reload when a new SW is installed and an old SW already exists (an update)
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // Seamlessly reload to apply the update if there are no unsaved edits
+                  if (window.$app && !window.$app.hasUnsavedEdit) {
+                    if (confirm("✨ A new version is available. Reload to update?")) {
+                      window.location.reload();
+                    }
+                  }
+                }
+              });
+            });
           }).catch(err => {
             console.log('ServiceWorker registration failed: ', err);
           });
