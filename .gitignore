@@ -1,8 +1,8 @@
 # OS generated files
-# 依存関係
+# Dependencies
 node_modules/
 
-# OSの一時ファイル
+# OS temporary files
 .DS_Store
 .DS_Store?
 ._*
@@ -13,15 +13,14 @@ node_modules/
 # IDEs and Editors
 .idea/
 
-# 開発用スクリプト・ファイル
+# Development scripts and files
 export_ai.md
 export_ai.sh
 Thumbs.db
+AI_RULES.md
 
-# アプリのバックアップ・データファイル
+# Application backup and data files
 *.qrcoder
 icons-preview.html
 tool_optimize_sprite.php
 tailwindcss-macos-arm64
-
-# AI_RULES.md
