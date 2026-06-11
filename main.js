@@ -1912,7 +1912,7 @@ function qrCodeGenerator() {
           if (summary && start && end) {
             const dtstamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
             const uid = `${Date.now()}-${Math.random().toString(36).substring(2,10)}@grinds`;
-            data = `BEGIN:VEVENT\r\nVERSION:2.0\r\nPRODID:-//GrindMoney//QRCoder//EN\r\nUID:${uid}\r\nDTSTAMP:${dtstamp}\r\nSUMMARY:${escapeICal(summary)}\r\nLOCATION:${escapeICal(location)}\r\nDTSTART:${formatDT(start)}\r\nDTEND:${formatDT(end)}\r\nDESCRIPTION:${escapeICal(description)}\r\nEND:VEVENT`;
+            data = `BEGIN:VEVENT\r\nVERSION:2.0\r\nPRODID:-//Grinds//QRCoder//EN\r\nUID:${uid}\r\nDTSTAMP:${dtstamp}\r\nSUMMARY:${escapeICal(summary)}\r\nLOCATION:${escapeICal(location)}\r\nDTSTART:${formatDT(start)}\r\nDTEND:${formatDT(end)}\r\nDESCRIPTION:${escapeICal(description)}\r\nEND:VEVENT`;
           }
           break;
         case "email":
