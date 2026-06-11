@@ -98,16 +98,17 @@
         color: #fff;
         text-align: center;
         border-radius: 6px;
-        padding: 8px;
+        padding: 5px 8px;
         position: absolute;
-        z-index: 1;
-        bottom: 125%;
+        z-index: 50;
+        bottom: calc(100% + 6px);
         left: 50%;
         margin-left: -120px;
         opacity: 0;
         transition: opacity 0.3s;
-        font-size: 12px;
-        font-weight: normal;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.02em;
         box-shadow:
           0 4px 6px -1px rgb(0 0 0 / 0.1),
           0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -131,15 +132,14 @@
         opacity: 1;
       }
 
-      .main-preview-bg {
-        background-size: contain;
-        background-position: center;
-        background-repeat: no-repeat;
-      }
-
-      .preview-grid-bg {
-        background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px), linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
-        background-size: 20px 20px;
+      .preview-checker-bg {
+        background-color: #ffffff;
+        background-image:
+          linear-gradient(45deg, #f1f5f9 25%, transparent 25%, transparent 75%, #f1f5f9 75%, #f1f5f9),
+          linear-gradient(45deg, #f1f5f9 25%, transparent 25%, transparent 75%, #f1f5f9 75%, #f1f5f9);
+        background-size: 24px 24px;
+        background-position: 0 0, 12px 12px;
+        background-repeat: repeat;
       }
 
       /* Responsive SVG for QR Canvas */
@@ -148,7 +148,6 @@
         width: 100% !important;
         height: auto !important;
         max-width: 100%;
-        max-height: 100%;
       }
 
       /* Custom scrollbar */
@@ -184,11 +183,20 @@
   </head>
 
   <body x-data="qrCodeGenerator()" x-init="init()" class="min-h-screen bg-[#fafbfc] text-slate-800 font-sans antialiased selection:bg-primary/20 selection:text-primary transition-colors duration-300" x-cloak>
+    <!-- Global Dropzone for Drag & Drop -->
+    <div id="global-dropzone" class="fixed inset-0 z-100 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-200">
+      <div class="pointer-events-none flex flex-col items-center rounded-3xl border-4 border-dashed border-primary bg-white/10 p-12 text-white shadow-2xl backdrop-blur-md">
+        <svg class="mb-4 h-16 w-16 animate-bounce text-primary-400" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>
+        <h2 class="text-3xl font-black tracking-tight">Drop backup file here</h2>
+        <p class="mt-2 text-sm font-medium text-slate-300">Restore your dashboard data instantly.</p>
+      </div>
+    </div>
+
     <!-- Main content area -->
     <main class="min-h-screen px-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 lg:px-8 w-full transition-all duration-300">
       <div class="mx-auto max-w-7xl w-full px-2 py-6 pb-24 md:p-6 md:pb-6">
         <!-- Header -->
-        <header class="z-50 sticky top-2 sm:top-4 flex w-full lg:flex-row flex-col justify-between items-start lg:items-center gap-5 mb-10 bg-white/70 backdrop-blur-xl border border-slate-200/60 shadow-softer rounded-2xl p-4 transition-all duration-300 hover:shadow-soft hover:bg-white/90">
+        <header class="relative z-20 flex w-full lg:flex-row flex-col justify-between items-start lg:items-center gap-5 mb-10 bg-white/70 backdrop-blur-xl border border-slate-200/60 shadow-softer rounded-2xl p-4 transition-all duration-300 hover:shadow-soft hover:bg-white/90">
           <!-- Left side: Title & Filename -->
           <div class="flex flex-col gap-1.5 min-w-0 max-w-full shrink-0">
             <h1 class="flex items-center gap-2.5 font-extrabold text-slate-900 text-2xl tracking-tight transition-colors">
@@ -531,14 +539,14 @@
                               Latitude
                               <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
                             </label>
-                            <input type="number" step="any" id="geo-latitude" x-model="formData.geo.latitude" @input.debounce.300ms="updateQrCode()" placeholder="35.681236" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="number" inputmode="decimal" step="any" id="geo-latitude" x-model="formData.geo.latitude" @input.debounce.300ms="updateQrCode()" placeholder="35.681236" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div>
                             <label for="geo-longitude" class="mb-2 block text-sm font-medium text-slate-700">
                               Longitude
                               <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
                             </label>
-                            <input type="number" step="any" id="geo-longitude" x-model="formData.geo.longitude" @input.debounce.300ms="updateQrCode()" placeholder="139.767125" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="number" inputmode="decimal" step="any" id="geo-longitude" x-model="formData.geo.longitude" @input.debounce.300ms="updateQrCode()" placeholder="139.767125" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                         </div>
                         <p class="mt-2 text-xs text-slate-500">Example: Tokyo Station (Latitude: 35.681236, Longitude: 139.767125)</p>
@@ -1067,26 +1075,15 @@
               </div>
 
               <!-- Right side: Preview and download -->
-              <div class="order-first xl:order-0 mb-8 xl:mb-0 top-[74px] h-fit w-full xl:sticky xl:w-[420px] xl:shrink-0 xl:max-h-[calc(100vh-100px)] xl:overflow-y-auto scrollbar-hide xl:pb-4">
-                <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-lg md:p-6 transition-all duration-300"
+              <div class="order-first xl:order-0 mb-8 xl:mb-0 xl:top-6 h-fit w-full xl:sticky xl:w-[420px] xl:shrink-0 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto scrollbar-hide xl:pb-4">
+                <div class="rounded-xl border border-slate-200 bg-white p-4 pt-5 shadow-lg md:p-6 md:pt-7 transition-all duration-300"
                      :class="{ 'ring-4 ring-primary/20 scale-[1.01] shadow-xl': isUpdatingPreview }">
                   <div class="mb-4 flex items-center justify-between">
                     <h2 class="text-xl font-bold text-slate-800">Preview</h2>
                     <div class="flex items-center gap-2">
-                      <div class="flex rounded-lg bg-slate-100 p-1">
-                        <button @click="previewScene = 'default'; mainSceneBackgroundUrl = '';" class="tooltip rounded-md p-1.5 transition-colors" :class="previewScene === 'default' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:bg-slate-200'">
-                          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <use href="icons-sprite.svg#outline-viewfinder-circle"></use>
-                          </svg>
-                          <span class="tooltiptext" style="width: 120px; margin-left: -60px">Standard Preview</span>
-                        </button>
-                        <button @click="openSceneModal()" class="tooltip rounded-md p-1.5 transition-colors" :class="previewScene !== 'default' ? 'bg-white text-primary shadow-sm' : 'text-slate-500 hover:bg-slate-200'">
-                          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                            <use href="icons-sprite.svg#outline-photo"></use>
-                          </svg>
-                          <span class="tooltiptext" style="width: 140px; margin-left: -70px">Use Case Preview</span>
-                        </button>
-                      </div>
+                      <button @click="openSceneModal()" class="rounded-md bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200 hover:text-slate-900">
+                        Use Case
+                      </button>
                       <div class="h-6 w-px bg-slate-200"></div>
                       <button @click="undo()" :disabled="historyIndex <= 0" aria-label="Undo" class="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:text-slate-300">
                         <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -1103,16 +1100,8 @@
                   </div>
 
                   <div>
-                    <div class="main-preview-bg relative flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-slate-100 transition-all duration-500 ease-out" :class="{ 'preview-grid-bg': previewScene === 'default' }" :style="mainSceneBackgroundUrl ? { backgroundImage: `url('${mainSceneBackgroundUrl}')` } : {}">
-                      <div class="flex h-full w-full items-center justify-center transition-all duration-500 ease-out" :style="previewScene !== 'default' ? { transform: `translateX(${mainSceneOptions.x}%) translateY(${mainSceneOptions.y}%)` } : { transform: 'translateX(0) translateY(0)' }">
-                        <div
-                          x-ref="qrCodeCanvas"
-                          class="flex items-center justify-center transition-all duration-500 ease-out"
-                          :style="previewScene !== 'default' ?
-                                        { transform: `scale(${mainSceneOptions.scale}) rotate(${mainSceneOptions.rotation}deg)`, width: '50%', height: '50%' } :
-                                        { transform: 'scale(1) rotate(0deg)', width: '100%', height: '100%' }"
-                        ></div>
-                      </div>
+                    <div class="relative flex w-full items-center justify-center overflow-hidden rounded-lg border border-slate-200/60 preview-checker-bg transition-all duration-300">
+                      <div x-ref="qrCodeCanvas" class="flex w-full items-center justify-center"></div>
                     </div>
                   </div>
 
@@ -1259,7 +1248,7 @@
                   <input type="checkbox" :checked="isAllSelected()" :indeterminate="selectedIds.length > 0 && !isAllSelected()" @change="toggleSelectAll()" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" title="Select all on this page" />
                   <button @click="sortBy('name')" class="flex items-center gap-1">
                     <span>QR Code Name</span>
-                    <svg x-show="sortKey === 'name'" :class="sortOrder === 'desc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                    <svg x-show="sortKey === 'name'" :class="sortOrder === 'asc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.78a.75.75 0 11-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 11-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd"></path>
                     </svg>
                   </button>
@@ -1268,7 +1257,7 @@
                 <div class="col-span-4 flex items-center justify-end gap-4">
                   <button @click="sortBy('createdAt')" class="flex items-center gap-1">
                     <span>Created At</span>
-                    <svg x-show="sortKey === 'createdAt'" :class="sortOrder === 'desc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                    <svg x-show="sortKey === 'createdAt'" :class="sortOrder === 'asc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.78a.75.75 0 11-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 11-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd"></path>
                     </svg>
                   </button>
@@ -1276,7 +1265,7 @@
                 </div>
               </div>
 
-              <div class="space-y-4">
+              <div class="space-y-4" :class="{ 'pointer-events-none opacity-60 transition-opacity': isExportingBulk }">
                 <template x-for="qr in displayedItems" :key="qr.id">
                   <div x-data="{ dropdownOpen: false }" class="relative rounded-xl bg-white shadow-md ring-1 ring-slate-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" :class="dropdownOpen ? 'z-10' : 'z-0'">
                     <div class="grid items-center gap-y-4 p-4 md:grid-cols-12 md:gap-x-4 md:p-6">
@@ -1296,15 +1285,15 @@
 
                         <!-- Inline edit memo -->
                         <div class="relative group" @click.outside="if(editingMemo) { updateInlineMemo(qr, tempMemo); editingMemo = false; }">
-                          <div x-show="!editingMemo" @click="editingMemo = true; tempMemo = qr.memo || ''; $nextTick(() => $refs.memoInput.focus())" class="cursor-text rounded border border-transparent hover:border-slate-200 hover:bg-slate-50 p-1 -mx-1 min-h-7 transition-colors" title="Click to edit memo">
+                          <div x-show="!editingMemo" @click="editingMemo = true; tempMemo = qr.memo || ''; $nextTick(() => $el.nextElementSibling.focus())" class="cursor-text rounded border border-transparent hover:border-slate-200 hover:bg-slate-50 p-1 -mx-1 min-h-7 transition-colors" title="Click to edit memo">
                             <p class="text-sm text-slate-600 line-clamp-2" x-text="qr.memo || 'Add memo...'" :class="{'text-slate-400 italic': !qr.memo}"></p>
                           </div>
-                          <textarea x-show="editingMemo" x-cloak x-ref="memoInput" x-model="tempMemo" @keydown.enter="if(!$event.isComposing && !$event.shiftKey) { $event.preventDefault(); updateInlineMemo(qr, tempMemo); editingMemo = false; }" @keydown.escape="editingMemo = false; tempMemo = qr.memo || ''" rows="3" class="resize-y absolute -top-1 -left-1 z-10 w-[calc(100%+0.5rem)] rounded-lg border border-primary bg-white p-2 text-sm shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/20" placeholder="Enter memo... (Enter to save / Shift+Enter for new line)"></textarea>
+                          <textarea x-show="editingMemo" x-cloak x-model="tempMemo" @keydown.enter="if(!$event.isComposing && !$event.shiftKey) { $event.preventDefault(); updateInlineMemo(qr, tempMemo); editingMemo = false; }" @keydown.escape="editingMemo = false; tempMemo = qr.memo || ''" rows="3" class="resize-y absolute -top-1 -left-1 z-10 w-[calc(100%+0.5rem)] rounded-lg border border-primary bg-white p-2 text-sm shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/20" placeholder="Enter memo... (Enter to save / Shift+Enter for new line)"></textarea>
                         </div>
 
                         <!-- Inline edit tags -->
                         <div class="relative group mt-1" @click.outside="if(editingTags) { updateInlineTags(qr, tempTags); editingTags = false; }">
-                          <div x-show="!editingTags" @click="editingTags = true; tempTags = (qr.tags || []).join(', '); $nextTick(() => $refs.tagsInput.focus())" class="cursor-text flex min-h-7 flex-wrap items-center gap-1 rounded border border-transparent hover:border-slate-200 hover:bg-slate-50 p-1 -mx-1 transition-colors" title="Click to edit tags">
+                          <div x-show="!editingTags" @click="editingTags = true; tempTags = (qr.tags || []).join(', '); $nextTick(() => $el.nextElementSibling.focus())" class="cursor-text flex min-h-7 flex-wrap items-center gap-1 rounded border border-transparent hover:border-slate-200 hover:bg-slate-50 p-1 -mx-1 transition-colors" title="Click to edit tags">
                             <template x-if="!qr.tags || qr.tags.length === 0">
                               <span class="text-[11px] text-slate-400 italic">Add tag...</span>
                             </template>
@@ -1316,7 +1305,7 @@
                               </button>
                             </template>
                           </div>
-                          <input type="text" x-show="editingTags" x-cloak x-ref="tagsInput" x-model="tempTags" @keydown.enter="if(!$event.isComposing) { $event.preventDefault(); updateInlineTags(qr, tempTags); editingTags = false; }" @keydown.escape="editingTags = false; tempTags = (qr.tags || []).join(', ')" class="absolute -top-1 -left-1 z-10 w-[calc(100%+0.5rem)] rounded-lg border border-primary bg-white p-2 text-sm shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/20" placeholder="tag1, tag2... (Enter to save)" />
+                          <input type="text" x-show="editingTags" x-cloak x-model="tempTags" @keydown.enter="if(!$event.isComposing) { $event.preventDefault(); updateInlineTags(qr, tempTags); editingTags = false; }" @keydown.escape="editingTags = false; tempTags = (qr.tags || []).join(', ')" class="absolute -top-1 -left-1 z-10 w-[calc(100%+0.5rem)] rounded-lg border border-primary bg-white p-2 text-sm shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/20" placeholder="tag1, tag2... (Enter to save)" />
                         </div>
                       </div>
 
@@ -1631,9 +1620,9 @@
     </div>
 
     <!-- Use case preview Modal -->
-    <div x-show="showSceneModal" @keydown.escape.window="cancelSceneSettings()" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="scene-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showSceneModal">
+    <div x-show="showSceneModal" @keydown.escape.window="closeSceneModal()" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="scene-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showSceneModal">
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
-        <div x-show="showSceneModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="cancelSceneSettings()" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+        <div x-show="showSceneModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="closeSceneModal()" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
         <div x-show="showSceneModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block w-full transform-gpu overflow-hidden rounded-xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-4xl sm:align-middle">
           <div class="bg-white px-4 pb-4 pt-5 sm:p-6">
@@ -1682,8 +1671,12 @@
                 </div>
                 <button @click="resetSceneOptions()" type="button" class="w-full rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-200">Reset Settings</button>
               </div>
-              <div class="flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-slate-100 md:col-span-2 order-first md:order-last" :style="{ backgroundImage: `url('${mainSceneBackgroundUrl}')`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }">
-                <div class="relative h-full w-full">
+              <div class="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border border-slate-200/60 preview-checker-bg md:col-span-2 order-first md:order-last">
+                <!-- Background Image Layer -->
+                <div class="absolute inset-0 z-0" :style="mainSceneBackgroundUrl ? { backgroundImage: `url('${mainSceneBackgroundUrl}')`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}"></div>
+
+                <!-- QR Code Layer -->
+                <div class="relative z-10 h-full w-full pointer-events-none">
                   <div class="absolute left-0 top-0 flex h-full w-full items-center justify-center transition-transform duration-100" :style="{ transform: `translateX(${mainSceneOptions.x}%) translateY(${mainSceneOptions.y}%)` }">
                     <div x-ref="modalQrCanvas" class="flex items-center justify-center transition-transform duration-100" :style="{ transform: `scale(${mainSceneOptions.scale}) rotate(${mainSceneOptions.rotation}deg)`, width: '50%', height: '50%' }"></div>
                   </div>
@@ -1692,8 +1685,7 @@
             </div>
           </div>
           <div class="bg-slate-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-            <button @click="applySceneSettings()" type="button" class="inline-flex w-full justify-center rounded-lg border border-transparent bg-primary px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm">Apply</button>
-            <button @click="cancelSceneSettings()" type="button" class="mt-3 inline-flex w-full justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-base font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm">Cancel</button>
+            <button @click="closeSceneModal()" type="button" class="inline-flex w-full justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-base font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 sm:w-auto sm:text-sm">Close</button>
           </div>
         </div>
       </div>

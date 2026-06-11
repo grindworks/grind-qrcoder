@@ -301,7 +301,7 @@ async function saveQRCoderFile() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 10000); // Safari fix
       fileHandle = { name: a.download };
     }
 
@@ -520,11 +520,37 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // Prevent accidental screen transition (data loss) caused by dropping outside.
+  const dropzone = document.getElementById("global-dropzone");
+  let dragCounter = 0;
+
+  window.addEventListener("dragenter", (e) => {
+    e.preventDefault();
+    dragCounter++;
+    if (dropzone) {
+      dropzone.classList.remove("hidden");
+      dropzone.classList.add("flex");
+    }
+  });
+
+  window.addEventListener("dragleave", (e) => {
+    e.preventDefault();
+    dragCounter--;
+    if (dragCounter === 0 && dropzone) {
+      dropzone.classList.add("hidden");
+      dropzone.classList.remove("flex");
+    }
+  });
+
   window.addEventListener("dragover", (e) => {
     e.preventDefault();
   });
   window.addEventListener("drop", (e) => {
     e.preventDefault();
+    dragCounter = 0;
+    if (dropzone) {
+      dropzone.classList.add("hidden");
+      dropzone.classList.remove("flex");
+    }
     // Auto-import magic if dropped file is .qrcoder.
     if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
@@ -821,7 +847,6 @@ function qrCodeGenerator() {
       y: 0,
       rotation: 0,
     },
-    backupSceneState: {},
     scenePresets: {
       poster: {
         scale: 0.5,
@@ -842,7 +867,7 @@ function qrCodeGenerator() {
         x: 0,
         y: 0,
         rotation: 0,
-        backgroundUrl: `data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' viewBox='0 0 400 400'%3e%3crect width='380' height='380' x='10' y='10' fill='%23f1f5f9' stroke='%239ca3af' stroke-width='2' stroke-dasharray='8 8' rx='15'/%3e%3ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='20px' fill='%2364748b'%3eUpload Photo Here%3c/text%3e%3c/svg%3e`,
+        backgroundUrl: `data:image/svg+xml,%3csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22400%22 viewBox=%220 0 400 400%22%3e%3crect width=%22380%22 height=%22380%22 x=%2210%22 y=%2210%22 fill=%22%23f1f5f9%22 stroke=%22%239ca3af%22 stroke-width=%222%22 stroke-dasharray=%228 8%22 rx=%2215%22/%3e%3ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-family=%22sans-serif%22 font-size=%2220px%22 fill=%22%2364748b%22%3eUpload Photo Here%3c/text%3e%3c/svg%3e`,
       },
     },
     dotStyles: [
@@ -1086,6 +1111,7 @@ function qrCodeGenerator() {
 
       this.generatePresetTemplates();
       this.loadBrandKit();
+      this.mainSceneBackgroundUrl = this.scenePresets.custom.backgroundUrl;
       await this.loadSavedQRCodes();
       await this.loadMyTemplates();
 
@@ -1685,7 +1711,11 @@ function qrCodeGenerator() {
           acceptTypes = { "image/png": [".png"] };
         }
 
-        const fullFileName = `${safeName}.${extension}`;
+        let normalizedName = safeName;
+        if (normalizedName.toLowerCase().endsWith('.' + extension)) {
+          normalizedName = normalizedName.slice(0, -(extension.length + 1));
+        }
+        const fullFileName = `${normalizedName}.${extension}`;
 
         if ("showSaveFilePicker" in window) {
           try {
@@ -1980,8 +2010,8 @@ function qrCodeGenerator() {
                 break;
               case "discord":
                 // Use directly if URL is pasted, otherwise treat as invite link.
-                if (identifier.includes("http")) {
-                  data = identifier.trim();
+                if (cleanId.includes("http")) {
+                  data = cleanId;
                 } else {
                   data = `https://discord.gg/${encodeURIComponent(cleanId)}`;
                 }
@@ -3282,6 +3312,11 @@ function qrCodeGenerator() {
         svgElement.querySelectorAll(".qr-frame").forEach((el) => el.remove());
         const originalSize = this.qrCodeInstance._options.width;
         svgElement.setAttribute("viewBox", `0 0 ${originalSize} ${originalSize}`);
+
+        // Overwrite fixed pixel dimensions from qr-code-styling to allow vertical expansion
+        svgElement.setAttribute("width", "100%");
+        svgElement.setAttribute("height", "auto");
+
         if (this.frame.style === "none") return;
         const frameGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
         frameGroup.classList.add("qr-frame");
@@ -3299,12 +3334,18 @@ function qrCodeGenerator() {
           case "scan-me-1": {
             frameHeight = 40;
             fontSize = 24;
-            mCtx.font = `bold ${fontSize}px ${systemFontStack}`;
-            const textMetrics = mCtx.measureText(textToMeasure);
-            const textWidth = textMetrics.width + 40;
-            const requiredWidth = Math.max(originalSize, textWidth + 20);
-            const offsetX = (requiredWidth - originalSize) / 2;
-            svgElement.setAttribute("viewBox", `${-offsetX} 0 ${requiredWidth} ${originalSize + frameHeight}`);
+            let currentFontSize = fontSize;
+            mCtx.font = `bold ${currentFontSize}px ${systemFontStack}`;
+            let textMetrics = mCtx.measureText(textToMeasure);
+
+            // Auto-scale font size to fit within the original QR code width
+            while (textMetrics.width > originalSize - 20 && currentFontSize > 10) {
+              currentFontSize -= 1;
+              mCtx.font = `bold ${currentFontSize}px ${systemFontStack}`;
+              textMetrics = mCtx.measureText(textToMeasure);
+            }
+
+            svgElement.setAttribute("viewBox", `0 0 ${originalSize} ${originalSize + frameHeight}`);
             textY = originalSize + frameHeight / 2;
             const text1 = document.createElementNS("http://www.w3.org/2000/svg", "text");
             Object.assign(text1.style, {
@@ -3315,7 +3356,7 @@ function qrCodeGenerator() {
             });
             text1.setAttribute("x", originalSize / 2);
             text1.setAttribute("y", textY);
-            text1.setAttribute("font-size", `${fontSize}px`);
+            text1.setAttribute("font-size", `${currentFontSize}px`);
             text1.setAttribute("fill", textColor);
             text1.textContent = this.frame.text;
             frameGroup.appendChild(text1);
@@ -3324,12 +3365,18 @@ function qrCodeGenerator() {
           case "scan-me-2": {
             frameHeight = 50;
             fontSize = 22;
-            mCtx.font = `bold ${fontSize}px ${systemFontStack}`;
-            const textMetrics = mCtx.measureText(textToMeasure);
-            const textWidth = textMetrics.width + 40;
-            const requiredWidth = Math.max(originalSize, textWidth + 20);
-            const offsetX = (requiredWidth - originalSize) / 2;
-            svgElement.setAttribute("viewBox", `${-offsetX} 0 ${requiredWidth} ${originalSize + frameHeight}`);
+            let currentFontSize = fontSize;
+            mCtx.font = `bold ${currentFontSize}px ${systemFontStack}`;
+            let textMetrics = mCtx.measureText(textToMeasure);
+
+            while (textMetrics.width > originalSize - 50 && currentFontSize > 10) {
+              currentFontSize -= 1;
+              mCtx.font = `bold ${currentFontSize}px ${systemFontStack}`;
+              textMetrics = mCtx.measureText(textToMeasure);
+            }
+            const textWidth = textMetrics.width + 30;
+
+            svgElement.setAttribute("viewBox", `0 0 ${originalSize} ${originalSize + frameHeight}`);
             textY = originalSize + frameHeight / 2;
             const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
             rect.setAttribute("x", originalSize / 2 - textWidth / 2);
@@ -3350,7 +3397,7 @@ function qrCodeGenerator() {
             });
             text2.setAttribute("x", originalSize / 2);
             text2.setAttribute("y", textY);
-            text2.setAttribute("font-size", `${fontSize}px`);
+            text2.setAttribute("font-size", `${currentFontSize}px`);
             text2.setAttribute("fill", textColor);
             text2.textContent = this.frame.text;
             frameGroup.appendChild(text2);
@@ -3359,17 +3406,22 @@ function qrCodeGenerator() {
           case "scan-me-3": {
             frameHeight = 40;
             fontSize = 22;
-            mCtx.font = `bold ${fontSize}px ${systemFontStack}`;
-            const textMetrics = mCtx.measureText(textToMeasure);
-            const textWidth = textMetrics.width + 40;
-            const requiredWidth = Math.max(originalSize, textWidth + 20);
-            const offsetX = (requiredWidth - originalSize) / 2;
-            svgElement.setAttribute("viewBox", `${-offsetX} 0 ${requiredWidth} ${originalSize + frameHeight}`);
+            let currentFontSize = fontSize;
+            mCtx.font = `bold ${currentFontSize}px ${systemFontStack}`;
+            let textMetrics = mCtx.measureText(textToMeasure);
+
+            while (textMetrics.width > originalSize - 20 && currentFontSize > 10) {
+              currentFontSize -= 1;
+              mCtx.font = `bold ${currentFontSize}px ${systemFontStack}`;
+              textMetrics = mCtx.measureText(textToMeasure);
+            }
+
+            svgElement.setAttribute("viewBox", `0 0 ${originalSize} ${originalSize + frameHeight}`);
             textY = originalSize + frameHeight / 2;
             const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            bgRect.setAttribute("x", -offsetX);
+            bgRect.setAttribute("x", 0);
             bgRect.setAttribute("y", originalSize);
-            bgRect.setAttribute("width", requiredWidth);
+            bgRect.setAttribute("width", originalSize);
             bgRect.setAttribute("height", frameHeight);
             bgRect.setAttribute("fill", textColor);
             frameGroup.appendChild(bgRect);
@@ -3382,7 +3434,7 @@ function qrCodeGenerator() {
             });
             text3.setAttribute("x", originalSize / 2);
             text3.setAttribute("y", textY);
-            text3.setAttribute("font-size", `${fontSize}px`);
+            text3.setAttribute("font-size", `${currentFontSize}px`);
             text3.setAttribute("fill", this.qrOptions.backgroundColor);
             text3.textContent = this.frame.text;
             frameGroup.appendChild(text3);
@@ -3393,11 +3445,6 @@ function qrCodeGenerator() {
       });
     },
     openSceneModal() {
-      this.backupSceneState = {
-        options: JSON.parse(JSON.stringify(this.mainSceneOptions)),
-        backgroundUrl: this.mainSceneBackgroundUrl,
-        scene: this.previewScene,
-      };
       this.showSceneModal = true;
       this.$nextTick(() => {
         this.$refs.modalQrCanvas.innerHTML = "";
@@ -3405,22 +3452,7 @@ function qrCodeGenerator() {
         this.applyFrame();
       });
     },
-    applySceneSettings() {
-      this.backupSceneState = {};
-      this.showSceneModal = false;
-      this.$nextTick(() => {
-        this.$refs.qrCodeCanvas.innerHTML = "";
-        this.qrCodeInstance.append(this.$refs.qrCodeCanvas);
-        this.applyFrame();
-      });
-    },
-    cancelSceneSettings() {
-      if (this.backupSceneState.options) {
-        this.mainSceneOptions = this.backupSceneState.options;
-        this.mainSceneBackgroundUrl = this.backupSceneState.backgroundUrl;
-        this.previewScene = this.backupSceneState.scene;
-      }
-      this.backupSceneState = {};
+    closeSceneModal() {
       this.showSceneModal = false;
       this.$nextTick(() => {
         this.$refs.qrCodeCanvas.innerHTML = "";
@@ -3461,7 +3493,7 @@ function qrCodeGenerator() {
         rotation: 0,
       };
       this.previewScene = "custom";
-      this.mainSceneBackgroundUrl = "";
+      this.mainSceneBackgroundUrl = this.scenePresets.custom.backgroundUrl;
 
       // ファイルインプットの表示をリセット
       const fileInput = document.getElementById("scene-upload");
@@ -3521,6 +3553,7 @@ function qrCodeGenerator() {
     resetGenerator() {
       this.editingQRCodeId = null;
       this.saveName = "";
+      this.download.fileName = "grinds-qr-code";
       this.saveMemo = "";
       this.saveTags = "";
       this.selectedType = "url";
@@ -3803,10 +3836,19 @@ function qrCodeGenerator() {
     isCurrentMyTemplate(tpl) {
       const current = this.qrOptions;
       const tplOpts = tpl.options;
+
       if (current.colorType !== tplOpts.colorType) return false;
-      if (current.colorType === "single" && current.foregroundColor !== tplOpts.foregroundColor) return false;
+      if (current.colorType === "single") {
+        if (current.foregroundColor.toLowerCase() !== tplOpts.foregroundColor.toLowerCase() ||
+            current.backgroundColor.toLowerCase() !== tplOpts.backgroundColor.toLowerCase()) return false;
+      } else {
+        if (!current.gradient || !tplOpts.gradient) return false;
+        if (current.gradient.color1.toLowerCase() !== tplOpts.gradient.color1.toLowerCase() ||
+            current.gradient.color2.toLowerCase() !== tplOpts.gradient.color2.toLowerCase()) return false;
+      }
       if (current.dotsStyle !== tplOpts.dotsStyle) return false;
-      if (this.frame.style !== tpl.frame.style) return false;
+      if (this.frame.style !== (tpl.frame?.style || "none")) return false;
+
       return true;
     },
     async updateInlineMemo(qr, newMemo) {
@@ -3828,6 +3870,7 @@ function qrCodeGenerator() {
       if (qrToEdit) {
         this.editingQRCodeId = id;
         this.saveName = qrToEdit.name;
+        this.download.fileName = qrToEdit.name;
         this.saveMemo = qrToEdit.memo || "";
         this.saveTags = qrToEdit.tags ? qrToEdit.tags.join(', ') : "";
         this.selectedType = qrToEdit.type;
@@ -4109,6 +4152,9 @@ function qrCodeGenerator() {
           }
           URL.revokeObjectURL(safeSvgUrl);
 
+          // メモリ回収(GC)をブラウザに促すため、数ミリ秒だけ処理を譲る
+          await new Promise(resolve => setTimeout(resolve, 50));
+
           let safeName = (qr.name || "qrcode").trim().replace(/[\\/:*?"<>|]/g, "-");
 
           if (nameCountMap[safeName] !== undefined) {
@@ -4187,9 +4233,19 @@ function qrCodeGenerator() {
               canvas.height = size;
               const ctx = canvas.getContext("2d");
               ctx.clearRect(0, 0, size, size);
+
+              if (!this.download?.transparentBg) {
+                ctx.fillStyle = this.qrOptions?.backgroundColor || "#ffffff";
+                ctx.fillRect(0, 0, size, size);
+              }
+
               ctx.drawImage(image, 0, 0, size, size);
               canvas.toBlob((blob) => {
                 if (svgDataUrl.startsWith("blob:")) URL.revokeObjectURL(svgDataUrl);
+
+                canvas.width = 0;
+                canvas.height = 0;
+
                 if (blob) resolve(blob);
                 else reject(new Error("Blob conversion failed"));
               }, "image/png");
@@ -4316,6 +4372,9 @@ function qrCodeGenerator() {
       this.qrOptions.cornerDotColor = this.brandKit.colors[0];
       this.qrOptions.backgroundColor = this.brandKit.colors[1];
       this.updateQrCode();
+
+      this.showFlashNotification("Applied brand kit.");
+      this.hapticFeedback('light');
     },
     hexToRgb(hex) {
       let shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;

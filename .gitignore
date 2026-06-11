@@ -17,7 +17,6 @@ node_modules/
 export_ai.md
 export_ai.sh
 Thumbs.db
-AI_RULES.md
 
 # Application backup and data files
 *.qrcoder
