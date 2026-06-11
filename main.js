@@ -492,6 +492,31 @@ document.addEventListener("keydown", (e) => {
       toggleCommandPalette();
       return;
     }
+    // Undo / Redo shortcuts (only when not typing in an input field)
+    if (!isInputFocused) {
+      if (key === "z") {
+        e.preventDefault();
+        const app = window.$app;
+        if (app && app.currentView === 'generator') {
+          if (e.shiftKey) {
+            app.redo();
+          } else {
+            app.undo();
+          }
+          app.hapticFeedback('light');
+        }
+        return;
+      }
+      if (key === "y" && !e.metaKey) { // Redo for Windows (Ctrl+Y)
+        e.preventDefault();
+        const app = window.$app;
+        if (app && app.currentView === 'generator') {
+          app.redo();
+          app.hapticFeedback('light');
+        }
+        return;
+      }
+    }
   }
 
   // Disable other single-key shortcuts when input form is focused (except Escape).
@@ -558,6 +583,11 @@ document.addEventListener("DOMContentLoaded", () => {
         fileHandle = { name: file.name };
         if (window.$app && typeof processQRCoderFile === 'function') {
           processQRCoderFile(file);
+        }
+      } else {
+        if (window.$app) {
+          window.$app.showFlashNotification("❌ Invalid file. Please drop a .qrcoder backup file.");
+          window.$app.hapticFeedback('error');
         }
       }
     }
@@ -1871,11 +1901,12 @@ function qrCodeGenerator() {
               const urlObj = new URL(urlStr);
               const utm = this.formData.url.utm;
               if (utm) {
-                if (utm.source.trim()) urlObj.searchParams.set("utm_source", utm.source.trim());
-                if (utm.medium.trim()) urlObj.searchParams.set("utm_medium", utm.medium.trim());
-                if (utm.campaign.trim()) urlObj.searchParams.set("utm_campaign", utm.campaign.trim());
-                if (utm.term.trim()) urlObj.searchParams.set("utm_term", utm.term.trim());
-                if (utm.content.trim()) urlObj.searchParams.set("utm_content", utm.content.trim());
+                const cleanParam = (val) => val.trim().replace(/^[?&]+/, '');
+                if (utm.source.trim()) urlObj.searchParams.set("utm_source", cleanParam(utm.source));
+                if (utm.medium.trim()) urlObj.searchParams.set("utm_medium", cleanParam(utm.medium));
+                if (utm.campaign.trim()) urlObj.searchParams.set("utm_campaign", cleanParam(utm.campaign));
+                if (utm.term.trim()) urlObj.searchParams.set("utm_term", cleanParam(utm.term));
+                if (utm.content.trim()) urlObj.searchParams.set("utm_content", cleanParam(utm.content));
               }
               data = urlObj.toString();
             } catch (e) {
@@ -3287,12 +3318,12 @@ function qrCodeGenerator() {
 
       // 色の比較
       if (current.colorType === "single") {
-        if (current.foregroundColor.toLowerCase() !== tempOpts.foregroundColor.toLowerCase() ||
-            current.backgroundColor.toLowerCase() !== tempOpts.backgroundColor.toLowerCase()) return false;
+        if (current.foregroundColor?.toLowerCase() !== tempOpts.foregroundColor?.toLowerCase() ||
+            current.backgroundColor?.toLowerCase() !== tempOpts.backgroundColor?.toLowerCase()) return false;
       } else {
         if (!current.gradient || !tempOpts.gradient) return false;
-        if (current.gradient.color1.toLowerCase() !== tempOpts.gradient.color1.toLowerCase() ||
-            current.gradient.color2.toLowerCase() !== tempOpts.gradient.color2.toLowerCase()) return false;
+        if (current.gradient.color1?.toLowerCase() !== tempOpts.gradient.color1?.toLowerCase() ||
+            current.gradient.color2?.toLowerCase() !== tempOpts.gradient.color2?.toLowerCase()) return false;
       }
 
       // ロゴの比較
@@ -3839,12 +3870,12 @@ function qrCodeGenerator() {
 
       if (current.colorType !== tplOpts.colorType) return false;
       if (current.colorType === "single") {
-        if (current.foregroundColor.toLowerCase() !== tplOpts.foregroundColor.toLowerCase() ||
-            current.backgroundColor.toLowerCase() !== tplOpts.backgroundColor.toLowerCase()) return false;
+        if (current.foregroundColor?.toLowerCase() !== tplOpts.foregroundColor?.toLowerCase() ||
+            current.backgroundColor?.toLowerCase() !== tplOpts.backgroundColor?.toLowerCase()) return false;
       } else {
         if (!current.gradient || !tplOpts.gradient) return false;
-        if (current.gradient.color1.toLowerCase() !== tplOpts.gradient.color1.toLowerCase() ||
-            current.gradient.color2.toLowerCase() !== tplOpts.gradient.color2.toLowerCase()) return false;
+        if (current.gradient.color1?.toLowerCase() !== tplOpts.gradient.color1?.toLowerCase() ||
+            current.gradient.color2?.toLowerCase() !== tplOpts.gradient.color2?.toLowerCase()) return false;
       }
       if (current.dotsStyle !== tplOpts.dotsStyle) return false;
       if (this.frame.style !== (tpl.frame?.style || "none")) return false;
@@ -3913,6 +3944,23 @@ function qrCodeGenerator() {
         }
 
         this.showFlashNotification("QR code deleted.");
+      }
+    },
+    async bulkDeleteQRCodes() {
+      if (this.selectedIds.length === 0) return;
+      const isConfirmed = window.confirm(`Are you sure you want to delete ${this.selectedIds.length} selected QR codes?\nThis action cannot be undone.`);
+
+      if (isConfirmed) {
+        this.savedQRCodes = this.savedQRCodes.filter(qr => !this.selectedIds.includes(qr.id));
+        await this.persistSavedQRCodes();
+        if (typeof setDirty === 'function') setDirty(true);
+
+        if (this.currentPage > this.totalPages) {
+          this.currentPage = Math.max(1, this.totalPages);
+        }
+
+        this.showFlashNotification(`${this.selectedIds.length} QR codes deleted.`);
+        this.selectedIds = [];
       }
     },
     async duplicateQRCode(id) {
@@ -4038,7 +4086,7 @@ function qrCodeGenerator() {
           this.editQRCode(qr.id, false);
 
           // Wait briefly for the DOM to render the SVG and apply the frame (which uses setTimeout)
-          await new Promise(resolve => setTimeout(resolve, 150));
+          await new Promise(resolve => setTimeout(resolve, 250));
 
           const visibleCanvas = this.showSceneModal ? this.$refs.modalQrCanvas : this.$refs.qrCodeCanvas;
           const svgElement = visibleCanvas.querySelector("svg");
