@@ -47,6 +47,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.13.5/dist/cdn.min.js" integrity="sha256-II/pD4ncnDJ5Gp5RoPCWgay844r/wjeJLUDpJWHO7Cg=" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js" integrity="sha256-ygV4Me+b49juR+FAeAif0jgdx4ILS7f724WkkPW49ow=" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js" crossorigin="anonymous"></script>
 
     <!-- Define basic global styles -->
     <style>
@@ -141,6 +142,15 @@
         background-size: 20px 20px;
       }
 
+      /* Responsive SVG for QR Canvas */
+      [x-ref="qrCodeCanvas"] svg,
+      [x-ref="modalQrCanvas"] svg {
+        width: 100% !important;
+        height: auto !important;
+        max-width: 100%;
+        max-height: 100%;
+      }
+
       /* Custom scrollbar */
       ::-webkit-scrollbar {
         width: 14px;
@@ -176,9 +186,9 @@
   <body x-data="qrCodeGenerator()" x-init="init()" class="min-h-screen bg-[#fafbfc] text-slate-800 font-sans antialiased selection:bg-primary/20 selection:text-primary transition-colors duration-300" x-cloak>
     <!-- Main content area -->
     <main class="min-h-screen px-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 lg:px-8 w-full transition-all duration-300">
-      <div class="mx-auto max-w-7xl px-2 py-6 pb-24 md:p-6 md:pb-6">
+      <div class="mx-auto max-w-7xl w-full px-2 py-6 pb-24 md:p-6 md:pb-6">
         <!-- Header -->
-        <header class="z-50 sticky top-2 sm:top-4 flex lg:flex-row flex-col justify-between items-start lg:items-center gap-5 mb-10 bg-white/70 backdrop-blur-xl border border-slate-200/60 shadow-softer rounded-2xl p-4 transition-all duration-300 hover:shadow-soft hover:bg-white/90">
+        <header class="z-50 sticky top-2 sm:top-4 flex w-full lg:flex-row flex-col justify-between items-start lg:items-center gap-5 mb-10 bg-white/70 backdrop-blur-xl border border-slate-200/60 shadow-softer rounded-2xl p-4 transition-all duration-300 hover:shadow-soft hover:bg-white/90">
           <!-- Left side: Title & Filename -->
           <div class="flex flex-col gap-1.5 min-w-0 max-w-full shrink-0">
             <h1 class="flex items-center gap-2.5 font-extrabold text-slate-900 text-2xl tracking-tight transition-colors">
@@ -246,7 +256,7 @@
         </header>
 
         <!-- Toggle tabs for "Create" and "Manage" -->
-        <div class="mb-8 flex items-center justify-between">
+        <div class="mb-8 flex w-full items-center justify-between">
           <nav class="flex items-center gap-1 rounded-full bg-slate-200/60 p-1.5 shadow-inner-soft backdrop-blur-sm">
             <button @click="currentView = 'generator'" :class="currentView === 'generator' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'" class="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300">
               <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
@@ -272,7 +282,7 @@
         </div>
 
         <!-- QR code creation view -->
-        <div x-show="currentView === 'generator'">
+        <div x-show="currentView === 'generator'" class="w-full">
           <!-- Step 1: Select QR code type -->
           <div x-show="currentStep === 'typeSelection'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0">
             <div class="mb-10 rounded-2xl border border-white bg-white/50 p-6 shadow-softer backdrop-blur-md md:p-10">
@@ -335,7 +345,7 @@
 
                 <div class="space-y-8">
                   <!-- Panel 1: Content input form -->
-                  <div x-show="activeStepTab === 'content'" x-transition class="space-y-6">
+                  <div x-show="activeStepTab === 'content'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="space-y-6">
                     <div class="rounded-2xl border border-white bg-white p-6 shadow-softer ring-1 ring-slate-900/5 sm:p-8">
                       <div x-show="selectedType === 'url'">
                         <h3 class="mb-2 text-xl font-bold text-slate-800">Website</h3>
@@ -344,7 +354,7 @@
                           Website URL
                           <span class="ml-2 inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600 ring-1 ring-inset ring-red-500/10">Required</span>
                         </label>
-                          <input type="text" id="website-url" x-model="formData.url.address" @input.debounce.300ms="validateUrl()" placeholder="https://www.example.com" class="block w-full rounded-xl border-0 bg-slate-50/50 px-4 py-3.5 text-base md:text-sm text-slate-900 shadow-inner-soft ring-1 ring-inset transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset" :class="urlError ? 'ring-red-500 focus:ring-red-500' : 'ring-slate-200 focus:ring-primary'" />
+                          <input type="url" id="website-url" autocapitalize="off" autocorrect="off" spellcheck="false" x-model="formData.url.address" @input.debounce.300ms="validateUrl()" placeholder="https://www.example.com" class="block w-full rounded-xl border-0 bg-slate-50/50 px-4 py-3.5 text-base md:text-sm text-slate-900 shadow-inner-soft ring-1 ring-inset transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset" :class="urlError ? 'ring-red-500 focus:ring-red-500' : 'ring-slate-200 focus:ring-primary'" />
                         <p x-show="urlError" x-text="urlError" class="mt-2 text-sm text-red-600"></p>
                         <!-- UTM Parameters Builder -->
                         <div x-data="{ showUtm: false }" class="mt-5 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 transition-all duration-300">
@@ -446,7 +456,7 @@
                           </div>
                           <div>
                             <label for="vcard-email" class="mb-2 block text-sm font-medium text-slate-700">Email Address</label>
-                            <input type="email" id="vcard-email" x-model="formData.vcard.email" @input.debounce.300ms="updateQrCode()" placeholder="john.doe@example.com" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="email" id="vcard-email" autocapitalize="off" autocorrect="off" spellcheck="false" x-model="formData.vcard.email" @input.debounce.300ms="updateQrCode()" placeholder="john.doe@example.com" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div class="sm:col-span-2">
                             <label for="vcard-address" class="mb-2 block text-sm font-medium text-slate-700">Address</label>
@@ -500,7 +510,7 @@
                               To Email Address
                               <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
                             </label>
-                            <input type="email" id="email-to" x-model="formData.email.to" @input.debounce.300ms="updateQrCode()" placeholder="support@example.com" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="email" id="email-to" autocapitalize="off" autocorrect="off" spellcheck="false" x-model="formData.email.to" @input.debounce.300ms="updateQrCode()" placeholder="support@example.com" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div>
                             <label for="email-subject" class="mb-2 block text-sm font-medium text-slate-700">Subject</label>
@@ -595,7 +605,7 @@
                   </div>
 
                   <!-- Panel 2: Design customization -->
-                  <div x-show="activeStepTab === 'design'" x-transition class="space-y-8">
+                  <div x-show="activeStepTab === 'design'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="space-y-8">
                     <div class="rounded-2xl border border-white bg-white shadow-softer ring-1 ring-slate-900/5">
 
                       <div class="p-6 sm:p-8">
@@ -795,7 +805,7 @@
                   </div>
 
                   <!-- Panel 3: Logo and frame settings -->
-                  <div x-show="activeStepTab === 'logo'" x-transition class="space-y-8">
+                  <div x-show="activeStepTab === 'logo'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="space-y-8">
                     <!-- Logo settings -->
                     <div class="rounded-2xl border border-white bg-white shadow-softer ring-1 ring-slate-900/5">
                       <div class="p-6 sm:p-8">
@@ -926,9 +936,17 @@
                             </template>
                           </div>
                         </div>
-                        <div x-show="frame.style !== 'none'">
-                          <label for="frame-text" class="mb-2 block text-sm font-medium text-slate-700">Frame Text</label>
-                          <input type="text" id="frame-text" x-model="frame.text" @input.debounce.300ms="updateQrCode()" placeholder="SCAN ME" maxlength="14" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                        <div x-show="frame.style !== 'none'" x-collapse>
+                          <div class="mt-2 pt-6 border-t border-slate-100">
+                            <label for="frame-text" class="mb-2 block text-sm font-medium text-slate-700">Frame Text</label>
+                            <div class="relative max-w-sm">
+                              <input type="text" id="frame-text" x-model="frame.text" @input.debounce.300ms="updateQrCode()" placeholder="SCAN ME" maxlength="14" class="block w-full rounded-lg border border-slate-300 bg-white p-3 pr-14 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                              <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <span class="text-[11px] font-mono font-medium transition-colors" :class="(frame.text || '').length >= 14 ? 'text-rose-500' : 'text-slate-400'"><span x-text="(frame.text || '').length"></span>/14</span>
+                              </div>
+                            </div>
+                            <p class="mt-2 text-xs text-slate-500">Keep it short and catchy to encourage scans.</p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1036,6 +1054,10 @@
                                 <button @click="applyBrandKit()" class="w-full rounded-lg bg-primary/10 px-3 py-2 text-sm font-semibold text-primary-hover transition-colors hover:bg-primary/20">Apply Brand Settings</button>
                               </div>
                             </div>
+                            <div class="bg-white border-t border-slate-200 p-4">
+                              <label class="mb-1 block text-xs font-semibold text-slate-600">Generated URL</label>
+                              <div class="break-all rounded bg-slate-50 p-2 font-mono text-[11px] text-slate-700 ring-1 ring-inset ring-slate-200" x-text="getQrDataString().trim()"></div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1045,7 +1067,7 @@
               </div>
 
               <!-- Right side: Preview and download -->
-              <div class="order-first xl:order-0 mb-8 xl:mb-0 top-[74px] h-fit w-full xl:sticky xl:w-[420px] xl:shrink-0">
+              <div class="order-first xl:order-0 mb-8 xl:mb-0 top-[74px] h-fit w-full xl:sticky xl:w-[420px] xl:shrink-0 xl:max-h-[calc(100vh-100px)] xl:overflow-y-auto scrollbar-hide xl:pb-4">
                 <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-lg md:p-6 transition-all duration-300"
                      :class="{ 'ring-4 ring-primary/20 scale-[1.01] shadow-xl': isUpdatingPreview }">
                   <div class="mb-4 flex items-center justify-between">
@@ -1154,32 +1176,13 @@
                     </div>
                   </div>
 
-                  <div class="mt-6 space-y-4 border-t border-slate-200 pt-6">
-                    <div>
-                      <label for="file-name" class="mb-2 block text-sm font-semibold text-slate-700">File Name</label>
-                      <input type="text" id="file-name" x-model="download.fileName" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
-                    </div>
-                    <div>
-                      <label class="mb-2 block text-sm font-semibold text-slate-700">Format</label>
-                      <div class="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
-                        <button @click="download.format = 'png'" :class="download.format === 'png' ? 'bg-white shadow-sm text-primary' : 'text-slate-600 hover:bg-white/60'" class="rounded-md px-4 py-2 text-sm font-semibold transition-all">PNG</button>
-                        <button @click="download.format = 'svg'" :class="download.format === 'svg' ? 'bg-white shadow-sm text-primary' : 'text-slate-600 hover:bg-white/60'" class="rounded-md px-4 py-2 text-sm font-semibold transition-all">SVG</button>
-                      </div>
-                    </div>
-                    <div x-show="download.format === 'png'" class="mt-4">
-                      <label for="download-size" class="mb-2 block text-sm font-semibold text-slate-700">
-                        Size (Resolution):
-                        <span x-text="download.size + 'px'"></span>
-                      </label>
-                    <input id="download-size" type="range" x-model.number="download.size" min="512" max="4096" step="512" class="h-2 w-full cursor-pointer rounded-lg bg-slate-200 accent-primary focus:outline-none focus:ring-2 focus:ring-primary/30" />
-                    </div>
-                    <div class="space-y-2">
+                  <div class="mt-6 space-y-2 border-t border-slate-200 pt-6">
                       <div class="flex gap-2">
-                        <button type="button" @click="showDownloadModal = true" :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex flex-1 items-center justify-center gap-x-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-hover hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
+                        <button type="button" @click="isBulkDownload = false; showDownloadModal = true" :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex flex-1 items-center justify-center gap-x-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-hover hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
                           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                             <use href="icons-sprite.svg#outline-arrow-down-tray"></use>
                           </svg>
-                          <span>PNG / SVG</span>
+                          <span>Download Image</span>
                         </button>
                         <button type="button" @click="copyImageToClipboard()" :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex items-center justify-center gap-x-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-200 hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50" title="Copy image to clipboard">
                           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
@@ -1204,22 +1207,21 @@
               </div>
             </div>
           </div>
-        </div>
 
         <!-- QR code management view (Dashboard) -->
-        <div x-show="currentView === 'dashboard'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100">
-          <div class="mb-8 rounded-xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+        <div x-show="currentView === 'dashboard'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="w-full">
+          <div class="mb-10 rounded-2xl border border-white bg-white/50 p-6 shadow-softer backdrop-blur-md md:p-10">
             <div class="flex flex-col items-start gap-6 md:flex-row md:items-center">
               <div class="shrink-0">
-                <div class="inline-flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-primary/20 bg-primary/5">
+                <div class="inline-flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-primary/20 bg-linear-to-br from-primary/10 to-primary/5 shadow-inner-soft">
                   <svg class="h-9 w-9 text-primary" fill="none" stroke="currentColor" stroke-width="2">
                     <use href="icons-sprite.svg#outline-folder"></use>
                   </svg>
                 </div>
               </div>
               <div>
-                <h1 class="text-3xl font-bold tracking-tight text-slate-900">QR Code Dashboard</h1>
-                <p class="mt-2 max-w-2xl text-base text-slate-600">Manage, edit, delete, and share your saved QR codes here.</p>
+                <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl">QR Code Dashboard</h1>
+                <p class="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">Manage, edit, delete, and share your saved QR codes here.</p>
               </div>
             </div>
           </div>
@@ -1243,8 +1245,8 @@
                       <use href="icons-sprite.svg#outline-magnifying-glass"></use>
                     </svg>
                   </div>
-                  <input type="text" x-model="searchQuery" @input="currentPage = 1" placeholder="Search by name, memo, tag..." class="block w-full rounded-lg border border-slate-300 bg-white p-2 pl-9 pr-8 text-base md:text-sm text-slate-900 shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
-                  <button x-show="searchQuery" @click="searchQuery = ''; currentPage = 1" x-cloak class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600">
+                  <input type="text" x-ref="searchInput" x-model="searchQuery" @input="currentPage = 1" placeholder="Search by name, memo, tag..." class="block w-full rounded-lg border border-slate-300 bg-white p-2 pl-9 pr-8 text-base md:text-sm text-slate-900 shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                  <button x-show="searchQuery" @click="searchQuery = ''; currentPage = 1; $nextTick(() => $refs.searchInput.focus())" x-cloak class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2">
                       <use href="icons-sprite.svg#outline-x-mark"></use>
                     </svg>
@@ -1253,12 +1255,15 @@
               </div>
 
               <div class="hidden rounded-lg bg-slate-100 px-6 py-3 text-left text-sm font-semibold text-slate-600 md:grid md:grid-cols-12 md:gap-4">
-                <button @click="sortBy('name')" class="col-span-4 flex items-center gap-1">
-                  <span>QR Code Name</span>
-                  <svg x-show="sortKey === 'name'" :class="sortOrder === 'desc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.78a.75.75 0 11-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 11-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd"></path>
-                  </svg>
-                </button>
+                <div class="col-span-4 flex items-center gap-3">
+                  <input type="checkbox" :checked="isAllSelected()" :indeterminate="selectedIds.length > 0 && !isAllSelected()" @change="toggleSelectAll()" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" title="Select all on this page" />
+                  <button @click="sortBy('name')" class="flex items-center gap-1">
+                    <span>QR Code Name</span>
+                    <svg x-show="sortKey === 'name'" :class="sortOrder === 'desc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 17a.75.75 0 01-.75-.75V5.612L6.22 8.78a.75.75 0 11-1.06-1.06l4.25-4.25a.75.75 0 011.06 0l4.25 4.25a.75.75 0 11-1.06 1.06L10.75 5.612V16.25A.75.75 0 0110 17z" clip-rule="evenodd"></path>
+                    </svg>
+                  </button>
+                </div>
                 <div class="col-span-4">Memo / Tag</div>
                 <div class="col-span-4 flex items-center justify-end gap-4">
                   <button @click="sortBy('createdAt')" class="flex items-center gap-1">
@@ -1276,6 +1281,7 @@
                   <div x-data="{ dropdownOpen: false }" class="relative rounded-xl bg-white shadow-md ring-1 ring-slate-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" :class="dropdownOpen ? 'z-10' : 'z-0'">
                     <div class="grid items-center gap-y-4 p-4 md:grid-cols-12 md:gap-x-4 md:p-6">
                       <div class="col-span-12 flex items-center gap-4 md:col-span-4">
+                        <input type="checkbox" :value="qr.id" x-model="selectedIds" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
                         <button @click="editQRCode(qr.id)" class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white p-1 shadow-sm transition-all hover:scale-105 hover:border-primary/50 hover:shadow-md" title="Edit">
                           <img :src="qr.previewSvgUrl" class="h-full w-full object-contain" />
                         </button>
@@ -1424,6 +1430,26 @@
               </nav>
             </div>
 
+            <!-- Floating Action Bar (FAB) for Bulk Download -->
+            <div x-show="selectedIds.length > 0 && currentView === 'dashboard'" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="translate-y-full opacity-0" x-transition:enter-end="translate-y-0 opacity-100" x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-full opacity-0" class="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 rounded-full bg-slate-900 px-6 py-3 shadow-2xl ring-1 ring-white/10 whitespace-nowrap">
+              <span class="font-bold text-white text-sm">
+                <span x-text="selectedIds.length" class="text-primary-400 mr-1"></span> Selected
+              </span>
+              <div class="h-5 w-px bg-slate-700"></div>
+              <button @click="isBulkDownload = true; download.format = 'png'; download.size = 1024; showDownloadModal = true" :disabled="isExportingBulk" class="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-hover active:scale-95 disabled:opacity-50 disabled:cursor-wait">
+                <template x-if="!isExportingBulk">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>
+                </template>
+                <template x-if="isExportingBulk">
+                  <svg class="h-4 w-4 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                </template>
+                <span x-text="isExportingBulk ? exportProgress : 'Export ZIP'"></span>
+              </button>
+              <button @click="selectedIds = []" :disabled="isExportingBulk" class="ml-2 text-slate-400 hover:text-white transition-colors p-1 disabled:opacity-50 disabled:cursor-not-allowed" title="Clear selection">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-x-mark"></use></svg>
+              </button>
+            </div>
+
             <div x-show="savedQRCodes.length === 0" class="rounded-xl border-2 border-dashed border-slate-300 bg-white py-16 text-center">
               <div class="inline-flex h-20 w-20 items-center justify-center rounded-full bg-slate-100">
                 <svg class="h-10 w-10 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -1466,12 +1492,12 @@
     <!-- Modal windows for various actions -->
 
     <!-- Save Modal -->
-    <div x-show="showSaveModal" @keydown.escape.window="showSaveModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showSaveModal">
+    <div x-show="showSaveModal" @keydown.escape.window="showSaveModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="save-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showSaveModal">
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showSaveModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showSaveModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
       <div x-show="showSaveModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-md transform-gpu rounded-t-3xl sm:rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-        <h3 class="text-xl font-black text-slate-900 mb-2" x-text="editingQRCodeId ? 'Save QR Code Changes' : 'Save QR Code'"></h3>
+        <h3 id="save-modal-title" class="text-xl font-black text-slate-900 mb-2" x-text="editingQRCodeId ? 'Save QR Code Changes' : 'Save QR Code'"></h3>
         <p class="text-sm text-slate-500 mb-6">Save to the dashboard for later editing.</p>
         <form @submit.prevent="saveToGrind(true)">
           <div class="space-y-4 mb-6">
@@ -1489,11 +1515,11 @@
     </div>
 
     <!-- Share Modal -->
-    <div x-show="showShareModal" @keydown.escape.window="showShareModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showShareModal">
+    <div x-show="showShareModal" @keydown.escape.window="showShareModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="share-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showShareModal">
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showShareModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showShareModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
-        <div x-show="showShareModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="sm:max-w-lg inline-block transform-gpu overflow-hidden rounded-xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:align-middle">
+        <div x-show="showShareModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block w-full transform-gpu overflow-hidden rounded-xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
           <div class="bg-white p-6">
             <div class="sm:flex sm:items-start">
               <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 sm:mx-0 sm:h-10 sm:w-10">
@@ -1502,11 +1528,11 @@
                 </svg>
               </div>
               <div class="mt-3 w-full text-center sm:ml-4 sm:mt-0 sm:text-left">
-                <h3 class="text-lg font-medium leading-6 text-slate-900" id="modal-title">Share QR Code</h3>
+                <h3 class="text-lg font-medium leading-6 text-slate-900" id="share-modal-title">Share QR Code</h3>
                 <div class="mt-4">
                   <p class="mb-4 text-sm text-slate-500" x-text="`Data content of \x22${qrToShare.name}\x22`"></p>
                   <div class="flex rounded-lg shadow-sm">
-                    <input type="text" readonly :value="getShareDataText(qrToShare)" class="block w-full min-w-0 flex-1 rounded-none rounded-l-lg border-slate-300 bg-slate-50 p-3 font-mono text-sm focus:border-primary focus:ring-primary" />
+                    <textarea readonly :value="getShareDataText(qrToShare)" rows="2" class="resize-none block w-full min-w-0 flex-1 rounded-none rounded-l-lg border-slate-300 bg-slate-50 p-3 font-mono text-xs focus:border-primary focus:ring-primary"></textarea>
                     <button @click="navigator.clipboard.writeText(getShareDataText(qrToShare)); copied = true; hapticFeedback('light'); setTimeout(() => copied = false, 2000)" type="button" class="relative -ml-px inline-flex w-24 items-center justify-center gap-x-1.5 rounded-r-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 ring-1 ring-inset ring-slate-300 transition-all hover:bg-slate-200">
                       <template x-if="!copied">
                         <span class="flex items-center gap-1.5">
@@ -1540,11 +1566,11 @@
     </div>
 
     <!-- Download confirmation Modal -->
-    <div x-show="showDownloadModal" @keydown.escape.window="showDownloadModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showDownloadModal">
+    <div x-show="showDownloadModal" @keydown.escape.window="showDownloadModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="download-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showDownloadModal">
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showDownloadModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showDownloadModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
-        <div x-show="showDownloadModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block transform-gpu overflow-hidden rounded-xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
+        <div x-show="showDownloadModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block w-full transform-gpu overflow-hidden rounded-xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
           <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
             <div class="sm:flex sm:items-start">
               <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 sm:mx-0 sm:h-10 sm:w-10">
@@ -1552,27 +1578,43 @@
                   <use href="icons-sprite.svg#outline-arrow-down-tray"></use>
                 </svg>
               </div>
-              <div class="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                <h3 class="text-lg font-medium leading-6 text-slate-900" id="modal-title">Confirm Download</h3>
-                <div class="mt-4">
-                  <p class="text-sm text-slate-500">Download the QR code with the following settings. Are you sure?</p>
-                  <div class="mt-4 space-y-2 text-sm">
-                    <div class="flex justify-between border-b border-slate-200 pb-1">
-                      <span class="font-semibold text-slate-600">File Name:</span>
-                      <span class="font-mono" x-text="download.fileName + '.' + download.format"></span>
+              <div class="mt-3 w-full text-center sm:ml-4 sm:mt-0 sm:text-left">
+                <h3 class="text-lg font-medium leading-6 text-slate-900" id="download-modal-title" x-text="isBulkDownload ? 'Bulk Export Options' : 'Download Options'"></h3>
+                <div class="mt-4 w-full">
+                  <p class="mb-4 text-sm text-slate-500" x-text="isBulkDownload ? 'Adjust the settings for ' + selectedIds.length + ' selected QR codes.' : 'Adjust the settings and download the QR code.'"></p>
+                  <div class="space-y-4 text-left">
+                    <div x-show="!isBulkDownload">
+                      <label for="modal-file-name" class="mb-1.5 block text-sm font-semibold text-slate-700">File Name</label>
+                      <div class="flex items-center rounded-lg shadow-sm">
+                        <input type="text" id="modal-file-name" x-model="download.fileName" class="z-10 block w-full rounded-none rounded-l-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                        <span class="rounded-none rounded-r-lg border border-l-0 border-slate-300 bg-slate-50 px-3 py-2.5 font-mono text-sm text-slate-500" x-text="'.' + download.format"></span>
+                      </div>
                     </div>
-                    <div class="flex justify-between border-b border-slate-200 pb-1">
-                      <span class="font-semibold text-slate-600">Format:</span>
-                      <span class="uppercase" x-text="download.format"></span>
+                    <div>
+                      <label class="mb-1.5 block text-sm font-semibold text-slate-700">Format</label>
+                      <div class="grid w-full grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1">
+                        <button @click="download.format = 'png'" :class="download.format === 'png' ? 'bg-white shadow-sm text-primary' : 'text-slate-600 hover:bg-white/60'" class="rounded-md px-4 py-2 text-sm font-semibold transition-all">PNG</button>
+                        <button @click="download.format = 'svg'" :class="download.format === 'svg' ? 'bg-white shadow-sm text-primary' : 'text-slate-600 hover:bg-white/60'" class="rounded-md px-4 py-2 text-sm font-semibold transition-all">SVG</button>
+                      </div>
                     </div>
-                    <div x-show="download.format === 'png'" class="flex justify-between border-b border-slate-200 pb-1">
-                      <span class="font-semibold text-slate-600">Size:</span>
-                      <span x-text="download.size + 'px × ' + download.size + 'px'"></span>
+                    <div x-show="download.format === 'svg'" x-collapse>
+                      <div class="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                        <div class="flex items-start gap-2.5">
+                          <svg class="mt-0.5 h-4 w-4 shrink-0 text-blue-600" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-question-mark-circle"></use></svg>
+                          <p class="text-xs leading-relaxed text-blue-800"><span class="font-bold">Note:</span> Text elements (e.g., Frame text) in SVG are not outlined. When opening in vector software like Illustrator, fonts may be substituted depending on your system.</p>
+                        </div>
+                      </div>
                     </div>
-                    <div class="mt-4">
-                      <label class="flex items-center">
-                        <input type="checkbox" x-model="download.transparentBg" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary" />
-                        <span class="ml-2 text-sm text-slate-600">Transparent Background</span>
+                    <div x-show="download.format === 'png'">
+                      <label for="modal-download-size" class="mb-1.5 block text-sm font-semibold text-slate-700">
+                        Resolution: <span class="font-normal text-slate-500" x-text="download.size + 'px'"></span>
+                      </label>
+                      <input id="modal-download-size" type="range" x-model.number="download.size" min="512" max="4096" step="512" class="h-2 w-full cursor-pointer rounded-lg bg-slate-200 accent-primary focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    </div>
+                    <div class="pt-2">
+                      <label class="flex cursor-pointer items-center">
+                        <input type="checkbox" x-model="download.transparentBg" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
+                        <span class="ml-2 text-sm font-medium text-slate-700">Transparent Background</span>
                       </label>
                     </div>
                   </div>
@@ -1581,7 +1623,7 @@
             </div>
           </div>
           <div class="bg-slate-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-            <button @click="downloadQrCode(); showDownloadModal = false" type="button" class="inline-flex w-full justify-center rounded-lg border border-transparent bg-primary px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm">Confirm and Download</button>
+            <button @click="if(isBulkDownload) { bulkDownloadZIP(); } else { downloadQrCode(); }; showDownloadModal = false" type="button" class="inline-flex w-full justify-center rounded-lg border border-transparent bg-primary px-4 py-2 text-base font-medium text-white shadow-sm hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:ml-3 sm:w-auto sm:text-sm" x-text="isBulkDownload ? 'Download ZIP' : 'Download'"></button>
             <button @click="showDownloadModal = false" type="button" class="mt-3 inline-flex w-full justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-base font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm">Cancel</button>
           </div>
         </div>
@@ -1589,13 +1631,13 @@
     </div>
 
     <!-- Use case preview Modal -->
-    <div x-show="showSceneModal" @keydown.escape.window="cancelSceneSettings()" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showSceneModal">
+    <div x-show="showSceneModal" @keydown.escape.window="cancelSceneSettings()" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="scene-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showSceneModal">
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showSceneModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="cancelSceneSettings()" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
-        <div x-show="showSceneModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block transform-gpu overflow-hidden rounded-xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-4xl sm:align-middle">
+        <div x-show="showSceneModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block w-full transform-gpu overflow-hidden rounded-xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-4xl sm:align-middle">
           <div class="bg-white px-4 pb-4 pt-5 sm:p-6">
-            <h3 class="text-lg font-medium leading-6 text-slate-900" id="modal-title">Preview Use Case</h3>
+            <h3 class="text-lg font-medium leading-6 text-slate-900" id="scene-modal-title">Preview Use Case</h3>
             <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
               <div class="space-y-6 md:col-span-1 order-last md:order-first">
                 <div>
@@ -1658,12 +1700,12 @@
     </div>
 
     <!-- Custom prompt modal -->
-    <div x-show="showPromptModal" @keydown.escape.window="if(showPromptModal) { resolvePrompt(null); showPromptModal = false; }" class="fixed inset-0 z-60 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true" x-cloak x-trap.noscroll="showPromptModal">
+    <div x-show="showPromptModal" @keydown.escape.window="if(showPromptModal) { resolvePrompt(null); showPromptModal = false; }" class="fixed inset-0 z-60 overflow-y-auto" aria-labelledby="prompt-modal-title" role="dialog" aria-modal="true" x-cloak x-trap.noscroll="showPromptModal">
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showPromptModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="resolvePrompt(null); showPromptModal = false;" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
         <div x-show="showPromptModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-sm transform-gpu rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-          <h3 class="text-lg font-bold text-slate-900 mb-4" x-text="promptMessage"></h3>
+          <h3 id="prompt-modal-title" class="text-lg font-bold text-slate-900 mb-4" x-text="promptMessage"></h3>
           <form @submit.prevent="resolvePrompt(promptInput); showPromptModal = false;">
             <input :type="promptInputType" x-model="promptInput" x-ref="promptInputField" autocomplete="off" data-lpignore="true" spellcheck="false" class="mb-6 block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" autofocus />
             <div class="flex gap-3">

@@ -386,7 +386,9 @@ function toggleCommandPalette() {
     selectedCommandIndex = 0;
     renderCommandList();
 
-    input.focus();
+    if (!window.matchMedia("(pointer: coarse)").matches) {
+      input.focus();
+    }
 
     requestAnimationFrame(() => {
       palette.classList.remove("opacity-0");
@@ -688,6 +690,12 @@ function qrCodeGenerator() {
     saveTags: "", // Store comma-separated tags.
     qrToShare: {}, // Store data for share modal.
 
+    // --- Bulk Download Status ---
+    selectedIds: [],
+    isBulkDownload: false, // Track if download modal is for bulk ZIP
+    isExportingBulk: false,
+    exportProgress: "",
+
     // --- Manage QR code and application data ---
     qrCodeInstance: null, // Store QR code library instance.
     logoFileName: "", // Store uploaded logo filename.
@@ -971,7 +979,9 @@ function qrCodeGenerator() {
         if (typeof valB === 'string') valB = valB.toLowerCase();
 
         let comparison = 0;
-        if (typeof valA === 'string' && typeof valB === 'string') {
+        if (this.sortKey === 'createdAt' || this.sortKey === 'updatedAt') {
+          comparison = new Date(valA).getTime() - new Date(valB).getTime();
+        } else if (typeof valA === 'string' && typeof valB === 'string') {
           comparison = valA.localeCompare(valB, 'en', { numeric: true });
         } else {
           if (valA > valB) comparison = 1;
@@ -1016,6 +1026,22 @@ function qrCodeGenerator() {
         last = page;
       }
       return withEllipsis;
+    },
+
+    // Check if all items on the current page are selected.
+    isAllSelected() {
+      if (this.displayedItems.length === 0) return false;
+      return this.displayedItems.every(qr => this.selectedIds.includes(qr.id));
+    },
+    // Toggle selection for all items on the current page.
+    toggleSelectAll() {
+      const currentIds = this.displayedItems.map(qr => qr.id);
+      if (this.isAllSelected()) {
+        this.selectedIds = this.selectedIds.filter(id => !currentIds.includes(id));
+      } else {
+        const newIds = currentIds.filter(id => !this.selectedIds.includes(id));
+        this.selectedIds = [...this.selectedIds, ...newIds];
+      }
     },
 
     // --- Haptic feedback ---
@@ -1345,8 +1371,8 @@ function qrCodeGenerator() {
     async copyImageToClipboard() {
       if (!this.qrCodeInstance) return;
 
-      if (!window.ClipboardItem) {
-        this.showFlashNotification("Your browser does not support copying images. Please use download.");
+      if (!navigator.clipboard || !window.ClipboardItem) {
+        this.showFlashNotification("Your browser does not support copying images (HTTPS required). Please use download.");
         return;
       }
 
@@ -1466,7 +1492,7 @@ function qrCodeGenerator() {
         const blob = new Blob([finalSvgString], { type: "image/svg+xml;charset=utf-8" });
         const safeSvgBlobUrl = URL.createObjectURL(blob);
 
-        const blobData = await new Promise((resolve, reject) => {
+        const blobPromise = new Promise((resolve, reject) => {
           try {
             const image = new Image();
             image.onload = () => {
@@ -1494,7 +1520,7 @@ function qrCodeGenerator() {
           }
         });
         const clipboardItem = new window.ClipboardItem({
-          "image/png": blobData
+          "image/png": blobPromise
         });
         await navigator.clipboard.write([clipboardItem]);
         if (hasInvalidImage) {
@@ -1514,7 +1540,7 @@ function qrCodeGenerator() {
       if (!this.qrCodeInstance) return;
 
       const extension = this.download.format;
-      const safeName = (this.download.fileName || "grinds-qr-code").replace(/[\\/:*?"<>|]/g, "-");
+      const safeName = (this.download.fileName || "grinds-qr-code").trim().replace(/[\\/:*?"<>|]/g, "-");
 
       const visibleCanvas = this.showSceneModal ? this.$refs.modalQrCanvas : this.$refs.qrCodeCanvas;
       const svgElement = visibleCanvas.querySelector("svg");
@@ -3262,6 +3288,8 @@ function qrCodeGenerator() {
         const textColor = this.qrOptions.colorType === "single" ? this.qrOptions.foregroundColor : this.qrOptions.gradient.color1;
         let frameHeight, textY, fontSize;
 
+        const systemFontStack = `system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif`;
+
         const textToMeasure = this.frame.text || "";
 
         const measureCanvas = document.createElement("canvas");
@@ -3271,7 +3299,7 @@ function qrCodeGenerator() {
           case "scan-me-1": {
             frameHeight = 40;
             fontSize = 24;
-            mCtx.font = `bold ${fontSize}px 'Inter', 'Helvetica Neue', Arial, sans-serif`;
+            mCtx.font = `bold ${fontSize}px ${systemFontStack}`;
             const textMetrics = mCtx.measureText(textToMeasure);
             const textWidth = textMetrics.width + 40;
             const requiredWidth = Math.max(originalSize, textWidth + 20);
@@ -3282,7 +3310,7 @@ function qrCodeGenerator() {
             Object.assign(text1.style, {
               textAnchor: "middle",
               dominantBaseline: "central",
-              fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+              fontFamily: systemFontStack,
               fontWeight: "bold",
             });
             text1.setAttribute("x", originalSize / 2);
@@ -3296,7 +3324,7 @@ function qrCodeGenerator() {
           case "scan-me-2": {
             frameHeight = 50;
             fontSize = 22;
-            mCtx.font = `bold ${fontSize}px 'Inter', 'Helvetica Neue', Arial, sans-serif`;
+            mCtx.font = `bold ${fontSize}px ${systemFontStack}`;
             const textMetrics = mCtx.measureText(textToMeasure);
             const textWidth = textMetrics.width + 40;
             const requiredWidth = Math.max(originalSize, textWidth + 20);
@@ -3317,7 +3345,7 @@ function qrCodeGenerator() {
             Object.assign(text2.style, {
               textAnchor: "middle",
               dominantBaseline: "central",
-              fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+              fontFamily: systemFontStack,
               fontWeight: "bold",
             });
             text2.setAttribute("x", originalSize / 2);
@@ -3331,7 +3359,7 @@ function qrCodeGenerator() {
           case "scan-me-3": {
             frameHeight = 40;
             fontSize = 22;
-            mCtx.font = `bold ${fontSize}px 'Inter', 'Helvetica Neue', Arial, sans-serif`;
+            mCtx.font = `bold ${fontSize}px ${systemFontStack}`;
             const textMetrics = mCtx.measureText(textToMeasure);
             const textWidth = textMetrics.width + 40;
             const requiredWidth = Math.max(originalSize, textWidth + 20);
@@ -3349,7 +3377,7 @@ function qrCodeGenerator() {
             Object.assign(text3.style, {
               textAnchor: "middle",
               dominantBaseline: "central",
-              fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
+              fontFamily: systemFontStack,
               fontWeight: "bold",
             });
             text3.setAttribute("x", originalSize / 2);
@@ -3473,12 +3501,16 @@ function qrCodeGenerator() {
 
       return new Promise((resolve, reject) => {
         const textReader = new FileReader();
-        textReader.onloadend = () => {
+        textReader.onload = () => {
           let svgString = textReader.result;
+          if (!svgString) {
+            reject(new Error("Failed to read SVG data"));
+            return;
+          }
           svgString = svgString.replace(/crossorigin="[^"]*"/gi, "");
           const cleanBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
           const dataUrlReader = new FileReader();
-          dataUrlReader.onloadend = () => resolve(dataUrlReader.result);
+          dataUrlReader.onload = () => resolve(dataUrlReader.result);
           dataUrlReader.onerror = reject;
           dataUrlReader.readAsDataURL(cleanBlob);
         };
@@ -3791,7 +3823,7 @@ function qrCodeGenerator() {
       if (typeof setDirty === 'function') setDirty(true);
       this.showFlashNotification("Tags updated.");
     },
-    editQRCode(id) {
+    editQRCode(id, transitionToGenerator = true) {
       const qrToEdit = this.savedQRCodes.find((qr) => qr.id === id);
       if (qrToEdit) {
         this.editingQRCodeId = id;
@@ -3808,14 +3840,18 @@ function qrCodeGenerator() {
         this.qrOptions = JSON.parse(JSON.stringify(qrToEdit.qrOptions));
         this.logoFileName = qrToEdit.logoFileName;
         this.frame = JSON.parse(JSON.stringify(qrToEdit.frame));
-        this.currentView = "generator";
-        this.currentStep = "contentEntry";
-        this.activeStepTab = "content";
+        if (transitionToGenerator) {
+          this.currentView = "generator";
+          this.currentStep = "contentEntry";
+          this.activeStepTab = "content";
+        }
         this.$nextTick(() => {
           this.updateQrCode(false);
-          this.history = [];
-          this.historyIndex = -1;
-          this.recordState();
+          if (transitionToGenerator) {
+            this.history = [];
+            this.historyIndex = -1;
+            this.recordState();
+          }
           this.hasUnsavedEdit = false;
           if (typeof setDirty === 'function') setDirty(false);
         });
@@ -3825,6 +3861,7 @@ function qrCodeGenerator() {
       const isConfirmed = window.confirm("Are you sure you want to delete this QR code?\nThis action cannot be undone.");
       if (isConfirmed) {
         this.savedQRCodes = this.savedQRCodes.filter((qr) => qr.id !== id);
+        this.selectedIds = this.selectedIds.filter((selectedId) => selectedId !== id);
         await this.persistSavedQRCodes();
         if (typeof setDirty === 'function') setDirty(true);
 
@@ -3892,7 +3929,8 @@ function qrCodeGenerator() {
       }
     },
     prepareDownloadFromDashboard(qr) {
-      this.editQRCode(qr.id);
+      this.isBulkDownload = false;
+      this.editQRCode(qr.id, false); // Load data and render in background perfectly without screen jump
       this.download.fileName = qr.name;
       this.download.format = 'png';
       this.download.size = 1024;
@@ -3934,6 +3972,190 @@ function qrCodeGenerator() {
       };
       return this.getQrDataString.call(dataStringContext);
     },
+    async bulkDownloadZIP() {
+      if (this.selectedIds.length === 0 || this.isExportingBulk) return;
+      this.isExportingBulk = true;
+      this.exportProgress = "Preparing...";
+
+      try {
+        const zipData = {}; // fflate expects { "filename.png": Uint8Array }
+        const nameCountMap = {};
+
+        const targets = this.savedQRCodes.filter(qr => this.selectedIds.includes(qr.id));
+        const total = targets.length;
+        const format = this.download.format;
+        let count = 0;
+
+        // Use for...of to process sequentially, preventing Canvas memory limits/crashes in Safari
+        for (const qr of targets) {
+          count++;
+          this.exportProgress = `Zipping... (${count}/${total})`;
+
+          // Render the full QR code invisibly in the background generator to ensure frames and logos are applied
+          this.editQRCode(qr.id, false);
+
+          // Wait briefly for the DOM to render the SVG and apply the frame (which uses setTimeout)
+          await new Promise(resolve => setTimeout(resolve, 150));
+
+          const visibleCanvas = this.showSceneModal ? this.$refs.modalQrCanvas : this.$refs.qrCodeCanvas;
+          const svgElement = visibleCanvas.querySelector("svg");
+          if (!svgElement) continue;
+
+          const svgClone = svgElement.cloneNode(true);
+          const svgViewBox = svgElement.viewBox.baseVal;
+          const aspectRatio = svgViewBox.height > 0 ? svgViewBox.width / svgViewBox.height : 1;
+          const canvasWidth = this.download.size;
+          const canvasHeight = this.download.size / Math.max(aspectRatio, 0.0001);
+
+          svgClone.setAttribute("width", `${canvasWidth}px`);
+          svgClone.setAttribute("height", `${canvasHeight}px`);
+          svgClone.style.width = "";
+          svgClone.style.height = "";
+
+          svgClone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+          svgClone.setAttribute("xmlns:xlink", "http://www.w3.org/1999/xlink");
+
+          if (this.download.transparentBg) {
+            const bgRect = Array.from(svgClone.children).find(el => el.tagName.toLowerCase() === 'rect');
+            if (bgRect) {
+              bgRect.setAttribute("fill", "transparent");
+              bgRect.style.fill = "transparent";
+            }
+          }
+
+          // Convert to static array using Array.from for dynamic DOM replacement.
+          const imageTags = Array.from(svgClone.querySelectorAll("image, img"));
+
+          for (let img of imageTags) {
+            let href = img.getAttribute("href") || img.getAttribute("xlink:href") || img.getAttribute("src");
+            if (href) {
+              if (!href.startsWith("data:")) {
+                img.remove();
+              } else if (img.tagName.toLowerCase() === 'img') {
+                img.remove();
+              } else {
+                if (href.startsWith("data:image/svg+xml")) {
+                  try {
+                    let svgString = "";
+                    if (href.includes("base64,")) {
+                      const binStr = atob(href.split("base64,")[1]);
+                      const bytes = new Uint8Array(binStr.length);
+                      for (let i = 0; i < binStr.length; i++) {
+                        bytes[i] = binStr.charCodeAt(i);
+                      }
+                      svgString = new TextDecoder('utf-8').decode(bytes); // Prevent character corruption.
+                    } else {
+                      svgString = decodeURIComponent(href.split(",")[1]);
+                    }
+
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(svgString, "image/svg+xml");
+                    const innerSvg = doc.documentElement;
+
+                    if (innerSvg && innerSvg.tagName.toLowerCase() === "svg") {
+                      const allElements = innerSvg.querySelectorAll("*");
+                      allElements.forEach(el => {
+                        const tagName = el.tagName.toLowerCase();
+                        if (['script', 'foreignobject', 'object', 'embed', 'iframe', 'applet'].includes(tagName)) {
+                          el.remove();
+                          return;
+                        }
+                        Array.from(el.attributes).forEach(attr => {
+                          const attrName = attr.name.toLowerCase();
+                          const attrVal = attr.value.trim().toLowerCase();
+                          if (attrName.startsWith('on')) {
+                            el.removeAttribute(attr.name);
+                          }
+                          if ((attrName === 'href' || attrName === 'xlink:href') && attrVal.startsWith('javascript:')) {
+                            el.removeAttribute(attr.name);
+                          }
+                        });
+                      });
+
+                      ['x', 'y', 'width', 'height'].forEach(attr => {
+                        const val = img.getAttribute(attr);
+                        if (val) innerSvg.setAttribute(attr, val);
+                      });
+
+                      innerSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+                      img.parentNode.replaceChild(innerSvg, img);
+                      continue;
+                    }
+                  } catch (e) {
+                    console.warn("Failed to inline vector SVG. Falling back.", e);
+                  }
+                }
+                img.removeAttribute("href");
+                img.removeAttribute("xlink:href");
+                img.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", href);
+              }
+            } else {
+              img.remove();
+            }
+          }
+
+          const finalSvgStr = new XMLSerializer().serializeToString(svgClone);
+          const svgBlob = new Blob([finalSvgStr], { type: "image/svg+xml;charset=utf-8" });
+          const safeSvgUrl = URL.createObjectURL(svgBlob);
+
+          let fileBytes;
+          if (format === 'svg') {
+            const arrayBuffer = await svgBlob.arrayBuffer();
+            fileBytes = new Uint8Array(arrayBuffer);
+          } else {
+            const pngBlob = await this.svgDataUrlToPngBlob(safeSvgUrl, this.download.size);
+            const arrayBuffer = await pngBlob.arrayBuffer();
+            fileBytes = new Uint8Array(arrayBuffer);
+          }
+          URL.revokeObjectURL(safeSvgUrl);
+
+          let safeName = (qr.name || "qrcode").trim().replace(/[\\/:*?"<>|]/g, "-");
+
+          if (nameCountMap[safeName] !== undefined) {
+            nameCountMap[safeName]++;
+            safeName = `${safeName}(${nameCountMap[safeName]})`;
+          } else {
+            nameCountMap[safeName] = 0;
+          }
+          zipData[`${safeName}.${format}`] = fileBytes;
+        }
+
+        this.exportProgress = "Compressing...";
+        await new Promise(resolve => setTimeout(resolve, 50)); // Allow UI to render
+
+        const zipped = await new Promise((resolve, reject) => {
+          fflate.zip(zipData, (err, data) => {
+            if (err) reject(err);
+            else resolve(data);
+          });
+        });
+        const zipBlob = new Blob([zipped], { type: 'application/zip' });
+        const url = URL.createObjectURL(zipBlob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `QR_Codes_Export_${new Date().toISOString().slice(0,10)}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        setTimeout(() => URL.revokeObjectURL(url), 10000); // Safari fix
+
+        this.showFlashNotification(`${total} QR codes exported successfully!`);
+        this.hapticFeedback('success');
+        this.selectedIds = [];
+
+      } catch (error) {
+        console.error("Bulk export failed:", error);
+        this.showFlashNotification("Failed to create ZIP file.");
+        this.hapticFeedback('error');
+      } finally {
+        this.isExportingBulk = false;
+        this.exportProgress = "";
+        this.resetGenerator();
+        this.currentView = "dashboard";
+      }
+    },
     async svgDataUrlToPngBlob(svgDataUrl, size = 512) {
       return new Promise(async (resolve, reject) => {
         try {
@@ -3964,8 +4186,7 @@ function qrCodeGenerator() {
               canvas.width = size;
               canvas.height = size;
               const ctx = canvas.getContext("2d");
-              ctx.fillStyle = "#ffffff";
-              ctx.fillRect(0, 0, size, size);
+              ctx.clearRect(0, 0, size, size);
               ctx.drawImage(image, 0, 0, size, size);
               canvas.toBlob((blob) => {
                 if (svgDataUrl.startsWith("blob:")) URL.revokeObjectURL(svgDataUrl);
@@ -3985,14 +4206,14 @@ function qrCodeGenerator() {
       });
     },
     async copyShareImage(qr) {
-      if (!window.ClipboardItem) {
-        this.showFlashNotification("Your browser does not support copying images.");
+      if (!navigator.clipboard || !window.ClipboardItem) {
+        this.showFlashNotification("Your browser does not support copying images (HTTPS required).");
         return;
       }
       try {
-        const blob = await this.svgDataUrlToPngBlob(qr.previewSvgUrl, 512);
+        const blobPromise = this.svgDataUrlToPngBlob(qr.previewSvgUrl, 512);
         const clipboardItem = new window.ClipboardItem({
-          "image/png": blob
+          "image/png": blobPromise
         });
         await navigator.clipboard.write([clipboardItem]);
         this.showFlashNotification("Copied the image to the clipboard!");

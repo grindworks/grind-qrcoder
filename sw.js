@@ -1,5 +1,5 @@
 // Update this version to trigger a cache update
-const CACHE_NAME = "grindqrcoder-v103";
+const CACHE_NAME = "grindqrcoder-v114";
 const urlsToCache = [
   "./",
   "./index.html",
@@ -23,7 +23,8 @@ const externalUrlsToCache = [
   "https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js",
   "https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.13.5/dist/cdn.min.js",
   "https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.13.5/dist/cdn.min.js",
-  "https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js"
+  "https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js",
+  "https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"
 ];
 
 // Create cache on install
