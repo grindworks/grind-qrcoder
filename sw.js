@@ -1,9 +1,5 @@
 // Update this version to trigger a cache update
-<<<<<<< HEAD
-const CACHE_NAME = "grindqrcoder-v120";
-=======
-const CACHE_NAME = "grindqrcoder-v130";
->>>>>>> 109d052 (fix: resolve HTML validation issues and polish UI/UX)
+const CACHE_NAME = "grindqrcoder-v131";
 const urlsToCache = [
   "./",
   "./index.html",

@@ -778,7 +778,7 @@ function qrCodeGenerator() {
     csvFile: null,
     csvHeaders: [],
     csvData: [], // Real data excluding headers
-    csvMapping: { name: "", url: "", memo: "", tags: "" },
+    csvMapping: { name: "", memo: "", tags: "", dynamic: {} },
     importTargetProject: "default",
     isImporting: false,
     importProgress: 0,
@@ -791,10 +791,8 @@ function qrCodeGenerator() {
       issues: [],
     }, // QR code quality score.
     urlError: "", // Store URL input error message.
-    brandKit: {
-      logo: null,
-      colors: ["#000000", "#ffffff"],
-    }, // Store brand kit settings.
+    brandKits: [], // Array to store multiple client brand kits.
+    activeBrandKitId: null, // Currently active brand kit ID.
     history: [], // Store operation history for undo/redo.
     historyIndex: -1,
     savedQRCodes: [], // Store saved QR code list.
@@ -1044,6 +1042,53 @@ function qrCodeGenerator() {
     presetTemplateGroups: [],
 
     // --- Computed Properties ---
+    get activeTypeFields() {
+      switch(this.selectedType) {
+        case 'url': return [{ key: 'url', label: 'URL', required: true }];
+        case 'text': return [{ key: 'content', label: 'Text Content', required: true }];
+        case 'wifi': return [
+            { key: 'ssid', label: 'Network Name (SSID)', required: true },
+            { key: 'password', label: 'Password', required: false },
+            { key: 'encryption', label: 'Encryption (WPA/WEP/None)', required: false }
+          ];
+        case 'vcard': return [
+            { key: 'lastName', label: 'Last Name', required: true },
+            { key: 'firstName', label: 'First Name', required: false },
+            { key: 'organization', label: 'Company', required: false },
+            { key: 'phone', label: 'Phone', required: false },
+            { key: 'email', label: 'Email', required: false },
+            { key: 'address', label: 'Address', required: false }
+          ];
+        case 'event': return [
+            { key: 'summary', label: 'Event Name', required: true },
+            { key: 'location', label: 'Location', required: false },
+            { key: 'start', label: 'Start Date (YYYY-MM-DD HH:mm)', required: true },
+            { key: 'end', label: 'End Date (YYYY-MM-DD HH:mm)', required: true },
+            { key: 'description', label: 'Description', required: false }
+          ];
+        case 'email': return [
+            { key: 'to', label: 'To Email', required: true },
+            { key: 'subject', label: 'Subject', required: false },
+            { key: 'body', label: 'Body', required: false }
+          ];
+        case 'sms': return [
+            { key: 'phone', label: 'Phone Number', required: true },
+            { key: 'message', label: 'Message', required: false }
+          ];
+        case 'geo': return [
+            { key: 'latitude', label: 'Latitude', required: true },
+            { key: 'longitude', label: 'Longitude', required: true }
+          ];
+        case 'sns': return [
+            { key: 'service', label: 'Service (x, instagram, etc.)', required: true },
+            { key: 'identifier', label: 'Username/ID', required: true },
+            { key: 'message', label: 'Prefilled Message', required: false }
+          ];
+        case 'images': return [{ key: 'url', label: 'Album URL', required: true }];
+        case 'video': return [{ key: 'url', label: 'Video URL', required: true }];
+        default: return [];
+      }
+    },
     get isUrlLong() {
       const dataLength = this.getQrDataString().trim().length;
       const isUrlBasedType = ['url', 'images', 'video', 'sns', 'geo'].includes(this.selectedType);
@@ -4513,7 +4558,10 @@ function qrCodeGenerator() {
       this.csvFile = null;
       this.csvHeaders = [];
       this.csvData = [];
-      this.csvMapping = { name: "", url: "", memo: "", tags: "" };
+      this.csvMapping = { name: "", memo: "", tags: "", dynamic: {} };
+      this.activeTypeFields.forEach(f => {
+        this.csvMapping.dynamic[f.key] = "";
+      });
       this.isImporting = false;
       this.importProgress = 0;
       const fileInput = document.getElementById("csv-upload-input");
@@ -4528,7 +4576,19 @@ function qrCodeGenerator() {
       this.csvFile = file;
       const reader = new FileReader();
       reader.onload = (e) => {
-        const cleanText = e.target.result.replace(/^\uFEFF/, '');
+        const buffer = e.target.result;
+        let text = '';
+        try {
+          // First, try decoding as strict UTF-8
+          const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+          text = utf8Decoder.decode(buffer);
+        } catch (err) {
+          // If UTF-8 decoding fails (fatal error), fallback to Shift_JIS (Japanese Excel CSVs)
+          const sjisDecoder = new TextDecoder('shift_jis');
+          text = sjisDecoder.decode(buffer);
+        }
+
+        const cleanText = text.replace(/^\uFEFF/, '');
         const parsed = this.parseCSV(cleanText);
         if (parsed.length < 2) {
           this.showFlashNotification("CSV must contain headers and at least one data row.");
@@ -4545,13 +4605,30 @@ function qrCodeGenerator() {
         this.csvHeaders = parsed[0].map(h => h.trim());
         this.csvData = parsed.slice(1);
 
-        // ヘッダー名から自動マッピングを試みる（スマートなUX）
-        this.csvMapping.name = this.csvHeaders.find(h => /name|title/i.test(h)) || this.csvHeaders[0] || "";
-        this.csvMapping.url = this.csvHeaders.find(h => /url|link|address/i.test(h)) || this.csvHeaders[1] || "";
-        this.csvMapping.memo = this.csvHeaders.find(h => /memo|desc/i.test(h)) || "";
-        this.csvMapping.tags = this.csvHeaders.find(h => /tag|category/i.test(h)) || "";
+        // Header name inference (Smart UX)
+        this.csvMapping.name = this.csvHeaders.find(h => /name|title|名前|件名/i.test(h)) || "";
+        this.csvMapping.memo = this.csvHeaders.find(h => /memo|desc|note|メモ|備考/i.test(h)) || "";
+        this.csvMapping.tags = this.csvHeaders.find(h => /tag|category|タグ|カテゴリ/i.test(h)) || "";
+
+        this.activeTypeFields.forEach((f, index) => {
+           let regex;
+           if (f.key === 'url') regex = /url|link|address|リンク/i;
+           else if (f.key === 'content') regex = /content|text|テキスト|内容/i;
+           else if (f.key === 'ssid') regex = /ssid|wifi|network|ネットワーク/i;
+           else if (f.key === 'password') regex = /pass|pw|パスワード/i;
+           else if (f.key === 'lastName') regex = /last.*name|surname|姓|名字/i;
+           else if (f.key === 'firstName') regex = /first.*name|given.*name|名/i;
+           else if (f.key === 'phone') regex = /phone|tel|電話/i;
+           else if (f.key === 'email' || f.key === 'to') regex = /mail|メール/i;
+           else if (f.key === 'summary') regex = /event|summary|イベント/i;
+           else if (f.key === 'start') regex = /start|開始/i;
+           else if (f.key === 'end') regex = /end|終了/i;
+           else regex = new RegExp(f.key, 'i');
+
+           this.csvMapping.dynamic[f.key] = this.csvHeaders.find(h => regex.test(h)) || (f.required ? (this.csvHeaders[index] || "") : "");
+        });
       };
-      reader.readAsText(file);
+      reader.readAsArrayBuffer(file);
     },
     // ダブルクォートで囲まれたカンマ等にも対応する堅牢な簡易CSVパーサー
     parseCSV(text) {
@@ -4578,11 +4655,15 @@ function qrCodeGenerator() {
 
     // --- 一括生成（バルクインポート）実行 ---
     async executeBulkImport() {
-      if (!this.csvMapping.url) {
-        this.showFlashNotification("URL mapping is required.");
-        this.hapticFeedback('error');
-        return;
+      const requiredFields = this.activeTypeFields.filter(f => f.required);
+      for (const f of requiredFields) {
+        if (!this.csvMapping.dynamic[f.key]) {
+          this.showFlashNotification(`${f.label} mapping is required.`);
+          this.hapticFeedback('error');
+          return;
+        }
       }
+
       this.isImporting = true;
       this.importProgress = 0;
 
@@ -4590,10 +4671,9 @@ function qrCodeGenerator() {
       let count = 0;
       const newQRCodes = [];
 
-      const idxName = this.csvHeaders.indexOf(this.csvMapping.name);
-      const idxUrl = this.csvHeaders.indexOf(this.csvMapping.url);
-      const idxMemo = this.csvHeaders.indexOf(this.csvMapping.memo);
-      const idxTags = this.csvHeaders.indexOf(this.csvMapping.tags);
+      const idxName = this.csvMapping.name ? this.csvHeaders.indexOf(this.csvMapping.name) : -1;
+      const idxMemo = this.csvMapping.memo ? this.csvHeaders.indexOf(this.csvMapping.memo) : -1;
+      const idxTags = this.csvMapping.tags ? this.csvHeaders.indexOf(this.csvMapping.tags) : -1;
 
       // テンプレートとして「現在のエディタのデザイン設定」を取得
       const rawOptions = window.Alpine.raw(this.qrOptions);
@@ -4609,8 +4689,33 @@ function qrCodeGenerator() {
         if (count % 10 === 0) await new Promise(r => setTimeout(r, 10));
         this.importProgress = Math.round((count / total) * 100);
 
-        const urlStr = idxUrl !== -1 && row[idxUrl] ? row[idxUrl].trim() : "";
-        if (!urlStr) continue; // URLが空の行はスキップ
+        const specificFormData = JSON.parse(JSON.stringify(baseFormData));
+        let hasData = false;
+
+        this.activeTypeFields.forEach(f => {
+            const h = this.csvMapping.dynamic[f.key];
+            // フィールドがマッピングされている場合のみ上書き（未マッピングならエディタの固定値を継承）
+            if (h) {
+              const idx = this.csvHeaders.indexOf(h);
+              const val = (idx !== -1 && row[idx]) ? row[idx].trim() : "";
+
+              if (val) hasData = true;
+
+              if (this.selectedType === 'url') specificFormData.url.address = val;
+              else if (this.selectedType === 'text') specificFormData.text.content = val;
+              else if (this.selectedType === 'wifi') specificFormData.wifi[f.key] = val;
+              else if (this.selectedType === 'vcard') specificFormData.vcard[f.key] = val;
+              else if (this.selectedType === 'event') specificFormData.event[f.key] = val;
+              else if (this.selectedType === 'email') specificFormData.email[f.key] = val;
+              else if (this.selectedType === 'sms') specificFormData.sms[f.key] = val;
+              else if (this.selectedType === 'geo') specificFormData.geo[f.key] = val;
+              else if (this.selectedType === 'sns') specificFormData.sns[f.key] = val;
+              else if (this.selectedType === 'images') specificFormData.images.url = val;
+              else if (this.selectedType === 'video') specificFormData.video.url = val;
+            }
+        });
+
+        if (!hasData) continue; // 空データの場合はスキップ
 
         const nameStr = idxName !== -1 && row[idxName] ? row[idxName].trim() : `Bulk QR ${count}`;
         const memoStr = idxMemo !== -1 && row[idxMemo] ? row[idxMemo].trim() : "";
@@ -4621,11 +4726,10 @@ function qrCodeGenerator() {
         const specificOptions = JSON.parse(JSON.stringify(restOptions));
         specificOptions.logo = logo;
 
-        const specificFormData = JSON.parse(JSON.stringify(baseFormData));
-        specificFormData.url.address = urlStr;
-
-        const dataStringContext = { selectedType: 'url', formData: specificFormData };
+        const dataStringContext = { selectedType: this.selectedType, formData: specificFormData };
         const dataString = this.getQrDataString.call(dataStringContext);
+
+        if (!dataString || dataString.trim() === "") continue;
 
         const builderContext = {
           qrOptions: specificOptions,
@@ -4661,7 +4765,7 @@ function qrCodeGenerator() {
           name: nameStr,
           memo: memoStr,
           tags: tagsArray,
-          type: 'url',
+          type: this.selectedType,
           formData: specificFormData,
           qrOptions: specificOptions,
           logoFileName: this.logoFileName,
@@ -4712,17 +4816,57 @@ function qrCodeGenerator() {
       this.qrOptions.margin = this.includeQuietZone ? 4 : 0;
       this.updateQrCode();
     },
+    getActiveBrandKit() {
+      return this.brandKits.find(b => b.id === this.activeBrandKitId) || null;
+    },
+    async createNewBrandKit() {
+      const name = await appPrompt("Enter brand name (e.g. Client A):", "text");
+      if (!name || !name.trim()) return;
+
+      const newKit = {
+        id: this.generateUniqueId(),
+        name: name.trim(),
+        logo: null,
+        colors: ["#000000", "#ffffff"]
+      };
+      this.brandKits.push(newKit);
+      this.activeBrandKitId = newKit.id;
+      this.saveBrandKits();
+      this.applyBrandKit(); // 新規作成時は自動適用
+      this.showFlashNotification(`Brand "${newKit.name}" created.`);
+    },
+    async renameBrandKit() {
+      const kit = this.getActiveBrandKit();
+      if (!kit) return;
+      const newName = await appPrompt(`Rename "${kit.name}":`, "text");
+      if (!newName || !newName.trim()) return;
+      kit.name = newName.trim();
+      this.saveBrandKits();
+    },
+    async deleteBrandKit() {
+      if (!this.activeBrandKitId) return;
+      const kit = this.getActiveBrandKit();
+      if (!confirm(`Are you sure you want to delete "${kit.name}"?`)) return;
+
+      this.brandKits = this.brandKits.filter(b => b.id !== this.activeBrandKitId);
+      this.activeBrandKitId = this.brandKits.length > 0 ? this.brandKits[0].id : null;
+      this.saveBrandKits();
+      if (this.activeBrandKitId) this.applyBrandKit(); // 削除後は次のものを自動適用
+      this.showFlashNotification("Brand kit deleted.");
+    },
     async selectBrandLogo(logoUrl) {
+      const kit = this.getActiveBrandKit();
+      if (!kit) return;
       try {
         const response = await fetch(logoUrl);
         const blob = await response.blob();
         const reader = new FileReader();
         reader.onloadend = () => {
-          this.brandKit.logo = reader.result;
+          kit.logo = reader.result;
           this.qrOptions.logo = reader.result;
           this.logoFileName = logoUrl.split('/').pop();
           this.updateQrCode();
-          this.saveBrandKit();
+          this.saveBrandKits(false);
         };
         reader.readAsDataURL(blob);
       } catch (error) {
@@ -4731,22 +4875,25 @@ function qrCodeGenerator() {
       }
     },
     removeBrandLogo() {
-      this.brandKit.logo = null;
-      this.saveBrandKit();
+      const kit = this.getActiveBrandKit();
+      if (!kit) return;
+      kit.logo = null;
+      this.saveBrandKits(false);
 
       const fileInput = document.getElementById("brand-logo-upload");
       if (fileInput) fileInput.value = "";
     },
     handleBrandLogoUpload(event) {
+      const kit = this.getActiveBrandKit();
+      if (!kit) return;
       const file = event.target.files[0];
       if (!file) return;
 
       if (file.type === "image/svg+xml" && file.size > 500 * 1024) {
-        this.showFlashNotification("SVG logos can be heavy to process if too complex. Please select a file smaller than 500KB.");
+        this.showFlashNotification("SVG logos can be heavy to process. Please select a file smaller than 500KB.");
         event.target.value = "";
         return;
       }
-
       if (file.size > 2 * 1024 * 1024) {
         this.showFlashNotification("Please select a brand logo smaller than 2MB.");
         event.target.value = "";
@@ -4755,53 +4902,76 @@ function qrCodeGenerator() {
 
       const reader = new FileReader();
       reader.onload = (e) => {
-        this.brandKit.logo = e.target.result;
+        kit.logo = e.target.result;
         this.qrOptions.logo = e.target.result;
         this.logoFileName = file.name;
         this.updateQrCode();
-        this.saveBrandKit();
+        this.saveBrandKits(false);
       };
       reader.readAsDataURL(file);
     },
-    saveBrandKit(showNotification = true) {
+    saveBrandKits(showNotification = true) {
       try {
-        localStorage.setItem("qrBrandKit", JSON.stringify(this.brandKit));
+        localStorage.setItem("qrBrandKits", JSON.stringify(this.brandKits));
         if (showNotification) {
-          this.showFlashNotification("Updated brand kit.");
+          this.showFlashNotification("Brand kit saved.");
         }
-      } catch (e) {
+      } catch(e) {
         this.showFlashNotification("Could not save brand settings due to storage limits.");
       }
     },
     loadBrandKit() {
       try {
-        const kit = localStorage.getItem("qrBrandKit");
-        if (kit) {
-          this.brandKit = JSON.parse(kit);
-          // Clean up invalid logos.
-          if (this.brandKit.logo && !this.brandKit.logo.startsWith("data:")) {
-             this.brandKit.logo = null;
-             this.saveBrandKit(false);
+        const kits = localStorage.getItem("qrBrandKits");
+        if (kits) {
+          this.brandKits = JSON.parse(kits);
+          this.brandKits.forEach(kit => {
+            if (kit.logo && !kit.logo.startsWith("data:")) kit.logo = null;
+          });
+          if (this.brandKits.length > 0) this.activeBrandKitId = this.brandKits[0].id;
+        } else {
+          // v1 (Single object) からの自動マイグレーション
+          const oldKit = localStorage.getItem("qrBrandKit");
+          if (oldKit) {
+            const parsed = JSON.parse(oldKit);
+            if (parsed.logo && !parsed.logo.startsWith("data:")) parsed.logo = null;
+            const migratedKit = {
+              id: this.generateUniqueId(),
+              name: "My Brand",
+              logo: parsed.logo,
+              colors: parsed.colors || ["#000000", "#ffffff"]
+            };
+            this.brandKits = [migratedKit];
+            this.activeBrandKitId = migratedKit.id;
+            localStorage.removeItem("qrBrandKit"); // 古いデータを削除
+            this.saveBrandKits(false);
+          } else {
+            this.brandKits = [];
           }
         }
       } catch (e) {
-        console.warn("Failed to load brand kit", e);
-        localStorage.removeItem("qrBrandKit");
+        console.warn("Failed to load brand kits", e);
+        this.brandKits = [];
       }
     },
     applyBrandKit() {
-      if (this.brandKit.logo) {
-        this.qrOptions.logo = this.brandKit.logo;
-        this.logoFileName = "Brand Logo";
+      const kit = this.getActiveBrandKit();
+      if (!kit) return;
+
+      if (kit.logo) {
+        this.qrOptions.logo = kit.logo;
+        this.logoFileName = kit.name + " Logo";
+      } else {
+        this.qrOptions.logo = null;
       }
       this.qrOptions.colorType = "single";
-      this.qrOptions.foregroundColor = this.brandKit.colors[0];
-      this.qrOptions.cornerColor = this.brandKit.colors[0];
-      this.qrOptions.cornerDotColor = this.brandKit.colors[0];
-      this.qrOptions.backgroundColor = this.brandKit.colors[1];
+      this.qrOptions.foregroundColor = kit.colors[0];
+      this.qrOptions.cornerColor = kit.colors[0];
+      this.qrOptions.cornerDotColor = kit.colors[0];
+      this.qrOptions.backgroundColor = kit.colors[1];
       this.updateQrCode();
 
-      this.showFlashNotification("Applied brand kit.");
+      this.showFlashNotification(`Applied ${kit.name} settings.`);
       this.hapticFeedback('light');
     },
     hexToRgb(hex) {
