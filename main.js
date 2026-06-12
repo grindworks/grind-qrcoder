@@ -351,6 +351,7 @@ const commandsList = [
   { id: "save", icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>', title: "Save Backup", action: () => saveQRCoderFile() },
   { id: "open", icon: '<svg class="w-5 h-5"><use href="icons-sprite.svg#outline-folder"></use></svg>', title: "Open Backup", action: () => loadQRCoderFile() }
 ];
+let currentCmdResults = [];
 
 function togglePasswordVisibility() {
   const pwInput = document.getElementById("file-password");
@@ -416,23 +417,38 @@ function renderCommandList(query = "") {
   if(!list) return;
   list.innerHTML = "";
   const terms = query.toLowerCase().split(/[\s　]+/).filter(Boolean);
-  const filtered = commandsList.filter(c => terms.every(term => c.title.toLowerCase().includes(term) || c.id.includes(term)));
 
-  if (filtered.length === 0) {
+  const filteredCmds = commandsList.filter(c => terms.every(term => c.title.toLowerCase().includes(term) || c.id.includes(term)));
+
+  let filteredQRs = [];
+  if (window.$app && window.$app.savedQRCodes) {
+    filteredQRs = window.$app.savedQRCodes
+      .filter(qr => terms.every(term => (qr.name || "").toLowerCase().includes(term)))
+      .map(qr => ({
+        id: `qr-${qr.id}`,
+        icon: '<svg class="w-5 h-5"><use href="icons-sprite.svg#outline-qr-code"></use></svg>',
+        title: `Edit: ${qr.name}`,
+        action: () => window.$app.editQRCode(qr.id, true)
+      }));
+  }
+
+  currentCmdResults = [...filteredCmds, ...filteredQRs];
+
+  if (currentCmdResults.length === 0) {
     list.innerHTML = `<div class="px-4 py-8 text-center text-slate-400 text-sm">No results found</div>`;
     return;
   }
 
-  if (selectedCommandIndex >= filtered.length) selectedCommandIndex = 0;
+  if (selectedCommandIndex >= currentCmdResults.length) selectedCommandIndex = 0;
 
-  filtered.forEach((cmd, i) => {
+  currentCmdResults.forEach((item, i) => {
     const div = document.createElement("div");
     const isSelected = i === selectedCommandIndex;
     div.className = `px-4 py-3 my-1 flex justify-between items-center rounded-md cursor-pointer transition-colors ${isSelected ? "bg-primary-50 text-primary" : "text-slate-600 hover:bg-slate-100"}`;
-    div.innerHTML = `<div class="flex items-center gap-3"><span class="text-xl">${cmd.icon}</span><span class="font-medium tracking-wide">${cmd.title}</span></div>`;
+    div.innerHTML = `<div class="flex items-center gap-3"><span class="text-xl">${item.icon}</span><span class="font-medium tracking-wide truncate">${item.title}</span></div>`;
     div.onclick = () => {
       toggleCommandPalette();
-      cmd.action();
+      item.action();
     };
     list.appendChild(div);
   });
@@ -449,26 +465,26 @@ document.addEventListener("keydown", (e) => {
       return;
     }
     const input = document.getElementById("cmd-input");
-    const filtered = commandsList.filter(c => input.value.toLowerCase().split(/[\s　]+/).filter(Boolean).every(term => c.title.toLowerCase().includes(term) || c.id.includes(term)));
 
-    if (filtered.length > 0) {
+    if (currentCmdResults.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        selectedCommandIndex = (selectedCommandIndex + 1) % filtered.length;
+        selectedCommandIndex = (selectedCommandIndex + 1) % currentCmdResults.length;
         renderCommandList(input.value);
         document.querySelector('#cmd-list > div:nth-child(' + (selectedCommandIndex + 1) + ')')?.scrollIntoView({ block: 'nearest' });
         return;
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        selectedCommandIndex = (selectedCommandIndex - 1 + filtered.length) % filtered.length;
+        selectedCommandIndex = (selectedCommandIndex - 1 + currentCmdResults.length) % currentCmdResults.length;
         renderCommandList(input.value);
         document.querySelector('#cmd-list > div:nth-child(' + (selectedCommandIndex + 1) + ')')?.scrollIntoView({ block: 'nearest' });
         return;
       }
-    } else if (e.key === "Enter" && filtered[selectedCommandIndex]) {
+    }
+    if (e.key === "Enter" && currentCmdResults[selectedCommandIndex]) {
       e.preventDefault();
       toggleCommandPalette();
-      filtered[selectedCommandIndex].action();
+      currentCmdResults[selectedCommandIndex].action();
       return;
     }
     return; // Ignore other shortcuts while command palette is open.
@@ -704,6 +720,11 @@ function qrCodeGenerator() {
     sns: {
       service: "x",
       identifier: "",
+      message: "",
+    },
+    sms: {
+      phone: "",
+      message: "",
     },
     images: {
       url: "",
@@ -752,6 +773,16 @@ function qrCodeGenerator() {
     isExportingBulk: false,
     exportProgress: "",
 
+    // --- Bulk Import from CSV ---
+    showImportModal: false,
+    csvFile: null,
+    csvHeaders: [],
+    csvData: [], // Real data excluding headers
+    csvMapping: { name: "", url: "", memo: "", tags: "" },
+    importTargetProject: "default",
+    isImporting: false,
+    importProgress: 0,
+
     // --- Manage QR code and application data ---
     qrCodeInstance: null, // Store QR code library instance.
     logoFileName: "", // Store uploaded logo filename.
@@ -768,6 +799,10 @@ function qrCodeGenerator() {
     historyIndex: -1,
     savedQRCodes: [], // Store saved QR code list.
     myTemplates: [], // Store custom design templates.
+    projects: [{ id: 'default', name: 'Default Project', isDefault: true, createdAt: new Date().toISOString() }], // Store project folders.
+    currentProjectId: 'all', // Track currently selected project ('all' or specific projectId).
+    viewMode: 'grid', // 'grid' or 'table' view for dashboard.
+    saveProjectId: 'default', // ID of project selected in save modal
 
     // --- Manage dashboard pagination and sorting ---
     sortKey: "createdAt",
@@ -816,6 +851,12 @@ function qrCodeGenerator() {
         icon: "envelope",
       },
       {
+        id: "sms",
+        title: "SMS / Text",
+        description: "Send an SMS message.",
+        icon: "chat-bubble-oval-left-ellipsis",
+      },
+      {
         id: "geo",
         title: "Location",
         description: "Share a specific location.",
@@ -850,6 +891,7 @@ function qrCodeGenerator() {
       format: "png",
       size: 1024,
       fileName: "grinds-qr-code",
+      zipName: "QR_Export",
       transparentBg: false,
     },
     frameStyles: [
@@ -1003,13 +1045,19 @@ function qrCodeGenerator() {
 
     // --- Computed Properties ---
     get isUrlLong() {
-      if (this.selectedType !== 'url') return false;
-      return this.getQrDataString().trim().length > 80;
+      const dataLength = this.getQrDataString().trim().length;
+      const isUrlBasedType = ['url', 'images', 'video', 'sns', 'geo'].includes(this.selectedType);
+      return isUrlBasedType && dataLength > 80;
     },
     // Return list filtered by search query.
     get filteredQRCodes() {
       if (!this.savedQRCodes) return [];
       let filtered = this.savedQRCodes;
+
+      if (this.currentProjectId && this.currentProjectId !== 'all') {
+        filtered = filtered.filter(qr => (qr.projectId || 'default') === this.currentProjectId);
+      }
+
       if (this.searchQuery.trim() !== "") {
         const searchTerms = this.searchQuery.toLowerCase().trim().split(/[\s　]+/).filter(Boolean);
         filtered = filtered.filter(qr => {
@@ -1030,14 +1078,11 @@ function qrCodeGenerator() {
         let valA = a[this.sortKey];
         let valB = b[this.sortKey];
 
-        if (typeof valA === 'string') valA = valA.toLowerCase();
-        if (typeof valB === 'string') valB = valB.toLowerCase();
-
         let comparison = 0;
         if (this.sortKey === 'createdAt' || this.sortKey === 'updatedAt') {
           comparison = new Date(valA).getTime() - new Date(valB).getTime();
         } else if (typeof valA === 'string' && typeof valB === 'string') {
-          comparison = valA.localeCompare(valB, 'en', { numeric: true });
+          comparison = valA.localeCompare(valB, undefined, { sensitivity: 'base', numeric: true });
         } else {
           if (valA > valB) comparison = 1;
           else if (valA < valB) comparison = -1;
@@ -1142,6 +1187,7 @@ function qrCodeGenerator() {
       this.generatePresetTemplates();
       this.loadBrandKit();
       this.mainSceneBackgroundUrl = this.scenePresets.custom.backgroundUrl;
+      await this.loadProjects();
       await this.loadSavedQRCodes();
       await this.loadMyTemplates();
 
@@ -1798,6 +1844,8 @@ function qrCodeGenerator() {
     // Save generated QR code to IndexedDB.
     // If stayOnEditor is true, keep editor open after saving instead of returning to dashboard.
     async saveToGrind(stayOnEditor = false) {
+      this.saveName = this.saveName.trim() || `Untitled QR (${new Date().toLocaleDateString()})`;
+
       const originalQr = this.editingQRCodeId ? this.savedQRCodes.find((qr) => qr.id === this.editingQRCodeId) : null;
       const conflictingQr = this.savedQRCodes.find((qr) => qr.name.trim() === this.saveName.trim() && qr.id !== this.editingQRCodeId);
 
@@ -1843,6 +1891,7 @@ function qrCodeGenerator() {
       const isNew = !this.editingQRCodeId;
       const newQr = {
         id: this.editingQRCodeId || this.generateUniqueId(),
+        projectId: this.saveProjectId || 'default',
         name: this.saveName,
         memo: this.saveMemo,
         tags: tagsArray,
@@ -1985,6 +2034,16 @@ function qrCodeGenerator() {
             data = `mailto:${to}${query.length > 0 ? '?' + query.join('&') : ''}`;
           }
           break;
+        case "sms":
+          const smsPhone = this.formData.sms.phone;
+          const smsMessage = this.formData.sms.message;
+          if (smsPhone) {
+            // iOS/Android共通で動く標準的なURIスキーム。記号や空白を正規表現で安全に除去
+            let smsData = `sms:${encodeURIComponent(smsPhone.replace(/[^0-9\+]/g, ''))}`;
+            if (smsMessage) smsData += `?body=${encodeURIComponent(smsMessage)}`;
+            data = smsData;
+          }
+          break;
         case "geo":
           const { latitude, longitude } = this.formData.geo;
           if (latitude && longitude) {
@@ -2031,7 +2090,11 @@ function qrCodeGenerator() {
                 data = `https://www.pinterest.com/${encodeURIComponent(cleanId)}/`;
                 break;
               case "whatsapp":
-                data = `https://wa.me/${encodeURIComponent(cleanId.replace(/[^0-9]/g, ''))}`;
+                let waUrl = `https://wa.me/${encodeURIComponent(cleanId.replace(/[^0-9]/g, ''))}`;
+                if (this.formData.sns.message) {
+                  waUrl += `?text=${encodeURIComponent(this.formData.sns.message)}`;
+                }
+                data = waUrl;
                 break;
               case "telegram":
                 data = `https://t.me/${encodeURIComponent(cleanId)}`;
@@ -3199,6 +3262,12 @@ function qrCodeGenerator() {
     getActiveType() {
       return this.qrTypes.find((t) => t.id === this.selectedType) || {};
     },
+    getActiveProjectName() {
+      if (!this.projects) return 'QR_Codes';
+      if (this.currentProjectId === 'all') return 'All_Projects';
+      const p = this.projects.find(proj => proj.id === this.currentProjectId);
+      return p ? p.name.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, "_") : 'Project';
+    },
     showFlashNotification(message) {
       this.notificationMessage = message;
       this.showNotification = true;
@@ -3346,7 +3415,8 @@ function qrCodeGenerator() {
 
         // Overwrite fixed pixel dimensions from qr-code-styling to allow vertical expansion
         svgElement.setAttribute("width", "100%");
-        svgElement.setAttribute("height", "auto");
+        svgElement.removeAttribute("height");
+        svgElement.style.height = "auto";
 
         if (this.frame.style === "none") return;
         const frameGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -3583,6 +3653,7 @@ function qrCodeGenerator() {
     },
     resetGenerator() {
       this.editingQRCodeId = null;
+      this.saveProjectId = this.currentProjectId !== 'all' ? this.currentProjectId : 'default';
       this.saveName = "";
       this.download.fileName = "grinds-qr-code";
       this.saveMemo = "";
@@ -3600,7 +3671,8 @@ function qrCodeGenerator() {
     },
     openIdb() {
       return new Promise((resolve, reject) => {
-        const request = indexedDB.open('GrindsQRCoderDB_Standalone', 3);
+        // Bump database version to 4 for Projects support
+        const request = indexedDB.open('GrindsQRCoderDB_Standalone', 4);
         request.onupgradeneeded = (e) => {
           const db = e.target.result;
           if (!db.objectStoreNames.contains('qrcodes')) {
@@ -3611,6 +3683,9 @@ function qrCodeGenerator() {
           }
           if (!db.objectStoreNames.contains('templates')) {
             db.createObjectStore('templates', { keyPath: 'id' });
+          }
+          if (!db.objectStoreNames.contains('projects')) {
+            db.createObjectStore('projects', { keyPath: 'id' });
           }
         };
         request.onsuccess = (e) => resolve(e.target.result);
@@ -3791,6 +3866,91 @@ function qrCodeGenerator() {
         }
       }
     },
+    async persistProjects() {
+      try {
+        const db = await this.openIdb();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('projects', 'readwrite');
+          const store = tx.objectStore('projects');
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+          store.clear().onsuccess = () => {
+            this.projects.forEach(p => store.put(window.Alpine.raw(p)));
+          };
+        });
+      } catch(e) {
+        console.error("Failed to save projects to IndexedDB", e);
+        try { localStorage.setItem("grindsProjects", JSON.stringify(this.projects)); }
+        catch(e2) { this.showFlashNotification("Could not save due to storage limits."); }
+      }
+    },
+    async loadProjects() {
+      try {
+        const db = await this.openIdb();
+        if (db.objectStoreNames.contains('projects')) {
+          const saved = await new Promise(resolve => {
+            const tx = db.transaction('projects', 'readonly');
+            const req = tx.objectStore('projects').getAll();
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => resolve([]);
+          });
+          if (saved && saved.length > 0) {
+            this.projects = saved;
+            return;
+          }
+        }
+      } catch(e) {
+        const ls = localStorage.getItem("grindsProjects");
+        if (ls) this.projects = JSON.parse(ls);
+      }
+    },
+    async createNewProject() {
+      const name = await appPrompt("Enter project name:", "text");
+      if (!name || !name.trim()) return;
+
+      const newProject = {
+        id: this.generateUniqueId(),
+        name: name.trim(),
+        createdAt: new Date().toISOString()
+      };
+      this.projects.push(newProject);
+      await this.persistProjects();
+      this.currentProjectId = newProject.id;
+      this.showFlashNotification("Project created.");
+    },
+    async renameProject(projectId) {
+      if (projectId === 'default') {
+        this.showFlashNotification("Default project cannot be renamed.");
+        return;
+      }
+      const project = this.projects.find(p => p.id === projectId);
+      if (!project) return;
+      const newName = await appPrompt(`Rename project "${project.name}":`, "text");
+      if (!newName || !newName.trim() || newName.trim() === project.name) return;
+      project.name = newName.trim();
+      await this.persistProjects();
+      this.showFlashNotification("Project renamed.");
+    },
+    async deleteProject(projectId) {
+      if (projectId === 'default') {
+        this.showFlashNotification("Default project cannot be deleted.");
+        return;
+      }
+      const project = this.projects.find(p => p.id === projectId);
+      if (!project) return;
+      const hasItems = this.savedQRCodes.some(qr => (qr.projectId || 'default') === projectId);
+      if (hasItems) {
+        if (!confirm(`The project "${project.name}" contains QR codes.\nDeleting it will move them to the Default Project. Continue?`)) return;
+        this.savedQRCodes = this.savedQRCodes.map(qr => qr.projectId === projectId ? { ...qr, projectId: 'default' } : qr);
+        await this.persistSavedQRCodes();
+      } else {
+        if (!confirm(`Are you sure you want to delete the project "${project.name}"?`)) return;
+      }
+      this.projects = this.projects.filter(p => p.id !== projectId);
+      await this.persistProjects();
+      if (this.currentProjectId === projectId) this.currentProjectId = 'all';
+      this.showFlashNotification("Project deleted.");
+    },
     async saveCurrentAsTemplate() {
       const templateName = await appPrompt("Enter a name for this template (e.g. My Brand):", "text");
       if (!templateName || !templateName.trim()) return;
@@ -3900,6 +4060,7 @@ function qrCodeGenerator() {
       const qrToEdit = this.savedQRCodes.find((qr) => qr.id === id);
       if (qrToEdit) {
         this.editingQRCodeId = id;
+        this.saveProjectId = qrToEdit.projectId || 'default';
         this.saveName = qrToEdit.name;
         this.download.fileName = qrToEdit.name;
         this.saveMemo = qrToEdit.memo || "";
@@ -3909,6 +4070,12 @@ function qrCodeGenerator() {
         const loadedFormData = JSON.parse(JSON.stringify(qrToEdit.formData));
         if (loadedFormData.url && !loadedFormData.url.utm) {
           loadedFormData.url.utm = { source: "", medium: "", campaign: "", term: "", content: "" };
+        }
+        if (loadedFormData.sns && typeof loadedFormData.sns.message === 'undefined') {
+          loadedFormData.sns.message = "";
+        }
+        if (!loadedFormData.sms) {
+          loadedFormData.sms = { phone: "", message: "" };
         }
         this.formData = loadedFormData;
         this.qrOptions = JSON.parse(JSON.stringify(qrToEdit.qrOptions));
@@ -4065,6 +4232,13 @@ function qrCodeGenerator() {
     },
     async bulkDownloadZIP() {
       if (this.selectedIds.length === 0 || this.isExportingBulk) return;
+
+      if (this.selectedIds.length > 100) {
+        this.showFlashNotification("For stability, please select up to 100 items for bulk export.");
+        this.hapticFeedback('error');
+        return;
+      }
+
       this.isExportingBulk = true;
       this.exportProgress = "Preparing...";
 
@@ -4203,7 +4377,13 @@ function qrCodeGenerator() {
           // メモリ回収(GC)をブラウザに促すため、数ミリ秒だけ処理を譲る
           await new Promise(resolve => setTimeout(resolve, 50));
 
-          let safeName = (qr.name || "qrcode").trim().replace(/[\\/:*?"<>|]/g, "-");
+          let baseName = qr.name ? qr.name.trim() : "";
+          // 名前が空の場合は、属しているプロジェクト名＋QR をデフォルト名にする
+          if (!baseName) {
+            const projName = this.projects.find(p => p.id === (qr.projectId || 'default'))?.name || "QR";
+            baseName = `${projName}_Image`;
+          }
+          let safeName = baseName.replace(/[\\/:*?"<>|]/g, "-");
 
           if (nameCountMap[safeName] !== undefined) {
             nameCountMap[safeName]++;
@@ -4228,7 +4408,13 @@ function qrCodeGenerator() {
 
         const a = document.createElement('a');
         a.href = url;
-        a.download = `QR_Codes_Export_${new Date().toISOString().slice(0,10)}.zip`;
+
+        let finalZipName = (this.download.zipName || "QR_Export").trim().replace(/[\\/:*?"<>|]/g, "-");
+        if (!finalZipName.toLowerCase().endsWith('.zip')) {
+          finalZipName += '.zip';
+        }
+
+        a.download = finalZipName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -4252,6 +4438,10 @@ function qrCodeGenerator() {
     },
     async svgDataUrlToPngBlob(svgDataUrl, size = 512) {
       return new Promise(async (resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error("Image rendering timeout"));
+        }, 5000);
+
         try {
           if (svgDataUrl && svgDataUrl.startsWith("data:image/svg+xml")) {
             let svgString = "";
@@ -4275,6 +4465,7 @@ function qrCodeGenerator() {
 
           const image = new Image();
           image.onload = () => {
+            clearTimeout(timeoutId);
             setTimeout(() => {
               const canvas = document.createElement("canvas");
               canvas.width = size;
@@ -4300,14 +4491,203 @@ function qrCodeGenerator() {
             }, 50);
           };
           image.onerror = () => {
+            clearTimeout(timeoutId);
             if (svgDataUrl.startsWith("blob:")) URL.revokeObjectURL(svgDataUrl);
             reject(new Error("SVG Rendering Error"));
           };
           image.src = svgDataUrl;
         } catch (e) {
+          clearTimeout(timeoutId);
           reject(e);
         }
       });
+    },
+
+    // --- CSVアップロードとパース処理 ---
+    openImportModal() {
+      this.importTargetProject = this.currentProjectId !== 'all' ? this.currentProjectId : 'default';
+      this.resetImportState();
+      this.showImportModal = true;
+    },
+    resetImportState() {
+      this.csvFile = null;
+      this.csvHeaders = [];
+      this.csvData = [];
+      this.csvMapping = { name: "", url: "", memo: "", tags: "" };
+      this.isImporting = false;
+      this.importProgress = 0;
+      const fileInput = document.getElementById("csv-upload-input");
+      if (fileInput) fileInput.value = "";
+    },
+    handleCsvDrop(event) {
+      const file = event.dataTransfer?.files[0] || event.target.files[0];
+      if (!file || !file.name.endsWith('.csv')) {
+        this.showFlashNotification("Please select a valid .csv file.");
+        return;
+      }
+      this.csvFile = file;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const cleanText = e.target.result.replace(/^\uFEFF/, '');
+        const parsed = this.parseCSV(cleanText);
+        if (parsed.length < 2) {
+          this.showFlashNotification("CSV must contain headers and at least one data row.");
+          this.resetImportState();
+          return;
+        }
+
+        if (parsed.length > 501) {
+          this.showFlashNotification("Cannot import more than 500 records at once to prevent browser crash.");
+          this.resetImportState();
+          return;
+        }
+
+        this.csvHeaders = parsed[0].map(h => h.trim());
+        this.csvData = parsed.slice(1);
+
+        // ヘッダー名から自動マッピングを試みる（スマートなUX）
+        this.csvMapping.name = this.csvHeaders.find(h => /name|title/i.test(h)) || this.csvHeaders[0] || "";
+        this.csvMapping.url = this.csvHeaders.find(h => /url|link|address/i.test(h)) || this.csvHeaders[1] || "";
+        this.csvMapping.memo = this.csvHeaders.find(h => /memo|desc/i.test(h)) || "";
+        this.csvMapping.tags = this.csvHeaders.find(h => /tag|category/i.test(h)) || "";
+      };
+      reader.readAsText(file);
+    },
+    // ダブルクォートで囲まれたカンマ等にも対応する堅牢な簡易CSVパーサー
+    parseCSV(text) {
+      const result = [];
+      let row = [], inQuotes = false, val = '';
+      for (let i = 0; i < text.length; i++) {
+        let char = text[i], nextChar = text[i+1];
+        if (inQuotes) {
+          if (char === '"' && nextChar === '"') { val += '"'; i++; }
+          else if (char === '"') inQuotes = false;
+          else val += char;
+        } else {
+          if (char === '"') inQuotes = true;
+          else if (char === ',') { row.push(val); val = ''; }
+          else if (char === '\n' || (char === '\r' && nextChar === '\n')) {
+            if (char === '\r') i++;
+            row.push(val); result.push(row); row = []; val = '';
+          } else val += char;
+        }
+      }
+      if (val || row.length > 0) { row.push(val); result.push(row); }
+      return result.filter(r => r.some(c => c.trim() !== '')); // 空行を除外
+    },
+
+    // --- 一括生成（バルクインポート）実行 ---
+    async executeBulkImport() {
+      if (!this.csvMapping.url) {
+        this.showFlashNotification("URL mapping is required.");
+        this.hapticFeedback('error');
+        return;
+      }
+      this.isImporting = true;
+      this.importProgress = 0;
+
+      const total = this.csvData.length;
+      let count = 0;
+      const newQRCodes = [];
+
+      const idxName = this.csvHeaders.indexOf(this.csvMapping.name);
+      const idxUrl = this.csvHeaders.indexOf(this.csvMapping.url);
+      const idxMemo = this.csvHeaders.indexOf(this.csvMapping.memo);
+      const idxTags = this.csvHeaders.indexOf(this.csvMapping.tags);
+
+      // テンプレートとして「現在のエディタのデザイン設定」を取得
+      const rawOptions = window.Alpine.raw(this.qrOptions);
+      const { logo, ...restOptions } = rawOptions;
+      const baseFrame = JSON.parse(JSON.stringify(window.Alpine.raw(this.frame)));
+      const baseFormData = JSON.parse(JSON.stringify(window.Alpine.raw(this.formData)));
+
+      const fixHex = (c) => /^#?([0-9a-fA-F]{3,8})$/.test(c) ? (c.startsWith('#') ? c : '#' + c) : '#ffffff';
+
+      for (const row of this.csvData) {
+        count++;
+        // 進捗をUIに反映するため、定期的にメインスレッドを解放する
+        if (count % 10 === 0) await new Promise(r => setTimeout(r, 10));
+        this.importProgress = Math.round((count / total) * 100);
+
+        const urlStr = idxUrl !== -1 && row[idxUrl] ? row[idxUrl].trim() : "";
+        if (!urlStr) continue; // URLが空の行はスキップ
+
+        const nameStr = idxName !== -1 && row[idxName] ? row[idxName].trim() : `Bulk QR ${count}`;
+        const memoStr = idxMemo !== -1 && row[idxMemo] ? row[idxMemo].trim() : "";
+        const tagsStr = idxTags !== -1 && row[idxTags] ? row[idxTags].trim() : "";
+        const tagsArray = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
+
+        // デザインオプションのディープコピー（参照を切るため）
+        const specificOptions = JSON.parse(JSON.stringify(restOptions));
+        specificOptions.logo = logo;
+
+        const specificFormData = JSON.parse(JSON.stringify(baseFormData));
+        specificFormData.url.address = urlStr;
+
+        const dataStringContext = { selectedType: 'url', formData: specificFormData };
+        const dataString = this.getQrDataString.call(dataStringContext);
+
+        const builderContext = {
+          qrOptions: specificOptions,
+          buildDotsOptions: this.buildDotsOptions,
+          buildCornersSquareOptions: this.buildCornersSquareOptions,
+          buildCornersDotOptions: this.buildCornersDotOptions,
+        };
+
+        const previewOptions = {
+          width: 80, height: 80,
+          data: dataString,
+          image: specificOptions.logo,
+          dotsOptions: builderContext.buildDotsOptions.call(builderContext),
+          backgroundOptions: { color: fixHex(specificOptions.backgroundColor) },
+          cornersSquareOptions: builderContext.buildCornersSquareOptions.call(builderContext),
+          cornersDotOptions: builderContext.buildCornersDotOptions.call(builderContext),
+          qrOptions: { errorCorrectionLevel: specificOptions.errorCorrectionLevel },
+          imageOptions: {
+            ...specificOptions.imageOptions,
+            margin: specificOptions.imageOptions.margin ? specificOptions.imageOptions.margin / 4 : 0,
+          },
+          margin: specificOptions.margin ? specificOptions.margin / 4 : 0,
+        };
+
+        let previewSvgUrl = "";
+        try {
+          previewSvgUrl = await this.getPreviewSvgUrl(previewOptions);
+        } catch(e) { console.warn("Failed to generate preview", e); }
+
+        newQRCodes.push({
+          id: this.generateUniqueId(),
+          projectId: this.importTargetProject,
+          name: nameStr,
+          memo: memoStr,
+          tags: tagsArray,
+          type: 'url',
+          formData: specificFormData,
+          qrOptions: specificOptions,
+          logoFileName: this.logoFileName,
+          frame: JSON.parse(JSON.stringify(baseFrame)),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          previewSvgUrl: previewSvgUrl,
+        });
+      }
+
+      // 生成したデータをダッシュボードに反映して保存
+      if (newQRCodes.length > 0) {
+        this.savedQRCodes = [...newQRCodes, ...this.savedQRCodes];
+        await this.persistSavedQRCodes();
+        this.currentProjectId = this.importTargetProject;
+        this.currentPage = 1;
+        if (typeof setDirty === 'function') setDirty(true);
+        this.showFlashNotification(`Successfully generated ${newQRCodes.length} QR codes.`);
+        this.hapticFeedback('success');
+      } else {
+        this.showFlashNotification("No valid URLs found in the CSV.");
+        this.hapticFeedback('error');
+      }
+
+      this.isImporting = false;
+      this.showImportModal = false;
     },
     async copyShareImage(qr) {
       if (!navigator.clipboard || !window.ClipboardItem) {

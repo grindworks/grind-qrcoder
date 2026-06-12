@@ -171,6 +171,14 @@
         border: 3px solid rgba(0, 0, 0, 0);
       }
 
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
       /* Prevent unintended double-tap zoom across the application */
       button, input, select, a, .cursor-pointer {
         touch-action: manipulation;
@@ -356,9 +364,9 @@
               <!-- Left side: Configuration panel -->
               <div class="w-full xl:flex-1">
                 <nav class="mb-8 flex items-center gap-1.5 rounded-2xl bg-slate-200/50 p-1.5 shadow-inner-soft backdrop-blur-sm">
-                  <button @click="activeStepTab = 'content'" :class="activeStepTab === 'content' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:bg-white/50 hover:text-slate-800'" class="flex-1 rounded-xl px-4 py-3 text-sm font-bold transition-all duration-300">1. Content</button>
-                  <button @click="activeStepTab = 'design'" :class="activeStepTab === 'design' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:bg-white/50 hover:text-slate-800'" class="flex-1 rounded-xl px-4 py-3 text-sm font-bold transition-all duration-300">2. Design</button>
-                  <button @click="activeStepTab = 'logo'" :class="activeStepTab === 'logo' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:bg-white/50 hover:text-slate-800'" class="flex-1 rounded-xl px-4 py-3 text-sm font-bold transition-all duration-300">3. Logo & Frame</button>
+                  <button @click="activeStepTab = 'content'" :class="activeStepTab === 'content' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:bg-white/50 hover:text-slate-800'" class="flex-1 rounded-xl px-2 sm:px-4 py-3 text-sm font-bold transition-all duration-300"><span class="hidden sm:inline">1. </span>Content</button>
+                  <button @click="activeStepTab = 'design'" :class="activeStepTab === 'design' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:bg-white/50 hover:text-slate-800'" class="flex-1 rounded-xl px-2 sm:px-4 py-3 text-sm font-bold transition-all duration-300"><span class="hidden sm:inline">2. </span>Design</button>
+                  <button @click="activeStepTab = 'logo'" :class="activeStepTab === 'logo' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:bg-white/50 hover:text-slate-800'" class="flex-1 rounded-xl px-2 sm:px-4 py-3 text-sm font-bold transition-all duration-300"><span class="hidden sm:inline">3. </span>Logo<span class="hidden sm:inline"> & Frame</span></button>
                 </nav>
 
                 <div class="space-y-8">
@@ -380,37 +388,63 @@
                             <span class="flex items-center gap-2">
                               <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-chart-bar"></use></svg>
                               UTM Parameters Builder
+                              <span x-show="formData.url.utm.source || formData.url.utm.medium || formData.url.utm.campaign || formData.url.utm.term || formData.url.utm.content" class="ml-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary" x-cloak>Active</span>
                             </span>
                             <svg class="h-4 w-4 text-slate-400 transition-transform duration-300" :class="showUtm ? 'rotate-180' : ''"><use href="icons-sprite.svg#outline-chevron-down"></use></svg>
                           </button>
                           <div x-show="showUtm" x-collapse>
                             <div class="space-y-3 border-t border-slate-200 p-4">
-                              <p class="mb-3 text-xs text-slate-500">Add tracking parameters to measure campaign performance in Google Analytics.</p>
+                              <div class="flex items-center justify-between mb-3">
+                                <p class="text-xs text-slate-500">Add tracking parameters to measure campaign performance in Google Analytics.</p>
+                                <button type="button" @click="formData.url.utm = { source: '', medium: '', campaign: '', term: '', content: '' }; updateQrCode()" class="text-xs font-semibold text-rose-500 hover:text-rose-600 transition-colors">Clear All</button>
+                              </div>
                               <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <div>
                                   <label class="mb-1 block text-xs font-semibold text-slate-600">Source (utm_source) <span class="text-red-500">*</span></label>
-                                  <input type="text" x-model="formData.url.utm.source" @input.debounce.300ms="updateQrCode()" placeholder="e.g. google, newsletter" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  <input type="text" x-model="formData.url.utm.source" @input.debounce.300ms="updateQrCode()" placeholder="e.g. google, newsletter" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                 </div>
                                 <div>
                                   <label class="mb-1 block text-xs font-semibold text-slate-600">Medium (utm_medium) <span class="text-red-500">*</span></label>
-                                  <input type="text" x-model="formData.url.utm.medium" @input.debounce.300ms="updateQrCode()" placeholder="e.g. cpc, email, flyer" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  <input type="text" x-model="formData.url.utm.medium" @input.debounce.300ms="updateQrCode()" placeholder="e.g. cpc, email, flyer" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                 </div>
                                 <div class="sm:col-span-2">
                                   <label class="mb-1 block text-xs font-semibold text-slate-600">Campaign (utm_campaign) <span class="text-red-500">*</span></label>
-                                  <input type="text" x-model="formData.url.utm.campaign" @input.debounce.300ms="updateQrCode()" placeholder="e.g. summer_sale, spring_event" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  <input type="text" x-model="formData.url.utm.campaign" @input.debounce.300ms="updateQrCode()" placeholder="e.g. summer_sale, spring_event" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                 </div>
                                 <div>
                                   <label class="mb-1 block text-xs font-semibold text-slate-600">Term (utm_term)</label>
-                                  <input type="text" x-model="formData.url.utm.term" @input.debounce.300ms="updateQrCode()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  <input type="text" x-model="formData.url.utm.term" @input.debounce.300ms="updateQrCode()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                 </div>
                                 <div>
                                   <label class="mb-1 block text-xs font-semibold text-slate-600">Content (utm_content)</label>
-                                  <input type="text" x-model="formData.url.utm.content" @input.debounce.300ms="updateQrCode()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  <input type="text" x-model="formData.url.utm.content" @input.debounce.300ms="updateQrCode()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                 </div>
                               </div>
                             </div>
                           </div>
                         </div>
+
+                        <!-- Dynamic QR Tip -->
+                        <div x-data="{ showDynamicTip: false }" class="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 transition-all duration-300">
+                          <button @click="showDynamicTip = !showDynamicTip" class="flex w-full items-center justify-between px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none">
+                            <span class="flex items-center gap-2">
+                              <svg class="h-4 w-4 text-amber-500" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-light-bulb"></use></svg>
+                              Pro Tip: Need Dynamic QR Codes?
+                            </span>
+                            <svg class="h-4 w-4 text-slate-400 transition-transform duration-300" :class="showDynamicTip ? 'rotate-180' : ''"><use href="icons-sprite.svg#outline-chevron-down"></use></svg>
+                          </button>
+                          <div x-show="showDynamicTip" x-collapse x-cloak>
+                            <div class="space-y-3 border-t border-slate-200 p-4 text-sm text-slate-600 leading-relaxed">
+                              <p>
+                                To protect your privacy and ensure 100% offline functionality, GRINDS does not route your traffic through external tracking servers.
+                              </p>
+                              <p>
+                                If you need <strong>Dynamic QR Codes</strong> (to change the destination URL after printing or track scan analytics), we recommend generating a short link using free services like <a href="https://bitly.com/" target="_blank" rel="noopener noreferrer" class="font-semibold text-primary hover:underline">Bitly</a> or <a href="https://rebrandly.com/" target="_blank" rel="noopener noreferrer" class="font-semibold text-primary hover:underline">Rebrandly</a>, and pasting that short URL here.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
                         <div x-show="isUrlLong" class="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
                           <div class="flex items-center justify-between">
                             <div>
@@ -540,6 +574,23 @@
                           </div>
                         </div>
                       </div>
+                      <div x-show="selectedType === 'sms'" x-cloak>
+                        <h3 class="mb-1 text-lg font-semibold text-slate-800">SMS / Text Message</h3>
+                        <p class="mb-4 text-sm text-slate-500">Create a QR code that opens the SMS app with a prefilled message.</p>
+                        <div class="space-y-4">
+                          <div>
+                            <label for="sms-phone" class="mb-2 block text-sm font-medium text-slate-700">
+                              Phone Number
+                              <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
+                            </label>
+                            <input type="tel" id="sms-phone" x-model="formData.sms.phone" @input.debounce.300ms="updateQrCode()" placeholder="+1234567890" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                          </div>
+                          <div>
+                            <label for="sms-message" class="mb-2 block text-sm font-medium text-slate-700">Prefilled Message (Optional)</label>
+                            <textarea id="sms-message" x-model="formData.sms.message" @input.debounce.300ms="updateQrCode()" rows="3" placeholder="Hello, I would like to know more about..." class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+                          </div>
+                        </div>
+                      </div>
                       <div x-show="selectedType === 'geo'">
                         <h3 class="mb-1 text-lg font-semibold text-slate-800">Location (Geo)</h3>
                         <p class="mb-4 text-sm text-slate-500">Display the specified location on a map app when scanned.</p>
@@ -592,6 +643,11 @@
                               <span x-show="['x', 'instagram', 'tiktok', 'youtube'].includes(formData.sns.service)" class="inline-flex items-center rounded-l-lg border border-r-0 border-slate-300 bg-slate-100 px-3 text-sm text-slate-600">@</span>
                               <input type="text" id="sns-identifier" x-model="formData.sns.identifier" @input.debounce.300ms="updateQrCode()" :placeholder="getSnsPlaceholder()" class="block w-full rounded-r-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                             </div>
+                          </div>
+                          <div x-show="formData.sns.service === 'whatsapp'" x-collapse>
+                            <label for="sns-message" class="mb-2 block text-sm font-medium text-slate-700">Prefilled Message (Optional)</label>
+                            <textarea id="sns-message" x-model="formData.sns.message" @input.debounce.300ms="updateQrCode()" rows="2" placeholder="I'm interested in your summer campaign!" class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+                            <p class="mt-2 text-xs text-slate-500">This message will be automatically typed when the WhatsApp chat opens.</p>
                           </div>
                         </div>
                       </div>
@@ -972,12 +1028,14 @@
                       <div class="space-y-6 p-6">
                         <h3 class="mb-0 text-lg font-semibold text-slate-800">Advanced Settings</h3>
                         <div class="space-y-2">
-                          <label for="error-correction" class="tooltip mb-2 block text-sm font-medium text-slate-700">
+                          <label for="error-correction" class="mb-2 block text-sm font-medium text-slate-700">
                             Error Correction Level
-                            <svg class="inline-block h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                              <use href="icons-sprite.svg#outline-question-mark-circle"></use>
-                            </svg>
-                            <span class="tooltiptext">This feature ensures the QR code remains readable even if it's partially damaged. Higher levels provide more error correction. "High (H)" is automatically selected when a logo is placed in the center.</span>
+                            <button type="button" tabindex="0" class="tooltip inline-flex items-center justify-center focus:outline-none ml-1 translate-y-0.5">
+                              <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <use href="icons-sprite.svg#outline-question-mark-circle"></use>
+                              </svg>
+                              <span class="tooltiptext font-normal">This feature ensures the QR code remains readable even if it's partially damaged. Higher levels provide more error correction. "High (H)" is automatically selected when a logo is placed in the center.</span>
+                            </button>
                           </label>
                           <select id="error-correction" x-model="qrOptions.errorCorrectionLevel" @change="updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20">
                             <option value="L">Low (L - 7%)</option>
@@ -988,12 +1046,14 @@
                         </div>
                         <div class="space-y-2 border-t border-slate-200 pt-6">
                           <div class="flex items-center justify-between">
-                            <label for="qr-margin-toggle" class="tooltip block text-sm font-medium text-slate-700">
+                            <label for="qr-margin-toggle" class="block text-sm font-medium text-slate-700">
                               Margin (Quiet Zone)
-                              <svg class="inline-block h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                <use href="icons-sprite.svg#outline-question-mark-circle"></use>
-                              </svg>
-                              <span class="tooltiptext">This area is essential for stable scanning of the QR code. A margin of 4 modules is strongly recommended.</span>
+                              <button type="button" tabindex="0" class="tooltip inline-flex items-center justify-center focus:outline-none ml-1 translate-y-0.5">
+                                <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                  <use href="icons-sprite.svg#outline-question-mark-circle"></use>
+                                </svg>
+                                <span class="tooltiptext font-normal">This area is essential for stable scanning of the QR code. A margin of 4 modules is strongly recommended.</span>
+                              </button>
                             </label>
                             <div @click="toggleQuietZone()" tabindex="0" @keydown.space.prevent="toggleQuietZone()" @keydown.enter.prevent="toggleQuietZone()" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2" role="switch" :aria-checked="includeQuietZone" :class="includeQuietZone ? 'bg-primary' : 'bg-slate-300'">
                               <span aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" :class="includeQuietZone ? 'translate-x-5' : 'translate-x-0'"></span>
@@ -1047,21 +1107,27 @@
                                 </div>
                               </div>
                             </div>
-                            <div>
-                              <label class="mb-2 block text-sm font-medium text-slate-700">Brand Color</label>
+                            <div class="mt-6">
+                              <div class="mb-2 flex items-center justify-between">
+                                <label class="block text-sm font-medium text-slate-700">Brand Color</label>
+                                <button type="button" @click="brandKit.colors = ['#000000', '#ffffff']; saveBrandKit(false);" class="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors">
+                                  <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-path"></use></svg>
+                                  Reset colors
+                                </button>
+                              </div>
                               <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                 <div>
                                   <label for="brand-main-color" class="mb-1 block text-xs text-slate-500">Main Color</label>
                                   <div class="flex items-center gap-3">
                                     <input id="brand-main-color" type="color" x-model="brandKit.colors[0]" @input.debounce.300ms="saveBrandKit(false)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                    <input type="text" x-model="brandKit.colors[0]" @input.debounce.300ms="saveBrandKit(false)" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                    <input type="text" x-model="brandKit.colors[0]" @input.debounce.300ms="saveBrandKit(false)" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                   </div>
                                 </div>
                                 <div>
                                   <label for="brand-bg-color" class="mb-1 block text-xs text-slate-500">Background Color</label>
                                   <div class="flex items-center gap-3">
                                     <input id="brand-bg-color" type="color" x-model="brandKit.colors[1]" @input.debounce.300ms="saveBrandKit(false)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                    <input type="text" x-model="brandKit.colors[1]" @input.debounce.300ms="saveBrandKit(false)" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                    <input type="text" x-model="brandKit.colors[1]" @input.debounce.300ms="saveBrandKit(false)" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                   </div>
                                 </div>
                               </div>
@@ -1074,7 +1140,7 @@
                             </div>
                             <div class="bg-white border-t border-slate-200 p-4">
                               <label class="mb-1 block text-xs font-semibold text-slate-600">Generated URL</label>
-                              <div class="break-all rounded bg-slate-50 p-2 font-mono text-[11px] text-slate-700 ring-1 ring-inset ring-slate-200" x-text="getQrDataString().trim()"></div>
+                              <div class="break-all rounded bg-slate-50 p-2 font-mono text-[11px] text-slate-700 ring-1 ring-inset ring-slate-200" x-text="rawDataString.trim() || '(No data)'"></div>
                             </div>
                           </div>
                         </div>
@@ -1210,22 +1276,75 @@
         <!-- QR code management view (Dashboard) -->
         <div x-show="currentView === 'dashboard'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="w-full">
           <div class="mb-10 rounded-2xl border border-white bg-white/50 p-6 shadow-softer backdrop-blur-md md:p-10">
-            <div class="flex flex-col items-start gap-6 md:flex-row md:items-center">
-              <div class="shrink-0">
-                <div class="inline-flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-primary/20 bg-linear-to-br from-primary/10 to-primary/5 shadow-inner-soft">
-                  <svg class="h-9 w-9 text-primary" fill="none" stroke="currentColor" stroke-width="2">
-                    <use href="icons-sprite.svg#outline-folder"></use>
-                  </svg>
+            <div class="flex flex-col items-start gap-6 md:flex-row md:items-center justify-between">
+              <div class="flex items-center gap-6">
+                <div class="shrink-0">
+                  <div class="inline-flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-primary/20 bg-linear-to-br from-primary/10 to-primary/5 shadow-inner-soft">
+                    <svg class="h-9 w-9 text-primary" fill="none" stroke="currentColor" stroke-width="2">
+                      <use href="icons-sprite.svg#outline-folder"></use>
+                    </svg>
+                  </div>
+                </div>
+                <div>
+                  <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl">Dashboard</h1>
+                  <p class="mt-2 max-w-2xl text-base leading-relaxed text-slate-600">Manage and organize your QR codes.</p>
                 </div>
               </div>
-              <div>
-                <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl">QR Code Dashboard</h1>
-                <p class="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">Manage, edit, delete, and share your saved QR codes here.</p>
+              <div class="flex items-center gap-4">
+                <button @click="openImportModal()" class="flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 shadow-sm px-4 py-2.5 rounded-lg text-sm font-bold transition-all">
+                  <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-up-tray"></use></svg>
+                  Import CSV
+                </button>
+                <!-- View Mode Toggle -->
+                <div class="hidden sm:flex bg-slate-200/60 p-1 rounded-lg backdrop-blur-sm">
+                  <button @click="viewMode = 'grid'" :class="viewMode === 'grid' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-800'" class="p-2 rounded-md transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-squares-2x2"></use></svg>
+                  </button>
+                  <button @click="viewMode = 'table'" :class="viewMode === 'table' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-800'" class="p-2 rounded-md transition-all">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-bars-3"></use></svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="space-y-6">
+          <!-- ここから 2カラムレイアウト -->
+          <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Sidebar (Projects) -->
+            <div class="w-full lg:w-64 shrink-0 space-y-2">
+              <div class="flex items-center justify-between px-2 mb-4">
+                <h3 class="text-xs font-black tracking-wider text-slate-500 uppercase">PROJECTS</h3>
+                <button @click="createNewProject()" class="text-primary hover:bg-primary/10 p-1 rounded transition-colors" title="New Project">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-plus"></use></svg>
+                </button>
+              </div>
+
+              <button @click="currentProjectId = 'all'; currentPage = 1" :class="currentProjectId === 'all' ? 'bg-primary text-white shadow-sm' : 'hover:bg-slate-200/60 text-slate-700'" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
+                <span class="flex items-center gap-2"><svg class="w-4 h-4"><use href="icons-sprite.svg#outline-folder"></use></svg> All Projects</span>
+                <span class="bg-black/10 text-xs px-2 py-0.5 rounded-full" x-text="savedQRCodes.length"></span>
+              </button>
+
+              <template x-for="project in projects" :key="project.id">
+                <div class="group relative flex items-center">
+                  <button @click="currentProjectId = project.id; currentPage = 1" :class="currentProjectId === project.id ? 'bg-primary text-white shadow-sm' : 'hover:bg-slate-200/60 text-slate-700'" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-semibold transition-all">
+                    <span class="flex items-center gap-2 truncate mr-2">
+                      <svg class="w-4 h-4 shrink-0"><use href="icons-sprite.svg#outline-folder"></use></svg>
+                      <span x-text="project.name" class="truncate"></span>
+                    </span>
+                    <span class="bg-black/10 text-xs px-2 py-0.5 rounded-full" :class="project.id !== 'default' ? 'group-hover:hidden' : ''" x-text="savedQRCodes.filter(q => (q.projectId || 'default') === project.id).length"></span>
+                    <template x-if="project.id !== 'default'">
+                      <div class="hidden group-hover:flex items-center gap-1 shrink-0">
+                        <div @click.stop="renameProject(project.id)" class="p-1 rounded hover:bg-black/10 transition-colors" title="Rename"><svg class="w-3.5 h-3.5"><use href="icons-sprite.svg#outline-pencil-square"></use></svg></div>
+                        <div @click.stop="deleteProject(project.id)" class="p-1 rounded hover:bg-rose-500 text-rose-500 hover:text-white transition-colors" title="Delete"><svg class="w-3.5 h-3.5"><use href="icons-sprite.svg#outline-trash"></use></svg></div>
+                      </div>
+                    </template>
+                  </button>
+                </div>
+              </template>
+            </div>
+
+            <!-- Main Content (List Area) -->
+            <div class="flex-1 min-w-0 space-y-6">
             <div x-show="savedQRCodes.length > 0">
               <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
                 <div class="flex items-center gap-x-2">
@@ -1275,12 +1394,15 @@
                 </div>
               </div>
 
-              <div class="space-y-4" :class="{ 'pointer-events-none opacity-60 transition-opacity': isExportingBulk }">
+              <!-- Grid View -->
+              <div x-show="viewMode === 'grid'" class="space-y-4" :class="{ 'pointer-events-none opacity-60 transition-opacity': isExportingBulk }">
                 <template x-for="qr in displayedItems" :key="qr.id">
                   <div x-data="{ dropdownOpen: false }" class="relative rounded-xl bg-white shadow-md ring-1 ring-slate-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" :class="dropdownOpen ? 'z-10' : 'z-0'">
                     <div class="grid items-center gap-y-4 p-4 md:grid-cols-12 md:gap-x-4 md:p-6">
                       <div class="col-span-12 flex items-center gap-4 md:col-span-4">
-                        <input type="checkbox" :value="qr.id" x-model="selectedIds" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
+                        <label class="p-2 -ml-2 cursor-pointer flex items-center justify-center">
+                          <input type="checkbox" :value="qr.id" x-model="selectedIds" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
+                        </label>
                         <button @click="editQRCode(qr.id)" class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white p-1 shadow-sm transition-all hover:scale-105 hover:border-primary/50 hover:shadow-md" title="Edit">
                           <img :src="qr.previewSvgUrl" class="h-full w-full object-contain" />
                         </button>
@@ -1298,7 +1420,7 @@
                           <div x-show="!editingMemo" @click="editingMemo = true; tempMemo = qr.memo || ''; $nextTick(() => $el.nextElementSibling.focus())" class="cursor-text rounded border border-transparent hover:border-slate-200 hover:bg-slate-50 p-1 -mx-1 min-h-7 transition-colors" title="Click to edit memo">
                             <p class="text-sm text-slate-600 line-clamp-2" x-text="qr.memo || 'Add memo...'" :class="{'text-slate-400 italic': !qr.memo}"></p>
                           </div>
-                          <textarea x-show="editingMemo" x-cloak x-model="tempMemo" @keydown.enter="if(!$event.isComposing && !$event.shiftKey) { $event.preventDefault(); updateInlineMemo(qr, tempMemo); editingMemo = false; }" @keydown.escape="editingMemo = false; tempMemo = qr.memo || ''" rows="3" class="resize-y absolute -top-1 -left-1 z-10 w-[calc(100%+0.5rem)] rounded-lg border border-primary bg-white p-2 text-sm shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/20" placeholder="Enter memo... (Enter to save / Shift+Enter for new line)"></textarea>
+                          <textarea x-show="editingMemo" x-cloak x-model="tempMemo" @keydown.enter="if(!$event.isComposing && !$event.shiftKey) { $event.preventDefault(); updateInlineMemo(qr, tempMemo); editingMemo = false; }" @keydown.escape="editingMemo = false; tempMemo = qr.memo || ''" rows="3" class="resize-y absolute -top-1 -left-1 z-10 w-[calc(100%+0.5rem)] rounded-lg border border-primary bg-white p-2 text-base md:text-sm shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/20" placeholder="Enter memo... (Enter to save / Shift+Enter for new line)"></textarea>
                         </div>
 
                         <!-- Inline edit tags -->
@@ -1315,7 +1437,7 @@
                               </button>
                             </template>
                           </div>
-                          <input type="text" x-show="editingTags" x-cloak x-model="tempTags" @keydown.enter="if(!$event.isComposing) { $event.preventDefault(); updateInlineTags(qr, tempTags); editingTags = false; }" @keydown.escape="editingTags = false; tempTags = (qr.tags || []).join(', ')" class="absolute -top-1 -left-1 z-10 w-[calc(100%+0.5rem)] rounded-lg border border-primary bg-white p-2 text-sm shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/20" placeholder="tag1, tag2... (Enter to save)" />
+                          <input type="text" x-show="editingTags" x-cloak x-model="tempTags" @keydown.enter="if(!$event.isComposing) { $event.preventDefault(); updateInlineTags(qr, tempTags); editingTags = false; }" @keydown.escape="editingTags = false; tempTags = (qr.tags || []).join(', ')" class="absolute -top-1 -left-1 z-10 w-[calc(100%+0.5rem)] rounded-lg border border-primary bg-white p-2 text-base md:text-sm shadow-lg focus:outline-none focus:ring-4 focus:ring-primary/20" placeholder="tag1, tag2... (Enter to save)" />
                         </div>
                       </div>
 
@@ -1369,6 +1491,66 @@
                     </div>
                   </div>
                 </template>
+              </div>
+
+              <!-- Table View -->
+              <div x-show="viewMode === 'table'" class="bg-white rounded-xl shadow-md ring-1 ring-slate-900/5 overflow-hidden" :class="{ 'pointer-events-none opacity-60 transition-opacity': isExportingBulk }" x-cloak>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm text-left">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 font-semibold uppercase tracking-wider">
+                      <tr>
+                        <th class="px-4 py-3 w-10">
+                          <label class="p-2 -ml-2 cursor-pointer flex items-center justify-center">
+                            <input type="checkbox" :checked="isAllSelected()" :indeterminate="selectedIds.length > 0 && !isAllSelected()" @change="toggleSelectAll()" class="rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" title="Select all on this page" />
+                          </label>
+                        </th>
+                        <th class="px-4 py-3">QR Code</th>
+                        <th class="px-4 py-3">Name / Memo</th>
+                        <th class="px-4 py-3">Tags</th>
+                        <th class="px-4 py-3">Date</th>
+                        <th class="px-4 py-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      <template x-for="qr in displayedItems" :key="qr.id">
+                        <tr class="hover:bg-slate-50/50 transition-colors">
+                          <td class="px-4 py-3">
+                            <label class="p-2 -ml-2 cursor-pointer flex items-center justify-center">
+                              <input type="checkbox" :value="qr.id" x-model="selectedIds" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
+                            </label>
+                          </td>
+                          <td class="px-4 py-3">
+                            <button @click="editQRCode(qr.id)" class="w-12 h-12 border border-slate-200 rounded-lg p-1 bg-white hover:border-primary/50 shadow-sm transition-all hover:scale-105" title="Edit">
+                              <img :src="qr.previewSvgUrl" class="w-full h-full object-contain" />
+                            </button>
+                          </td>
+                          <td class="px-4 py-3 max-w-[200px]">
+                            <div class="font-bold text-slate-800 truncate" x-text="qr.name" :title="qr.name"></div>
+                            <div class="text-xs text-slate-500 truncate mt-0.5" x-text="qr.memo || 'No memo'" :title="qr.memo"></div>
+                          </td>
+                          <td class="px-4 py-3">
+                            <div class="flex flex-wrap gap-1">
+                              <template x-for="tag in (qr.tags || []).slice(0, 2)" :key="tag">
+                                <span class="px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-medium" x-text="tag"></span>
+                              </template>
+                              <span x-show="(qr.tags || []).length > 2" class="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-medium" x-text="'+' + ((qr.tags || []).length - 2)"></span>
+                            </div>
+                          </td>
+                          <td class="px-4 py-3 text-xs text-slate-500 whitespace-nowrap" x-text="new Date(qr.createdAt).toLocaleDateString()"></td>
+                          <td class="px-4 py-3">
+                            <div class="flex items-center justify-end gap-1">
+                              <button @click="prepareDownloadFromDashboard(qr)" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded transition-colors" title="Download"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg></button>
+                              <button @click="openShareModal(qr)" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded transition-colors" title="Share"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-share"></use></svg></button>
+                              <button @click="editQRCode(qr.id)" class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded transition-colors" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-pencil-square"></use></svg></button>
+                              <button @click="duplicateQRCode(qr.id)" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded transition-colors" title="Duplicate"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-document-duplicate"></use></svg></button>
+                              <button @click="deleteQRCode(qr.id)" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors" title="Delete"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-trash"></use></svg></button>
+                            </div>
+                          </td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               <!-- Show when no search results found -->
@@ -1435,7 +1617,7 @@
                 <span x-text="selectedIds.length" class="text-primary-400 mr-1"></span> Selected
               </span>
               <div class="h-5 w-px bg-slate-700"></div>
-              <button @click="isBulkDownload = true; download.format = 'png'; download.size = 1024; showDownloadModal = true" :disabled="isExportingBulk" class="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-hover active:scale-95 disabled:opacity-50 disabled:cursor-wait">
+              <button @click="isBulkDownload = true; download.format = 'png'; download.size = 1024; download.zipName = getActiveProjectName() + '_' + new Date().toISOString().slice(0,10).replace(/-/g, ''); showDownloadModal = true" :disabled="isExportingBulk" class="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-hover active:scale-95 disabled:opacity-50 disabled:cursor-wait">
                 <template x-if="!isExportingBulk">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>
                 </template>
@@ -1473,6 +1655,7 @@
           </div>
         </div>
       </div>
+      </div>
     </main>
 
     <!-- Mobile Bottom Navigation -->
@@ -1504,6 +1687,14 @@
         <p class="text-sm text-slate-500 mb-6">Save to the dashboard for later editing.</p>
         <form @submit.prevent="saveToGrind(true)">
           <div class="space-y-4 mb-6">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Project</label>
+              <select x-model="saveProjectId" class="block w-full rounded-lg border border-slate-300 bg-slate-50 p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <template x-for="p in projects" :key="p.id">
+                  <option :value="p.id" x-text="p.name"></option>
+                </template>
+              </select>
+            </div>
             <input type="text" x-model="saveName" x-ref="saveNameInput" placeholder="QR Code Name" required class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
             <textarea x-model="saveMemo" placeholder="Memo (Optional)" rows="2" class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
             <input type="text" x-model="saveTags" placeholder="Tags (Comma separated, Optional)" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
@@ -1586,10 +1777,21 @@
                 <div class="mt-4 w-full">
                   <p class="mb-4 text-sm text-slate-500" x-text="isBulkDownload ? 'Adjust the settings for ' + selectedIds.length + ' selected QR codes.' : 'Adjust the settings and download the QR code.'"></p>
                   <div class="space-y-4 text-left">
+                    <!-- ZIP File Name for Bulk Export -->
+                    <div x-show="isBulkDownload" x-cloak>
+                      <label for="modal-zip-name" class="mb-1.5 block text-sm font-semibold text-slate-700">ZIP File Name</label>
+                      <div class="flex items-center rounded-lg shadow-sm">
+                        <input type="text" id="modal-zip-name" x-model="download.zipName" class="z-10 block w-full rounded-none rounded-l-lg border border-slate-300 bg-white p-2.5 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                        <span class="rounded-none rounded-r-lg border border-l-0 border-slate-300 bg-slate-50 px-3 py-2.5 font-mono text-sm text-slate-500">.zip</span>
+                      </div>
+                      <p class="text-[11px] text-slate-500 mt-1.5 leading-relaxed">
+                        <span class="font-bold text-slate-600">Inside the ZIP:</span> Each QR code image will be named automatically based on its "Name" column from the CSV.
+                      </p>
+                    </div>
                     <div x-show="!isBulkDownload">
                       <label for="modal-file-name" class="mb-1.5 block text-sm font-semibold text-slate-700">File Name</label>
                       <div class="flex items-center rounded-lg shadow-sm">
-                        <input type="text" id="modal-file-name" x-model="download.fileName" class="z-10 block w-full rounded-none rounded-l-lg border border-slate-300 bg-white p-2.5 text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                        <input type="text" id="modal-file-name" x-model="download.fileName" class="z-10 block w-full rounded-none rounded-l-lg border border-slate-300 bg-white p-2.5 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                         <span class="rounded-none rounded-r-lg border border-l-0 border-slate-300 bg-slate-50 px-3 py-2.5 font-mono text-sm text-slate-500" x-text="'.' + download.format"></span>
                       </div>
                     </div>
@@ -1705,6 +1907,147 @@
       </div>
     </div>
 
+    <!-- Bulk Import CSV Modal -->
+    <div x-show="showImportModal" @keydown.escape.window="if(!isImporting) showImportModal = false" class="fixed inset-0 z-105 overflow-y-auto" role="dialog" aria-modal="true" x-trap.noscroll="showImportModal" x-cloak>
+      <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
+        <div x-show="showImportModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="if(!isImporting) showImportModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity"></div>
+        <span class="hidden sm:inline-block sm:h-screen sm:align-middle">&#8203;</span>
+
+        <div x-show="showImportModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-2xl transform-gpu rounded-t-3xl sm:rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+
+          <div class="flex items-center justify-between mb-6">
+            <div>
+              <h3 class="text-xl font-black text-slate-900">Bulk Import via CSV</h3>
+              <p class="text-sm text-slate-500 mt-1">Generate multiple QR codes instantly using the current design.</p>
+            </div>
+            <button @click="showImportModal = false" :disabled="isImporting" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-x-mark"></use></svg>
+            </button>
+          </div>
+
+          <!-- Step 1: Upload -->
+          <div x-show="csvHeaders.length === 0">
+            <label @dragover.prevent="$el.classList.add('border-primary', 'bg-primary-50')" @dragleave.prevent="$el.classList.remove('border-primary', 'bg-primary-50')" @drop.prevent="$el.classList.remove('border-primary', 'bg-primary-50'); handleCsvDrop($event)" class="group flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 py-16 transition-all hover:border-primary/50 hover:bg-primary-50/50">
+              <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform group-hover:scale-110">
+                <svg class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-document-arrow-up"></use></svg>
+              </div>
+              <p class="text-lg font-bold text-slate-700">Drop your CSV file here</p>
+              <p class="mt-2 text-sm text-slate-500">or click to browse</p>
+              <input id="csv-upload-input" type="file" @change="handleCsvDrop" accept=".csv" class="hidden" />
+            </label>
+            <div class="mt-4 p-4 bg-slate-100 rounded-xl text-xs text-slate-600">
+              <p class="font-bold mb-1">💡 Expected CSV Format:</p>
+              <p>Your CSV should contain headers like <code class="bg-white px-1 rounded border">Name, URL, Memo, Tags</code>. Only URL is strictly required. The current QR design (logo, colors, frames) will be applied to all entries.</p>
+            </div>
+          </div>
+
+          <!-- Step 2: Mapping & Execute -->
+          <div x-show="csvHeaders.length > 0" x-cloak>
+            <div class="space-y-5">
+
+              <!-- Project Selection -->
+              <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Import Destination Project</label>
+                <select x-model="importTargetProject" :disabled="isImporting" class="w-full rounded-lg border-slate-300 bg-white p-2.5 text-base md:text-sm shadow-sm focus:border-primary focus:ring-primary disabled:opacity-50">
+                  <template x-for="p in projects" :key="p.id">
+                    <option :value="p.id" x-text="p.name"></option>
+                  </template>
+                </select>
+              </div>
+
+              <!-- Field Mapping -->
+              <div>
+                <h4 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+                  <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrows-right-left"></use></svg>
+                  Map CSV Columns
+                </h4>
+                <div class="grid grid-cols-2 gap-4">
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">URL Column <span class="text-red-500">*</span></label>
+                    <select x-model="csvMapping.url" :disabled="isImporting" class="w-full rounded-lg border-slate-300 text-base md:text-sm focus:border-primary focus:ring-primary disabled:opacity-50">
+                      <option value="">-- Select Column --</option>
+                      <template x-for="h in csvHeaders"><option :value="h" x-text="h"></option></template>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Name Column</label>
+                    <select x-model="csvMapping.name" :disabled="isImporting" class="w-full rounded-lg border-slate-300 text-base md:text-sm focus:border-primary focus:ring-primary disabled:opacity-50">
+                      <option value="">-- Optional --</option>
+                      <template x-for="h in csvHeaders"><option :value="h" x-text="h"></option></template>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Memo Column</label>
+                    <select x-model="csvMapping.memo" :disabled="isImporting" class="w-full rounded-lg border-slate-300 text-base md:text-sm focus:border-primary focus:ring-primary disabled:opacity-50">
+                      <option value="">-- Optional --</option>
+                      <template x-for="h in csvHeaders"><option :value="h" x-text="h"></option></template>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Tags Column (Comma separated)</label>
+                    <select x-model="csvMapping.tags" :disabled="isImporting" class="w-full rounded-lg border-slate-300 text-base md:text-sm focus:border-primary focus:ring-primary disabled:opacity-50">
+                      <option value="">-- Optional --</option>
+                      <template x-for="h in csvHeaders"><option :value="h" x-text="h"></option></template>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Data Preview -->
+              <div>
+                <h4 class="text-sm font-bold text-slate-800 mb-2">Data Preview</h4>
+                <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-32">
+                  <table class="w-full text-xs text-left">
+                    <thead class="bg-slate-50 sticky top-0">
+                      <tr>
+                        <template x-for="h in csvHeaders">
+                          <th class="px-3 py-2 font-semibold text-slate-600 border-b border-slate-200 whitespace-nowrap" x-text="h"></th>
+                        </template>
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                      <template x-for="row in csvData.slice(0, 3)">
+                        <tr>
+                          <template x-for="cell in row">
+                            <td class="px-3 py-2 text-slate-600 truncate max-w-[150px]" x-text="cell"></td>
+                          </template>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-1 text-right">Showing top 3 of <span x-text="csvData.length"></span> rows</p>
+              </div>
+
+              <!-- Action Buttons & Progress -->
+              <div class="mt-6 pt-6 border-t border-slate-200 flex flex-col gap-4">
+                <div x-show="isImporting" class="w-full">
+                  <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                    <span>Generating QR Codes...</span>
+                    <span x-text="importProgress + '%'"></span>
+                  </div>
+                  <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
+                    <div class="bg-primary h-2.5 rounded-full transition-all duration-300" :style="`width: ${importProgress}%`"></div>
+                  </div>
+                </div>
+
+                <div class="flex gap-3">
+                  <button type="button" @click="resetImportState()" :disabled="isImporting" class="flex-1 py-3.5 rounded-xl bg-slate-100 font-bold text-slate-700 active:scale-95 transition-all disabled:opacity-50">Back</button>
+                  <button type="button" @click="executeBulkImport()" :disabled="isImporting || !csvMapping.url" class="flex-1 py-3.5 rounded-xl bg-primary font-bold text-white shadow-md hover:bg-primary-hover active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    <template x-if="isImporting">
+                      <svg class="h-5 w-5 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    </template>
+                    <span x-text="isImporting ? 'Processing...' : `Generate ${csvData.length} QR Codes`"></span>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Custom prompt modal -->
     <div x-show="showPromptModal" @keydown.escape.window="if(showPromptModal) { resolvePrompt(null); showPromptModal = false; }" class="fixed inset-0 z-60 overflow-y-auto" aria-labelledby="prompt-modal-title" role="dialog" aria-modal="true" x-cloak x-trap.noscroll="showPromptModal">
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
@@ -1757,7 +2100,12 @@
                     const toastEl = document.querySelector('.fixed.bottom-24.md\\:bottom-6');
                     if(toastEl) {
                       toastEl.style.cursor = 'pointer';
-                      toastEl.addEventListener('click', () => window.location.reload(), { once: true });
+                      toastEl.addEventListener('click', () => {
+                        if (window.$app && window.$app.hasUnsavedEdit) {
+                          if (!confirm("You have unsaved changes. Discard them to update the app?")) return;
+                        }
+                        window.location.reload();
+                      }, { once: true });
                     }
                   }
                 }
