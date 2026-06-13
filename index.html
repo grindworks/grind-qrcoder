@@ -193,7 +193,7 @@
 
   <body x-data="qrCodeGenerator()" x-init="init()" class="min-h-screen bg-[#fafbfc] text-slate-800 font-sans antialiased selection:bg-primary/20 selection:text-primary transition-colors duration-300" x-cloak>
     <!-- Global Dropzone for Drag & Drop -->
-    <div id="global-dropzone" class="fixed inset-0 z-100 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-200">
+    <div id="global-dropzone" class="pointer-events-none fixed inset-0 z-100 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-200">
       <div class="pointer-events-none flex flex-col items-center rounded-3xl border-4 border-dashed border-primary bg-white/10 p-12 text-white shadow-2xl backdrop-blur-md">
         <svg class="mb-4 h-16 w-16 animate-bounce text-primary-400" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>
         <h2 class="text-3xl font-black tracking-tight">Drop backup file here</h2>
@@ -232,14 +232,16 @@
           <!-- Right side: Control buttons -->
           <div class="flex flex-wrap justify-start lg:justify-end items-center gap-2 sm:gap-3 w-full lg:w-auto">
             <!-- Encryption password input -->
-            <div class="relative flex items-center">
+            <form @submit.prevent class="relative flex items-center">
+              <!-- Hidden username field to satisfy browser password manager requirements -->
+              <input type="text" name="username" autocomplete="username" class="sr-only" aria-hidden="true" tabindex="-1" value="encryption-user">
               <label for="file-password" class="sr-only">Encryption Password</label>
               <input type="password" id="file-password" placeholder="Encryption Password..." autocomplete="new-password"
-                data-lpignore="true" spellcheck="false" autocorrect="off" autocapitalize="off"
-                class="bg-white shadow-sm py-2 pr-8 pl-3 border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/20 rounded-md outline-none w-36 text-slate-900 text-base md:text-sm transition-all placeholder-slate-400"
+                data-lpignore="true" data-1p-ignore spellcheck="false" autocorrect="off" autocapitalize="off"
+                class="bg-white shadow-sm py-2 pr-10 pl-3 border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/20 rounded-md outline-none w-48 md:w-56 text-slate-900 text-base md:text-sm transition-all placeholder-slate-400"
                 title="Enter a password to strongly encrypt the file when saving">
               <button type="button" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility"
-                class="right-2 absolute text-slate-400 hover:text-slate-600 transition-colors" title="Show/Hide Password">
+                class="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Show/Hide Password">
                 <svg id="icon-eye-open" class="hidden w-4 h-4">
                   <use href="icons-sprite.svg#outline-eye"></use>
                 </svg>
@@ -247,7 +249,7 @@
                   <use href="icons-sprite.svg#outline-eye-slash"></use>
                 </svg>
               </button>
-            </div>
+            </form>
 
             <button onclick="loadQRCoderFile()"
               class="bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-600 hover:text-slate-900 text-sm transition-colors cursor-pointer shrink-0" aria-label="Open Backup"
@@ -380,7 +382,7 @@
                           Website URL
                           <span class="ml-2 inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600 ring-1 ring-inset ring-red-500/10">Required</span>
                         </label>
-                          <input type="url" id="website-url" autocapitalize="off" autocorrect="off" spellcheck="false" x-model="formData.url.address" @input.debounce.300ms="validateUrl()" placeholder="https://www.example.com" class="block w-full rounded-xl border-0 bg-slate-50/50 px-4 py-3.5 text-base md:text-sm text-slate-900 shadow-inner-soft ring-1 ring-inset transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset" :class="urlError ? 'ring-red-500 focus:ring-red-500' : 'ring-slate-200 focus:ring-primary'" />
+                          <input type="url" id="website-url" autocapitalize="off" autocorrect="off" spellcheck="false" x-model="formData.url.address" @input.debounce.300ms="updateQrCode(false)" @blur="validateUrl(); recordState()" placeholder="https://www.example.com" class="block w-full rounded-xl border-0 bg-slate-50/50 px-4 py-3.5 text-base md:text-sm text-slate-900 shadow-inner-soft ring-1 ring-inset transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset" :class="urlError ? 'ring-red-500 focus:ring-red-500' : 'ring-slate-200 focus:ring-primary'" />
                         <p x-show="urlError" x-text="urlError" class="mt-2 text-sm text-red-600"></p>
                         <!-- UTM Parameters Builder -->
                         <div x-data="{ showUtm: false }" class="mt-5 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 transition-all duration-300">
@@ -401,23 +403,23 @@
                               <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <div>
                                   <label class="mb-1 block text-xs font-semibold text-slate-600">Source (utm_source) <span class="text-red-500">*</span></label>
-                                  <input type="text" x-model="formData.url.utm.source" @input.debounce.300ms="updateQrCode()" placeholder="e.g. google, newsletter" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  <input type="text" x-model="formData.url.utm.source" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="e.g. google, newsletter" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                 </div>
                                 <div>
                                   <label class="mb-1 block text-xs font-semibold text-slate-600">Medium (utm_medium) <span class="text-red-500">*</span></label>
-                                  <input type="text" x-model="formData.url.utm.medium" @input.debounce.300ms="updateQrCode()" placeholder="e.g. cpc, email, flyer" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  <input type="text" x-model="formData.url.utm.medium" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="e.g. cpc, email, flyer" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                 </div>
                                 <div class="sm:col-span-2">
                                   <label class="mb-1 block text-xs font-semibold text-slate-600">Campaign (utm_campaign) <span class="text-red-500">*</span></label>
-                                  <input type="text" x-model="formData.url.utm.campaign" @input.debounce.300ms="updateQrCode()" placeholder="e.g. summer_sale, spring_event" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  <input type="text" x-model="formData.url.utm.campaign" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="e.g. summer_sale, spring_event" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                 </div>
                                 <div>
                                   <label class="mb-1 block text-xs font-semibold text-slate-600">Term (utm_term)</label>
-                                  <input type="text" x-model="formData.url.utm.term" @input.debounce.300ms="updateQrCode()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  <input type="text" x-model="formData.url.utm.term" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                 </div>
                                 <div>
                                   <label class="mb-1 block text-xs font-semibold text-slate-600">Content (utm_content)</label>
-                                  <input type="text" x-model="formData.url.utm.content" @input.debounce.300ms="updateQrCode()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  <input type="text" x-model="formData.url.utm.content" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                 </div>
                               </div>
                             </div>
@@ -444,21 +446,12 @@
                             </div>
                           </div>
                         </div>
-
-                        <div x-show="isUrlLong" class="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3">
-                          <div class="flex items-center justify-between">
-                            <div>
-                              <p class="text-sm font-semibold text-blue-800">URL is too long</p>
-                              <p class="text-xs text-blue-700">The QR code's scanning accuracy may decrease. We recommend using a URL shortener service like Bitly.</p>
-                            </div>
-                          </div>
-                        </div>
                       </div>
                       <div x-show="selectedType === 'text'">
                         <h3 class="mb-1 text-lg font-semibold text-slate-800">Text</h3>
                         <p class="mb-4 text-sm text-slate-500">Enter the text you want the QR code to display.</p>
                         <label for="text-content" class="mb-2 block text-sm font-medium text-slate-700">Text Content</label>
-                        <textarea id="text-content" x-model="formData.text.content" @input.debounce.300ms="updateQrCode()" rows="6" placeholder="Enter text here..." class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+                        <textarea id="text-content" x-model="formData.text.content" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" rows="6" placeholder="Enter text here..." class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
                       </div>
                       <!-- Other content input forms (WiFi, vCard, Event, Email, Geo, SNS, Images, Video) -->
                       <div x-show="selectedType === 'wifi'">
@@ -470,11 +463,15 @@
                               Network Name (SSID)
                               <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
                             </label>
-                            <input type="text" id="wifi-ssid" x-model="formData.wifi.ssid" @input.debounce.300ms="updateQrCode()" placeholder="My Wifi Network" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="text" id="wifi-ssid" x-model="formData.wifi.ssid" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="My Wifi Network" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
-                          <div x-show="formData.wifi.encryption !== 'なし'" x-collapse>
+                          <div x-show="formData.wifi.encryption !== 'None'" x-collapse>
+                            <form @submit.prevent>
+                            <!-- Hidden username field to satisfy browser password manager requirements -->
+                            <input type="text" name="username" autocomplete="username" class="sr-only" aria-hidden="true" tabindex="-1" value="wifi-user">
                             <label for="wifi-password" class="mb-2 block text-sm font-medium text-slate-700">Password</label>
-                            <input type="password" id="wifi-password" x-model="formData.wifi.password" @input.debounce.300ms="updateQrCode()" placeholder="********" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="password" id="wifi-password" x-model="formData.wifi.password" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" autocomplete="new-password" data-lpignore="true" data-1p-ignore placeholder="********" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            </form>
                           </div>
                           <div>
                             <label for="wifi-encryption" class="mb-2 block text-sm font-medium text-slate-700">Encryption</label>
@@ -484,6 +481,12 @@
                               <option>None</option>
                             </select>
                           </div>
+                          <div class="pt-2">
+                            <label class="flex cursor-pointer items-center">
+                              <input type="checkbox" x-model="formData.wifi.hidden" @change="updateQrCode()" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
+                              <span class="ml-2 text-sm font-medium text-slate-700">Hidden Network</span>
+                            </label>
+                          </div>
                         </div>
                       </div>
                       <div x-show="selectedType === 'vcard'">
@@ -492,27 +495,27 @@
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                           <div>
                             <label for="vcard-lastname" class="mb-2 block text-sm font-medium text-slate-700">Last Name</label>
-                            <input type="text" id="vcard-lastname" x-model="formData.vcard.lastName" @input.debounce.300ms="updateQrCode()" placeholder="Doe" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="text" id="vcard-lastname" x-model="formData.vcard.lastName" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="Doe" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div>
                             <label for="vcard-firstname" class="mb-2 block text-sm font-medium text-slate-700">First Name</label>
-                            <input type="text" id="vcard-firstname" x-model="formData.vcard.firstName" @input.debounce.300ms="updateQrCode()" placeholder="John" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="text" id="vcard-firstname" x-model="formData.vcard.firstName" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="John" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div class="sm:col-span-2">
                             <label for="vcard-org" class="mb-2 block text-sm font-medium text-slate-700">Company</label>
-                            <input type="text" id="vcard-org" x-model="formData.vcard.organization" @input.debounce.300ms="updateQrCode()" placeholder="Acme Corp" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="text" id="vcard-org" x-model="formData.vcard.organization" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="Acme Corp" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div>
                             <label for="vcard-phone" class="mb-2 block text-sm font-medium text-slate-700">Phone Number</label>
-                            <input type="tel" id="vcard-phone" x-model="formData.vcard.phone" @input.debounce.300ms="updateQrCode()" placeholder="+1-555-123-4567" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="tel" id="vcard-phone" x-model="formData.vcard.phone" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="+1-555-123-4567" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div>
                             <label for="vcard-email" class="mb-2 block text-sm font-medium text-slate-700">Email Address</label>
-                            <input type="email" id="vcard-email" autocapitalize="off" autocorrect="off" spellcheck="false" x-model="formData.vcard.email" @input.debounce.300ms="updateQrCode()" placeholder="john.doe@example.com" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="email" id="vcard-email" autocapitalize="off" autocorrect="off" spellcheck="false" x-model="formData.vcard.email" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="john.doe@example.com" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div class="sm:col-span-2">
                             <label for="vcard-address" class="mb-2 block text-sm font-medium text-slate-700">Address</label>
-                            <input type="text" id="vcard-address" x-model="formData.vcard.address" @input.debounce.300ms="updateQrCode()" placeholder="123 Tech Avenue, San Francisco, CA" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="text" id="vcard-address" x-model="formData.vcard.address" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="123 Tech Avenue, San Francisco, CA" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                         </div>
                       </div>
@@ -525,11 +528,11 @@
                               Event Name
                               <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
                             </label>
-                            <input type="text" id="event-summary" x-model="formData.event.summary" @input.debounce.300ms="updateQrCode()" placeholder="Product Launch Event" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="text" id="event-summary" x-model="formData.event.summary" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="Product Launch Event" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div>
                             <label for="event-location" class="mb-2 block text-sm font-medium text-slate-700">Location</label>
-                            <input type="text" id="event-location" x-model="formData.event.location" @input.debounce.300ms="updateQrCode()" placeholder="Moscone Center" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="text" id="event-location" x-model="formData.event.location" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="Moscone Center" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                             <div>
@@ -549,7 +552,7 @@
                           </div>
                           <div>
                             <label for="event-description" class="mb-2 block text-sm font-medium text-slate-700">Description</label>
-                            <textarea id="event-description" x-model="formData.event.description" @input.debounce.300ms="updateQrCode()" rows="3" placeholder="Enter event details..." class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+                            <textarea id="event-description" x-model="formData.event.description" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" rows="3" placeholder="Enter event details..." class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
                           </div>
                         </div>
                       </div>
@@ -562,15 +565,15 @@
                               To Email Address
                               <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
                             </label>
-                            <input type="email" id="email-to" autocapitalize="off" autocorrect="off" spellcheck="false" x-model="formData.email.to" @input.debounce.300ms="updateQrCode()" placeholder="support@example.com" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="email" id="email-to" autocapitalize="off" autocorrect="off" spellcheck="false" x-model="formData.email.to" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="support@example.com" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div>
                             <label for="email-subject" class="mb-2 block text-sm font-medium text-slate-700">Subject</label>
-                            <input type="text" id="email-subject" x-model="formData.email.subject" @input.debounce.300ms="updateQrCode()" placeholder="Product Inquiry" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="text" id="email-subject" x-model="formData.email.subject" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="Product Inquiry" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div>
                             <label for="email-body" class="mb-2 block text-sm font-medium text-slate-700">Body</label>
-                            <textarea id="email-body" x-model="formData.email.body" @input.debounce.300ms="updateQrCode()" rows="4" placeholder="Please enter your inquiry details." class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+                            <textarea id="email-body" x-model="formData.email.body" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" rows="4" placeholder="Please enter your inquiry details." class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
                           </div>
                         </div>
                       </div>
@@ -583,11 +586,36 @@
                               Phone Number
                               <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
                             </label>
-                            <input type="tel" id="sms-phone" x-model="formData.sms.phone" @input.debounce.300ms="updateQrCode()" placeholder="+1234567890" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="tel" id="sms-phone" x-model="formData.sms.phone" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="+1234567890" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div>
                             <label for="sms-message" class="mb-2 block text-sm font-medium text-slate-700">Prefilled Message (Optional)</label>
-                            <textarea id="sms-message" x-model="formData.sms.message" @input.debounce.300ms="updateQrCode()" rows="3" placeholder="Hello, I would like to know more about..." class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+                            <textarea id="sms-message" x-model="formData.sms.message" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" rows="3" placeholder="Hello, I would like to know more about..." class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+                          </div>
+                        </div>
+                      </div>
+                      <div x-show="selectedType === 'crypto'" x-cloak>
+                        <h3 class="mb-1 text-lg font-semibold text-slate-800">Cryptocurrency</h3>
+                        <p class="mb-4 text-sm text-slate-500">Create a QR code to easily receive cryptocurrency payments.</p>
+                        <div class="space-y-4">
+                          <div>
+                            <label for="crypto-currency" class="mb-2 block text-sm font-medium text-slate-700">Currency</label>
+                            <select id="crypto-currency" x-model="formData.crypto.currency" @change="updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20">
+                              <option value="bitcoin">Bitcoin (BTC)</option>
+                              <option value="ethereum">Ethereum (ETH)</option>
+                              <option value="solana">Solana (SOL)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label for="crypto-address" class="mb-2 block text-sm font-medium text-slate-700">
+                              Wallet Address
+                              <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
+                            </label>
+                            <input type="text" id="crypto-address" x-model="formData.crypto.address" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="e.g. 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                          </div>
+                          <div>
+                            <label for="crypto-amount" class="mb-2 block text-sm font-medium text-slate-700">Amount (Optional)</label>
+                            <input type="number" step="any" inputmode="decimal" id="crypto-amount" x-model="formData.crypto.amount" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="e.g. 0.01" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                         </div>
                       </div>
@@ -600,14 +628,14 @@
                               Latitude
                               <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
                             </label>
-                            <input type="number" inputmode="decimal" step="any" id="geo-latitude" x-model="formData.geo.latitude" @input.debounce.300ms="updateQrCode()" placeholder="35.681236" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="number" inputmode="decimal" step="any" id="geo-latitude" x-model="formData.geo.latitude" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="35.681236" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div>
                             <label for="geo-longitude" class="mb-2 block text-sm font-medium text-slate-700">
                               Longitude
                               <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
                             </label>
-                            <input type="number" inputmode="decimal" step="any" id="geo-longitude" x-model="formData.geo.longitude" @input.debounce.300ms="updateQrCode()" placeholder="139.767125" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="number" inputmode="decimal" step="any" id="geo-longitude" x-model="formData.geo.longitude" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="139.767125" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                         </div>
                         <p class="mt-2 text-xs text-slate-500">Example: Tokyo Station (Latitude: 35.681236, Longitude: 139.767125)</p>
@@ -634,19 +662,20 @@
                               <option value="discord">Discord</option>
                               <option value="twitch">Twitch</option>
                               <option value="paypal">PayPal</option>
+                              <option value="venmo">Venmo</option>
                               <option value="paypay">PayPay</option>
                             </select>
                           </div>
                           <div>
                             <label for="sns-identifier" class="mb-2 block text-sm font-medium text-slate-700" x-text="formData.sns.service === 'line' ? 'Official Account ID' : 'Username / ID'"></label>
                             <div class="flex items-center">
-                              <span x-show="['x', 'instagram', 'tiktok', 'youtube'].includes(formData.sns.service)" class="inline-flex items-center rounded-l-lg border border-r-0 border-slate-300 bg-slate-100 px-3 text-sm text-slate-600">@</span>
-                              <input type="text" id="sns-identifier" x-model="formData.sns.identifier" @input.debounce.300ms="updateQrCode()" :placeholder="getSnsPlaceholder()" class="block w-full rounded-r-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                              <span x-show="['x', 'instagram', 'tiktok', 'youtube', 'threads'].includes(formData.sns.service)" class="inline-flex items-center rounded-l-lg border border-r-0 border-slate-300 bg-slate-100 px-3 text-sm text-slate-600">@</span>
+                              <input type="text" id="sns-identifier" x-model="formData.sns.identifier" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" autocomplete="off" data-lpignore="true" data-1p-ignore :placeholder="getSnsPlaceholder()" class="block w-full rounded-r-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                             </div>
                           </div>
                           <div x-show="formData.sns.service === 'whatsapp'" x-collapse>
                             <label for="sns-message" class="mb-2 block text-sm font-medium text-slate-700">Prefilled Message (Optional)</label>
-                            <textarea id="sns-message" x-model="formData.sns.message" @input.debounce.300ms="updateQrCode()" rows="2" placeholder="I'm interested in your summer campaign!" class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+                            <textarea id="sns-message" x-model="formData.sns.message" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" rows="2" placeholder="I'm interested in your summer campaign!" class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
                             <p class="mt-2 text-xs text-slate-500">This message will be automatically typed when the WhatsApp chat opens.</p>
                           </div>
                         </div>
@@ -660,7 +689,7 @@
                               Shared Album Link
                               <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
                             </label>
-                            <input type="url" id="gallery-url" x-model="formData.images.url" @input.debounce.300ms="updateQrCode()" placeholder="https://photos.app.goo.gl/..." class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="url" id="gallery-url" x-model="formData.images.url" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="https://photos.app.goo.gl/..." class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                         </div>
                       </div>
@@ -672,7 +701,16 @@
                             Video URL
                             <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
                           </label>
-                          <input type="text" id="video-url" x-model="formData.video.url" @input.debounce.300ms="updateQrCode()" placeholder="https://www.youtube.com/..." class="block w-full rounded-xl border-0 bg-slate-50/50 px-4 py-3.5 text-base md:text-sm text-slate-900 shadow-inner-soft ring-1 ring-inset ring-slate-200 transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary" />
+                          <input type="text" id="video-url" x-model="formData.video.url" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="https://www.youtube.com/..." class="block w-full rounded-xl border-0 bg-slate-50/50 px-4 py-3.5 text-base md:text-sm text-slate-900 shadow-inner-soft ring-1 ring-inset ring-slate-200 transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary" />
+                        </div>
+                      </div>
+
+                      <div x-show="isUrlLong" x-transition x-cloak class="mt-6 rounded-lg border border-blue-200 bg-blue-50 p-3">
+                        <div class="flex items-center justify-between">
+                          <div>
+                            <p class="text-sm font-semibold text-blue-800">URL is too long</p>
+                            <p class="text-xs text-blue-700">The QR code's scanning accuracy may decrease. We recommend using a URL shortener service like Bitly.</p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -705,7 +743,7 @@
                               <template x-for="tpl in myTemplates" :key="tpl.id">
                                 <div class="group relative space-y-2">
                                   <button @click="applyMyTemplate(tpl)" class="relative w-full aspect-square transform overflow-hidden rounded-lg border-2 bg-slate-50 p-2 shadow-sm transition group-hover:scale-105 group-hover:border-primary group-hover:shadow-md" :class="isCurrentMyTemplate(tpl) ? 'border-primary ring-2 ring-primary/30' : 'border-slate-200'">
-                                    <img :src="tpl.preview" class="h-full w-full object-contain drop-shadow-sm" />
+                                    <img :src="tpl.preview" class="h-full w-full object-contain drop-shadow-sm" alt="" />
                                   </button>
                                   <p class="text-center text-xs font-semibold text-slate-700 truncate" x-text="tpl.name"></p>
                                   <button @click.stop="deleteMyTemplate(tpl.id)" class="absolute -top-3 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm border border-slate-200 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100" title="Delete template">
@@ -756,8 +794,8 @@
                             <div x-show="qrOptions.colorType === 'single'">
                               <label for="fg-color" class="mb-2 block text-sm font-medium text-slate-700">Dot Color (Foreground)</label>
                               <div class="flex items-center gap-3">
-                                <input type="color" id="fg-color" x-model="qrOptions.foregroundColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" x-model="qrOptions.foregroundColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                <input type="color" id="fg-color" x-model.debounce.50ms="qrOptions.foregroundColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" name="fg-color-hex" spellcheck="false" aria-label="Foreground Hex Color" x-model="qrOptions.foregroundColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               </div>
                             </div>
 
@@ -778,15 +816,15 @@
                               <div>
                                 <label for="gradient-start" class="mb-2 block text-sm font-medium text-slate-700">Start Color</label>
                                 <div class="flex items-center gap-3">
-                                  <input type="color" id="gradient-start" x-model="qrOptions.gradient.color1" @input.debounce.300ms="updateQrCode()" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" x-model="qrOptions.gradient.color1" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                  <input type="color" id="gradient-start" x-model.debounce.50ms="qrOptions.gradient.color1" @input.debounce.300ms="updateQrCode()" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" name="gradient-start-hex" spellcheck="false" aria-label="Gradient Start Hex Color" x-model="qrOptions.gradient.color1" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                                 </div>
                               </div>
                               <div>
                                 <label for="gradient-end" class="mb-2 block text-sm font-medium text-slate-700">End Color</label>
                                 <div class="flex items-center gap-3">
-                                  <input type="color" id="gradient-end" x-model="qrOptions.gradient.color2" @input.debounce.300ms="updateQrCode()" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" x-model="qrOptions.gradient.color2" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                  <input type="color" id="gradient-end" x-model.debounce.50ms="qrOptions.gradient.color2" @input.debounce.300ms="updateQrCode()" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" name="gradient-end-hex" spellcheck="false" aria-label="Gradient End Hex Color" x-model="qrOptions.gradient.color2" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                                 </div>
                               </div>
                             </div>
@@ -796,22 +834,22 @@
                             <div>
                               <label for="bg-color" class="mb-2 block text-sm font-medium text-slate-700">Background Color</label>
                               <div class="flex items-center gap-3">
-                                <input type="color" id="bg-color" x-model="qrOptions.backgroundColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" x-model="qrOptions.backgroundColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                <input type="color" id="bg-color" x-model.debounce.50ms="qrOptions.backgroundColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" name="bg-color-hex" spellcheck="false" aria-label="Background Hex Color" x-model="qrOptions.backgroundColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               </div>
                             </div>
                             <div>
                               <label for="corner-color" class="mb-2 block text-sm font-medium text-slate-700">Corner Border Color</label>
                               <div class="flex items-center gap-3">
-                                <input type="color" id="corner-color" x-model="qrOptions.cornerColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" x-model="qrOptions.cornerColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                <input type="color" id="corner-color" x-model.debounce.50ms="qrOptions.cornerColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" name="corner-color-hex" spellcheck="false" aria-label="Corner Border Hex Color" x-model="qrOptions.cornerColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               </div>
                             </div>
                             <div>
                               <label for="corner-dot-color" class="mb-2 block text-sm font-medium text-slate-700">Corner Dot Color</label>
                               <div class="flex items-center gap-3">
-                                <input type="color" id="corner-dot-color" x-model="qrOptions.cornerDotColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" x-model="qrOptions.cornerDotColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                <input type="color" id="corner-dot-color" x-model.debounce.50ms="qrOptions.cornerDotColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" name="corner-dot-color-hex" spellcheck="false" aria-label="Corner Dot Hex Color" x-model="qrOptions.cornerDotColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               </div>
                             </div>
                           </div>
@@ -892,7 +930,7 @@
 
                         <!-- 1. When logo is not set -->
                         <div x-show="!qrOptions.logo">
-                          <label @dragover.prevent="$el.classList.add('border-primary', 'bg-primary-50')" @dragleave.prevent="$el.classList.remove('border-primary', 'bg-primary-50')" @drop.prevent="$el.classList.remove('border-primary', 'bg-primary-50'); handleDrop($event, 'handleLogoUpload')" class="group flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 py-8 transition-all hover:border-primary/50 hover:bg-primary-50/50">
+                          <label @dragover.prevent.stop="$el.classList.add('border-primary', 'bg-primary-50')" @dragleave.prevent.stop="$el.classList.remove('border-primary', 'bg-primary-50')" @drop.prevent.stop="$el.classList.remove('border-primary', 'bg-primary-50'); handleDrop($event, 'handleLogoUpload')" class="group flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 py-8 transition-all hover:border-primary/50 hover:bg-primary-50/50">
                             <div class="flex flex-col items-center justify-center text-center pointer-events-none">
                               <div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform group-hover:scale-110">
                                 <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2">
@@ -928,7 +966,7 @@
 
                                   <!-- Logo image -->
                                   <div class="relative transition-all duration-200" :style="{ transform: `scale(${0.5 + (qrOptions.imageOptions.imageSize)})` }">
-                                    <img :src="qrOptions.logo" class="h-16 w-auto max-w-[200px] object-contain drop-shadow-sm" />
+                                    <img :src="qrOptions.logo" class="h-16 w-auto max-w-[200px] object-contain drop-shadow-sm" alt="" />
                                   </div>
                                 </div>
                               </div>
@@ -992,7 +1030,7 @@
                       <div class="space-y-6 p-6">
                         <h3 class="mb-0 text-lg font-semibold text-slate-800">Frame</h3>
                         <div>
-                          <label for="frame-style" class="mb-2 block text-sm font-medium text-slate-700">Frame Style</label>
+                          <label class="mb-2 block text-sm font-medium text-slate-700">Frame Style</label>
                           <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
                             <button @click="frame.style = 'none'; updateQrCode()" class="rounded-lg border-2 p-3 transition" :class="frame.style === 'none' ? 'border-primary ring-2 ring-primary/20' : 'border-slate-200 hover:border-primary/50'">
                               <div class="flex h-12 w-full items-center justify-center rounded-md bg-slate-100">
@@ -1004,7 +1042,7 @@
                             </button>
                             <template x-for="f in frameStyles" :key="f.id">
                               <button @click="frame.style = f.id; updateQrCode()" class="rounded-lg border-2 p-2 transition" :class="frame.style === f.id ? 'border-primary ring-2 ring-primary/20' : 'border-slate-200 hover:border-primary/50'">
-                                <img :src="f.preview" class="h-auto w-full" />
+                                <img :src="f.preview" class="h-auto w-full" alt="" />
                                 <p class="mt-2 text-center text-xs font-semibold" x-text="f.name"></p>
                               </button>
                             </template>
@@ -1014,7 +1052,7 @@
                           <div class="mt-2 pt-6 border-t border-slate-100">
                             <label for="frame-text" class="mb-2 block text-sm font-medium text-slate-700">Frame Text</label>
                             <div class="relative max-w-sm">
-                              <input type="text" id="frame-text" x-model="frame.text" @input.debounce.300ms="updateQrCode()" placeholder="SCAN ME" maxlength="14" class="block w-full rounded-lg border border-slate-300 bg-white p-3 pr-14 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                              <input type="text" id="frame-text" x-model="frame.text" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="SCAN ME" maxlength="14" class="block w-full rounded-lg border border-slate-300 bg-white p-3 pr-14 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                 <span class="text-[11px] font-mono font-medium transition-colors" :class="(frame.text || '').length >= 14 ? 'text-rose-500' : 'text-slate-400'"><span x-text="(frame.text || '').length"></span>/14</span>
                               </div>
@@ -1046,7 +1084,7 @@
                         </div>
                         <div class="space-y-2 border-t border-slate-200 pt-6">
                           <div class="flex items-center justify-between">
-                            <label for="qr-margin-toggle" class="block text-sm font-medium text-slate-700">
+                            <label class="block text-sm font-medium text-slate-700">
                               Margin (Quiet Zone)
                               <button type="button" tabindex="0" class="tooltip inline-flex items-center justify-center focus:outline-none ml-1 translate-y-0.5">
                                 <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -1080,17 +1118,17 @@
                             </button>
                           </div>
 
-                          <!-- ブランドキットが1つもない場合 -->
+                          <!-- When there are no brand kits -->
                           <div x-show="brandKits.length === 0" class="rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 py-6 text-center">
                             <p class="text-sm font-medium text-slate-500">No brand kits saved.</p>
                             <button @click="createNewBrandKit()" class="mt-2 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 transition-all hover:bg-slate-50">Create your first brand</button>
                           </div>
 
-                          <!-- ブランドキットがある場合 -->
+                          <!-- When there are brand kits -->
                           <div x-show="brandKits.length > 0" class="space-y-6">
-                            <!-- セレクター＆操作ボタン -->
+                            <!-- Selector & Action buttons -->
                             <div class="flex gap-2">
-                              <!-- 追加: @change="applyBrandKit()" を設定して、切り替え時に即座にプレビューに反映させる -->
+                              <!-- Added: applyBrandKit() is called on change to instantly reflect on the preview -->
                               <select x-model="activeBrandKitId" @change="applyBrandKit()" class="block w-full flex-1 rounded-lg border border-slate-300 bg-white p-2.5 text-sm font-semibold text-slate-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
                                 <template x-for="kit in brandKits" :key="kit.id">
                                   <option :value="kit.id" x-text="kit.name"></option>
@@ -1106,15 +1144,15 @@
                               </div>
                             </div>
 
-                            <!-- 選択中のブランド設定 -->
+                            <!-- Selected brand settings -->
                             <div x-show="activeBrandKitId">
                               <div class="space-y-4">
-                                <!-- ロゴ設定 -->
+                                <!-- Logo settings -->
                                 <div>
                                   <label class="mb-2 block text-sm font-medium text-slate-700">Brand Logo</label>
                                   <div x-show="getActiveBrandKit()?.logo" class="mb-4 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 p-2 shadow-sm">
                                     <div class="flex items-center gap-3">
-                                      <img :src="getActiveBrandKit()?.logo || ''" class="h-8 w-8 rounded object-contain drop-shadow-sm" />
+                                      <img :src="getActiveBrandKit()?.logo || ''" class="h-8 w-8 rounded object-contain drop-shadow-sm" alt="" />
                                       <span class="text-sm font-semibold text-slate-700" x-text="getActiveBrandKit()?.name + ' Logo'"></span>
                                     </div>
                                     <button @click="removeBrandLogo(); applyBrandKit();" class="rounded-full bg-white p-1.5 text-slate-400 shadow-sm ring-1 ring-slate-200 transition-all hover:bg-rose-50 hover:text-rose-500" title="Remove logo">
@@ -1139,7 +1177,7 @@
                                   </div>
                                 </div>
 
-                                <!-- カラー設定 -->
+                                <!-- Color settings -->
                                 <div class="border-t border-slate-100 pt-4">
                                   <div class="mb-2 flex items-center justify-between">
                                     <label class="block text-sm font-medium text-slate-700">Brand Color</label>
@@ -1152,8 +1190,8 @@
                                       <div>
                                         <label class="mb-1.5 block text-xs font-semibold text-slate-500">Main Color</label>
                                         <div class="flex items-center gap-3">
-                                          <input type="color" x-model="getActiveBrandKit().colors[0]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                          <input type="text" x-model="getActiveBrandKit().colors[0]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                          <input type="color" x-model.debounce.50ms="getActiveBrandKit().colors[0]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                          <input type="text" x-model="getActiveBrandKit().colors[0]" spellcheck="false" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                         </div>
                                       </div>
                                     </template>
@@ -1161,15 +1199,15 @@
                                       <div>
                                         <label class="mb-1.5 block text-xs font-semibold text-slate-500">Background Color</label>
                                         <div class="flex items-center gap-3">
-                                          <input type="color" x-model="getActiveBrandKit().colors[1]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                          <input type="text" x-model="getActiveBrandKit().colors[1]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                          <input type="color" x-model.debounce.50ms="getActiveBrandKit().colors[1]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                          <input type="text" x-model="getActiveBrandKit().colors[1]" spellcheck="false" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                         </div>
                                       </div>
                                     </template>
                                   </div>
                                 </div>
 
-                                <!-- 適用ボタン (自動反映にしたため不要になりますが、念のため残すことも可能です。今回はUX向上のため「手動適用」ボタン自体を削除しています) -->
+                                <!-- Apply button (Removed for UX improvement as it is now auto-applied, but kept in comments just in case) -->
                               </div>
                             </div>
                           </div>
@@ -1295,7 +1333,7 @@
                         <button x-show="editingQRCodeId" type="button" @click="currentView = 'dashboard'; resetGenerator()" class="relative z-30 flex items-center justify-center gap-x-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:outline-none">
                           Cancel
                         </button>
-                        <button type="button" @click="showSaveModal = true; $nextTick(() => $refs.saveNameInput.focus())" :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex flex-1 items-center justify-center gap-x-2 rounded-lg border border-slate-300 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-100 hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
+                        <button type="button" @click="showSaveModal = true; setTimeout(() => $refs.saveNameInput.focus(), 310)" :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex flex-1 items-center justify-center gap-x-2 rounded-lg border border-slate-300 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-100 hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
                           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                             <use href="icons-sprite.svg#outline-folder"></use>
                           </svg>
@@ -1344,10 +1382,10 @@
             </div>
           </div>
 
-          <!-- ここから 2カラムレイアウト -->
+          <!-- 2-column layout from here -->
           <div class="flex flex-col lg:flex-row gap-8">
             <!-- Sidebar (Projects) -->
-            <div class="w-full lg:w-64 shrink-0 space-y-2">
+            <div class="w-full lg:w-64 shrink-0 space-y-2 max-h-48 overflow-y-auto lg:max-h-none scrollbar-hide">
               <div class="flex items-center justify-between px-2 mb-4">
                 <h3 class="text-xs font-black tracking-wider text-slate-500 uppercase">PROJECTS</h3>
                 <button @click="createNewProject()" class="text-primary hover:bg-primary/10 p-1 rounded transition-colors" title="New Project">
@@ -1399,8 +1437,9 @@
                       <use href="icons-sprite.svg#outline-magnifying-glass"></use>
                     </svg>
                   </div>
-                  <input type="text" x-ref="searchInput" x-model="searchQuery" @input="currentPage = 1" placeholder="Search by name, memo, tag..." class="block w-full rounded-lg border border-slate-300 bg-white p-2 pl-9 pr-8 text-base md:text-sm text-slate-900 shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
-                  <button x-show="searchQuery" @click="searchQuery = ''; currentPage = 1; $nextTick(() => $refs.searchInput.focus())" x-cloak class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600">
+                  <label for="search-qr" class="sr-only">Search QR Codes</label>
+                  <input type="text" id="search-qr" name="search-qr" x-ref="searchInput" x-model.debounce.300ms="searchQuery" @input.debounce.300ms="currentPage = 1" placeholder="Search by name, memo, tag..." class="block w-full rounded-lg border border-slate-300 bg-white p-2 pl-9 pr-8 text-base md:text-sm text-slate-900 shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                  <button type="button" x-show="searchQuery" @click="searchQuery = ''; currentPage = 1; $nextTick(() => $refs.searchInput.focus())" x-cloak class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2">
                       <use href="icons-sprite.svg#outline-x-mark"></use>
                     </svg>
@@ -1410,7 +1449,7 @@
 
               <div class="hidden rounded-lg bg-slate-100 px-6 py-3 text-left text-sm font-semibold text-slate-600 md:grid md:grid-cols-12 md:gap-4">
                 <div class="col-span-4 flex items-center gap-3">
-                  <input type="checkbox" :checked="isAllSelected()" :indeterminate="selectedIds.length > 0 && !isAllSelected()" @change="toggleSelectAll()" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" title="Select all on this page" />
+                  <input type="checkbox" name="select-all" aria-label="Select all on this page" :checked="isAllSelected()" x-effect="$el.indeterminate = selectedIds.length > 0 && !isAllSelected()" @change="toggleSelectAll()" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" title="Select all on this page" />
                   <button @click="sortBy('name')" class="flex items-center gap-1">
                     <span>QR Code Name</span>
                     <svg x-show="sortKey === 'name'" :class="sortOrder === 'asc' ? 'rotate-180' : ''" class="h-4 w-4 transform transition-transform" fill="currentColor" viewBox="0 0 20 20">
@@ -1437,10 +1476,10 @@
                     <div class="grid items-center gap-y-4 p-4 md:grid-cols-12 md:gap-x-4 md:p-6">
                       <div class="col-span-12 flex items-center gap-4 md:col-span-4">
                         <label class="p-2 -ml-2 cursor-pointer flex items-center justify-center">
-                          <input type="checkbox" :value="qr.id" x-model="selectedIds" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
+                          <input type="checkbox" :name="'select-qr-' + qr.id" aria-label="Select QR code" :value="qr.id" x-model="selectedIds" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
                         </label>
                         <button @click="editQRCode(qr.id)" class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white p-1 shadow-sm transition-all hover:scale-105 hover:border-primary/50 hover:shadow-md" title="Edit">
-                          <img :src="qr.previewSvgUrl" class="h-full w-full object-contain" />
+                          <img :src="qr.previewSvgUrl" class="h-full w-full object-contain" alt="" />
                         </button>
                         <div class="min-w-0 flex-1">
                           <p class="font-semibold text-slate-800 truncate max-w-full" x-text="qr.name" :title="qr.name"></p>
@@ -1496,7 +1535,7 @@
                               <use href="icons-sprite.svg#outline-share"></use>
                             </svg>
                           </button>
-                          <button @click="dropdownOpen = !dropdownOpen" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" title="More">
+                          <button @click.stop="dropdownOpen = !dropdownOpen" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" title="More">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                               <use href="icons-sprite.svg#outline-ellipsis-vertical"></use>
                             </svg>
@@ -1537,7 +1576,7 @@
                       <tr>
                         <th class="px-4 py-3 w-10">
                           <label class="p-2 -ml-2 cursor-pointer flex items-center justify-center">
-                            <input type="checkbox" :checked="isAllSelected()" :indeterminate="selectedIds.length > 0 && !isAllSelected()" @change="toggleSelectAll()" class="rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" title="Select all on this page" />
+                            <input type="checkbox" name="select-all-table" aria-label="Select all on this page" :checked="isAllSelected()" x-effect="$el.indeterminate = selectedIds.length > 0 && !isAllSelected()" @change="toggleSelectAll()" class="rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" title="Select all on this page" />
                           </label>
                         </th>
                         <th class="px-4 py-3">QR Code</th>
@@ -1552,12 +1591,12 @@
                         <tr class="hover:bg-slate-50/50 transition-colors">
                           <td class="px-4 py-3">
                             <label class="p-2 -ml-2 cursor-pointer flex items-center justify-center">
-                              <input type="checkbox" :value="qr.id" x-model="selectedIds" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
+                              <input type="checkbox" :name="'select-qr-table-' + qr.id" aria-label="Select QR code" :value="qr.id" x-model="selectedIds" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
                             </label>
                           </td>
                           <td class="px-4 py-3">
                             <button @click="editQRCode(qr.id)" class="w-12 h-12 border border-slate-200 rounded-lg p-1 bg-white hover:border-primary/50 shadow-sm transition-all hover:scale-105" title="Edit">
-                              <img :src="qr.previewSvgUrl" class="w-full h-full object-contain" />
+                              <img :src="qr.previewSvgUrl" class="w-full h-full object-contain" alt="" />
                             </button>
                           </td>
                           <td class="px-4 py-3 max-w-[200px]">
@@ -1724,16 +1763,24 @@
         <form @submit.prevent="saveToGrind(true)">
           <div class="space-y-4 mb-6">
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Project</label>
+              <div class="flex items-center justify-between mb-1">
+                <label class="block text-xs font-semibold text-slate-600">Project</label>
+                <button type="button" @click="createNewProject().then(id => { if(id) saveProjectId = id; $nextTick(() => $refs.saveNameInput.focus()); })" class="flex items-center gap-1 text-[11px] font-bold text-primary transition-colors hover:text-primary-hover">
+                  <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-plus"></use></svg>New Project
+                </button>
+              </div>
               <select x-model="saveProjectId" class="block w-full rounded-lg border border-slate-300 bg-slate-50 p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
                 <template x-for="p in projects" :key="p.id">
                   <option :value="p.id" x-text="p.name"></option>
                 </template>
               </select>
             </div>
-            <input type="text" x-model="saveName" x-ref="saveNameInput" placeholder="QR Code Name" required class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
-            <textarea x-model="saveMemo" placeholder="Memo (Optional)" rows="2" class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
-            <input type="text" x-model="saveTags" placeholder="Tags (Comma separated, Optional)" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+            <label for="save-name" class="sr-only">QR Code Name</label>
+            <input type="text" id="save-name" name="save-name" x-model="saveName" x-ref="saveNameInput" placeholder="QR Code Name" required class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+            <label for="save-memo" class="sr-only">Memo</label>
+            <textarea id="save-memo" name="save-memo" x-model="saveMemo" placeholder="Memo (Optional)" rows="2" class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+            <label for="save-tags" class="sr-only">Tags</label>
+            <input type="text" id="save-tags" name="save-tags" x-model="saveTags" placeholder="Tags (Comma separated, Optional)" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
           </div>
           <div class="flex gap-3">
             <button type="button" @click="showSaveModal = false" class="flex-1 py-3.5 rounded-2xl bg-slate-100 font-bold text-slate-700 active:scale-95 transition-transform">Cancel</button>
@@ -1762,7 +1809,7 @@
                 <div class="mt-4">
                   <p class="mb-4 text-sm text-slate-500" x-text="`Data content of \x22${qrToShare.name}\x22`"></p>
                   <div class="flex rounded-lg shadow-sm">
-                    <textarea readonly :value="getShareDataText(qrToShare)" rows="2" class="resize-none block w-full min-w-0 flex-1 rounded-none rounded-l-lg border-slate-300 bg-slate-50 p-3 font-mono text-xs focus:border-primary focus:ring-primary"></textarea>
+                    <textarea readonly :value="getShareDataText(qrToShare)" rows="4" class="resize-none overflow-y-auto block w-full min-w-0 flex-1 rounded-none rounded-l-lg border-slate-300 bg-slate-50 p-3 font-mono text-xs focus:border-primary focus:ring-primary"></textarea>
                     <button @click="navigator.clipboard.writeText(getShareDataText(qrToShare)); copied = true; hapticFeedback('light'); setTimeout(() => copied = false, 2000)" type="button" class="relative -ml-px inline-flex w-24 items-center justify-center gap-x-1.5 rounded-r-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 ring-1 ring-inset ring-slate-300 transition-all hover:bg-slate-200">
                       <template x-if="!copied">
                         <span class="flex items-center gap-1.5">
@@ -1857,6 +1904,10 @@
                         <input type="checkbox" x-model="download.transparentBg" class="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
                         <span class="ml-2 text-sm font-medium text-slate-700">Transparent Background</span>
                       </label>
+                      <div x-show="download.transparentBg && isDotColorBright()" class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800" x-cloak>
+                        <strong class="flex items-center gap-1 mb-1"><svg class="w-4 h-4"><use href="icons-sprite.svg#solid-exclamation-triangle"></use></svg>Warning</strong>
+                        You have selected a bright dot color with a transparent background. If placed on a dark surface, this creates an inverted (negative) QR code, which many scanners cannot read.
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1879,7 +1930,7 @@
         <div x-show="showSceneModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block w-full transform-gpu overflow-hidden rounded-xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-4xl sm:align-middle">
           <div class="bg-white px-4 pb-4 pt-5 sm:p-6">
             <h3 class="text-lg font-medium leading-6 text-slate-900" id="scene-modal-title">Preview Use Case</h3>
-            <div class="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+            <div class="mt-6 flex flex-col md:grid md:grid-cols-3 gap-6 relative">
               <div class="space-y-6 md:col-span-1 order-last md:order-first">
                 <div>
                   <label for="scene-upload" class="block text-sm font-medium text-slate-700">Upload Background</label>
@@ -1923,14 +1974,16 @@
                 </div>
                 <button @click="resetSceneOptions()" type="button" class="w-full rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-200">Reset Settings</button>
               </div>
-              <div class="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border border-slate-200/60 preview-checker-bg md:col-span-2 order-first md:order-last">
-                <!-- Background Image Layer -->
-                <div class="absolute inset-0 z-0" :style="mainSceneBackgroundUrl ? { backgroundImage: `url('${mainSceneBackgroundUrl}')`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}"></div>
+              <div class="sticky top-0 z-20 bg-white pb-2 md:pb-0 md:relative md:col-span-2 order-first md:order-last">
+                <div class="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border border-slate-200/60 preview-checker-bg">
+                  <!-- Background Image Layer -->
+                  <div class="absolute inset-0 z-0" :style="mainSceneBackgroundUrl ? { backgroundImage: `url('${mainSceneBackgroundUrl}')`, backgroundSize: 'contain', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}"></div>
 
-                <!-- QR Code Layer -->
-                <div class="relative z-10 h-full w-full pointer-events-none">
-                  <div class="absolute left-0 top-0 flex h-full w-full items-center justify-center transition-transform duration-100" :style="{ transform: `translateX(${mainSceneOptions.x}%) translateY(${mainSceneOptions.y}%)` }">
-                    <div x-ref="modalQrCanvas" class="flex items-center justify-center transition-transform duration-100" :style="{ transform: `scale(${mainSceneOptions.scale}) rotate(${mainSceneOptions.rotation}deg)`, width: '50%', height: '50%' }"></div>
+                  <!-- QR Code Layer -->
+                  <div class="relative z-10 h-full w-full pointer-events-none">
+                    <div class="absolute left-0 top-0 flex h-full w-full items-center justify-center transition-transform duration-100" :style="{ transform: `translateX(${mainSceneOptions.x}%) translateY(${mainSceneOptions.y}%)` }">
+                      <div x-ref="modalQrCanvas" class="flex items-center justify-center transition-transform duration-100" :style="{ transform: `scale(${mainSceneOptions.scale}) rotate(${mainSceneOptions.rotation}deg)`, width: '50%', height: '50%' }"></div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1963,7 +2016,17 @@
 
           <!-- Step 1: Upload -->
           <div x-show="csvHeaders.length === 0">
-            <label @dragover.prevent="$el.classList.add('border-primary', 'bg-primary-50')" @dragleave.prevent="$el.classList.remove('border-primary', 'bg-primary-50')" @drop.prevent="$el.classList.remove('border-primary', 'bg-primary-50'); handleCsvDrop($event)" class="group flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 py-16 transition-all hover:border-primary/50 hover:bg-primary-50/50">
+            <div class="mb-5 bg-slate-50 p-4 rounded-xl border border-slate-200">
+              <label class="block text-sm font-semibold text-slate-700 mb-2">QR Code Type</label>
+              <select x-model="selectedType" @change="reMapCsvHeaders()" class="w-full rounded-lg border-slate-300 bg-white p-2.5 text-base md:text-sm shadow-sm focus:border-primary focus:ring-primary">
+                <template x-for="type in qrTypes" :key="type.id">
+                  <option :value="type.id" x-text="type.title"></option>
+                </template>
+              </select>
+              <p class="text-[11px] text-slate-500 mt-2">The current design from the editor will be applied.</p>
+            </div>
+
+            <label @dragover.prevent.stop="$el.classList.add('border-primary', 'bg-primary-50')" @dragleave.prevent.stop="$el.classList.remove('border-primary', 'bg-primary-50')" @drop.prevent.stop="$el.classList.remove('border-primary', 'bg-primary-50'); handleCsvDrop($event)" class="group flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 py-16 transition-all hover:border-primary/50 hover:bg-primary-50/50">
               <div class="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary transition-transform group-hover:scale-110">
                 <svg class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-document-arrow-up"></use></svg>
               </div>
@@ -1971,9 +2034,31 @@
               <p class="mt-2 text-sm text-slate-500">or click to browse</p>
               <input id="csv-upload-input" type="file" @change="handleCsvDrop" accept=".csv" class="hidden" />
             </label>
-            <div class="mt-4 p-4 bg-slate-100 rounded-xl text-xs text-slate-600">
-              <p class="font-bold mb-1">💡 Expected CSV Format:</p>
-              <p>Your CSV should contain headers like <code class="bg-white px-1 rounded border">Name, URL, Memo, Tags</code>. Only URL is strictly required. The current QR design (logo, colors, frames) will be applied to all entries.</p>
+            <div class="mt-4 p-4 bg-slate-100 rounded-xl text-xs text-slate-600 relative border border-slate-200 shadow-inner-soft">
+              <p class="font-bold mb-1 flex items-center gap-1.5 text-slate-800">
+                <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a6 6 0 00-6 6c0 1.887.454 3.665 1.257 5.234a.75.75 0 01-.132.846l-1.9 1.9a.75.75 0 001.06 1.06l1.9-1.9a.75.75 0 01.846-.132A5.962 5.962 0 0010 16a6 6 0 100-14zM8 11V7a2 2 0 114 0v4a2 2 0 11-4 0z"></path></svg>
+                Expected CSV Format
+              </p>
+              <p class="mb-2">
+                Your CSV should contain the following headers for <strong class="text-primary" x-text="getActiveType().title"></strong>:
+              </p>
+
+              <!-- Visual representation of CSV columns -->
+              <div class="mb-4 flex flex-wrap gap-1.5 p-2.5 bg-white/60 rounded-lg border border-slate-200/80 shadow-inner-soft">
+                <span class="px-2 py-1 bg-white border border-slate-200 rounded text-[10px] font-mono text-slate-500 shadow-sm">Name</span>
+                <span class="px-2 py-1 bg-white border border-slate-200 rounded text-[10px] font-mono text-slate-500 shadow-sm">Memo</span>
+                <span class="px-2 py-1 bg-white border border-slate-200 rounded text-[10px] font-mono text-slate-500 shadow-sm">Tags</span>
+                <template x-for="field in activeTypeFields" :key="selectedType + '-' + field.key">
+                  <span class="px-2 py-1 bg-primary/10 border border-primary/20 rounded text-[10px] font-mono font-bold text-primary animate-fade-in shadow-sm" x-text="field.label"></span>
+                </template>
+              </div>
+
+              <div class="flex items-center gap-3">
+                <button :key="'btn-' + selectedType" @click="downloadSampleCSV()" class="animate-fade-in flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-300 transition-all hover:bg-slate-50 hover:text-primary active:scale-95">
+                  <svg class="h-4 w-4 text-primary" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>
+                  Download <span x-text="getActiveType().title"></span> Sample
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1993,13 +2078,20 @@
 
               <!-- Field Mapping -->
               <div>
-                <h4 class="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2">
-                  <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrows-right-left"></use></svg>
-                  Map CSV Columns
-                </h4>
-                <p class="text-[11px] text-slate-500 mb-4 font-medium bg-slate-100 px-2 py-1 rounded inline-block">
-                  Current Type: <span class="font-bold text-primary" x-text="getActiveType().title"></span>
-                </p>
+                <div class="flex items-center justify-between mb-4">
+                  <h4 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrows-right-left"></use></svg>
+                    Map CSV Columns
+                  </h4>
+                  <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+                    <span class="text-[11px] text-slate-500 font-semibold">Type:</span>
+                    <select x-model="selectedType" @change="reMapCsvHeaders()" :disabled="isImporting" class="text-xs font-bold text-primary bg-transparent border-none py-0 pl-1 pr-6 focus:ring-0 cursor-pointer w-auto min-w-[140px]">
+                      <template x-for="type in qrTypes" :key="type.id">
+                        <option :value="type.id" x-text="type.title"></option>
+                      </template>
+                    </select>
+                  </div>
+                </div>
 
                 <div class="grid grid-cols-2 gap-4 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                   <template x-for="field in activeTypeFields" :key="field.key">
@@ -2048,7 +2140,7 @@
               <!-- Data Preview -->
               <div>
                 <h4 class="text-sm font-bold text-slate-800 mb-2">Data Preview</h4>
-                <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-32">
+                <div class="overflow-x-auto border border-slate-200 rounded-lg max-h-48 scrollbar-hide">
                   <table class="w-full text-xs text-left">
                     <thead class="bg-slate-50 sticky top-0">
                       <tr>
@@ -2126,7 +2218,7 @@
           <span class="text-slate-500">
             <svg class="w-5 h-5"><use href="icons-sprite.svg#outline-magnifying-glass"></use></svg>
           </span>
-          <input type="text" id="cmd-input" placeholder="Execute command or search by name..." class="bg-transparent outline-none w-full font-sans font-medium text-slate-900 text-xl placeholder-slate-400">
+          <input type="text" id="cmd-input" oninput="handleCommandInput(event)" placeholder="Execute command or search by name, tag, memo..." class="bg-transparent outline-none w-full font-sans font-medium text-slate-900 text-xl placeholder-slate-400">
           <span class="right-4 absolute bg-slate-100 px-2 py-1 rounded font-mono text-[10px] text-slate-400">ESC</span>
         </div>
         <div id="cmd-list" class="p-2 max-h-[50vh] overflow-y-auto scrollbar-hide"></div>

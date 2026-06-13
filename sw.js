@@ -1,5 +1,5 @@
 // Update this version to trigger a cache update
-const CACHE_NAME = "grindqrcoder-v131";
+const CACHE_NAME = "grindqrcoder-v142";
 const urlsToCache = [
   "./",
   "./index.html",
@@ -8,7 +8,7 @@ const urlsToCache = [
   "./icon-192.png",
   "./icon-512.png",
   "./icons-sprite.svg",
-  "./ICON_EMAIL.png",
+  "./ICON_GOOGLE_MAPS.png",
   "./ICON_FACEBOOK.png",
   "./ICON_INSTAGRAM.png",
   "./ICON_TIKTOK.png",

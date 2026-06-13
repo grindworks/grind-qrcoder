@@ -36,4 +36,4 @@
 
 - **Deep Contextual Analysis:** Do not act like a naive static analysis tool. Analyze actual data flow in the browser memory (e.g., Alpine.js component scope vs. window scope) before suggesting "optimizations."
 - **Respect Design Philosophy:** Maintain the "Serverless & Subscription-free" nature of the tool. Do NOT suggest features that require external hosting for user media. Media features (like Video or Image Galleries) MUST strictly be URL-based (e.g., YouTube links, Google Photos links). Do not implement local file uploads that mislead users into thinking their files are hosted online.
-- **Language:** Output chat explanations in **Japanese**. Code & comments strictly in **English**.
+- **Language:** Output chat explanations in **Japanese**. The entire codebase (UI text, code, comments, regular expressions, console logs, etc.) MUST strictly be 100% in **English**. Do NOT use Japanese anywhere in the source code.

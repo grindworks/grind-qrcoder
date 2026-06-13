@@ -12,7 +12,10 @@ function appPrompt(message, inputType = "password") {
     app.promptMessage = message;
     app.promptInput = "";
     app.promptInputType = inputType;
-    app.resolvePrompt = resolve;
+    app.resolvePrompt = (value) => {
+      resolve(value);
+      app.resolvePrompt = null;
+    };
     app.showPromptModal = true;
     setTimeout(() => {
       if (app.$refs.promptInputField) app.$refs.promptInputField.focus();
@@ -135,7 +138,20 @@ async function processQRCoderFile(file) {
       text = new TextDecoder().decode(Uints);
     }
 
-    const data = JSON.parse(text);
+    const parsedData = JSON.parse(text);
+    let newQRCodes = [];
+    let importedProjects = [];
+    let importedBrands = [];
+    let importedTemplates = [];
+
+    if (Array.isArray(parsedData)) {
+      newQRCodes = parsedData;
+    } else if (parsedData.version >= 3) {
+      newQRCodes = parsedData.qrcodes || [];
+      importedProjects = parsedData.projects || [];
+      importedBrands = parsedData.brandKits || [];
+      importedTemplates = parsedData.templates || [];
+    }
 
     const component = window.$app;
 
@@ -156,29 +172,83 @@ async function processQRCoderFile(file) {
         );
 
         if (shouldOverwrite) {
-          component.savedQRCodes = data;
+          component.savedQRCodes = newQRCodes;
+          if (importedProjects.length > 0) component.projects = importedProjects;
+          if (importedBrands.length > 0) component.brandKits = importedBrands;
+          if (importedTemplates.length > 0) component.myTemplates = importedTemplates;
         } else {
           return; // Abort completely without doing anything.
         }
       } else {
-        const existingIds = new Set(component.savedQRCodes.map(qr => qr.id));
-        const mergedData = [...component.savedQRCodes];
+        const projectIdMap = {};
 
-        for (const newQr of data) {
-          if (!existingIds.has(newQr.id)) {
-            mergedData.push(newQr);
-          } else {
-            newQr.id = component.generateUniqueId();
-            mergedData.push(newQr);
+        const mergeProjects = (currentList, newItems) => {
+          const existingIds = new Set(currentList.map(item => item.id));
+          const result = [...currentList];
+          for (const item of newItems) {
+            if (!existingIds.has(item.id)) {
+              result.push(item);
+            } else {
+              const newId = component.generateUniqueId();
+              projectIdMap[item.id] = newId;
+              item.id = newId;
+              result.push(item);
+            }
           }
+          return result;
+        };
+
+        if (importedProjects.length > 0) {
+          component.projects = mergeProjects(component.projects, importedProjects);
         }
-        component.savedQRCodes = mergedData;
+
+        const mergeQRs = (currentList, newItems) => {
+          const existingIds = new Set(currentList.map(item => item.id));
+          const result = [...currentList];
+          for (const item of newItems) {
+            if (projectIdMap[item.projectId]) {
+              item.projectId = projectIdMap[item.projectId];
+            }
+            if (!existingIds.has(item.id)) {
+              result.push(item);
+            } else {
+              item.id = component.generateUniqueId();
+              result.push(item);
+            }
+          }
+          return result;
+        };
+
+        component.savedQRCodes = mergeQRs(component.savedQRCodes, newQRCodes);
+
+        const mergeItems = (currentList, newItems) => {
+          const existingIds = new Set(currentList.map(item => item.id));
+          const result = [...currentList];
+          for (const item of newItems) {
+            if (!existingIds.has(item.id)) {
+              result.push(item);
+            } else {
+              item.id = component.generateUniqueId();
+              result.push(item);
+            }
+          }
+          return result;
+        };
+
+        if (importedBrands.length > 0) component.brandKits = mergeItems(component.brandKits, importedBrands);
+        if (importedTemplates.length > 0) component.myTemplates = mergeItems(component.myTemplates, importedTemplates);
       }
     } else {
-      component.savedQRCodes = data;
+      component.savedQRCodes = newQRCodes;
+      if (importedProjects.length > 0) component.projects = importedProjects;
+      if (importedBrands.length > 0) component.brandKits = importedBrands;
+      if (importedTemplates.length > 0) component.myTemplates = importedTemplates;
     }
 
     await component.persistSavedQRCodes();
+    await component.persistProjects();
+    if (importedBrands.length > 0) component.saveBrandKits(false);
+    if (importedTemplates.length > 0) await component.persistMyTemplates();
 
     setDirty(false);
     component.showFlashNotification(`Loaded file "${file.name}"`);
@@ -243,9 +313,9 @@ async function saveQRCoderFile() {
     } else {
       // Open modal to prompt for a name on new creation, pausing file save.
       component.showSaveModal = true;
-      component.$nextTick(() => {
+      setTimeout(() => {
         if (component.$refs.saveNameInput) component.$refs.saveNameInput.focus();
-      });
+      }, 310);
       component.showFlashNotification("First, enter a name to save it to the dashboard.");
       return;
     }
@@ -261,7 +331,14 @@ async function saveQRCoderFile() {
 
   let success = false;
   try {
-    const dataString = JSON.stringify(window.Alpine.raw(component.savedQRCodes), null, 2);
+    const exportData = {
+      version: 3,
+      qrcodes: window.Alpine.raw(component.savedQRCodes),
+      projects: window.Alpine.raw(component.projects),
+      brandKits: window.Alpine.raw(component.brandKits),
+      templates: window.Alpine.raw(component.myTemplates)
+    };
+    const dataString = JSON.stringify(exportData, null, 2);
 
     const encoder = new TextEncoder();
     let fileData = encoder.encode(dataString);
@@ -351,7 +428,6 @@ const commandsList = [
   { id: "save", icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>', title: "Save Backup", action: () => saveQRCoderFile() },
   { id: "open", icon: '<svg class="w-5 h-5"><use href="icons-sprite.svg#outline-folder"></use></svg>', title: "Open Backup", action: () => loadQRCoderFile() }
 ];
-let currentCmdResults = [];
 
 function togglePasswordVisibility() {
   const pwInput = document.getElementById("file-password");
@@ -366,6 +442,55 @@ function togglePasswordVisibility() {
     iconOpen.classList.add("hidden");
     iconClosed.classList.remove("hidden");
   }
+}
+
+// --- Handle input events globally and reliably ---
+window.handleCommandInput = function(e) {
+  selectedCommandIndex = 0;
+  renderCommandList(e.target.value);
+};
+
+// --- Centralized search result processing ---
+function getCommandSearchResults(query) {
+  const terms = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
+
+  // 1. Search static commands
+  const filteredCmds = commandsList.filter(c => terms.every(term => c.title.toLowerCase().includes(term) || c.id.includes(term)));
+
+  // 2. Search saved QR codes
+  let filteredQRs = [];
+  if (window.$app && window.$app.savedQRCodes) {
+    // Bypass Alpine's Proxy and get data as a pure raw array
+    const rawQRs = window.Alpine ? window.Alpine.raw(window.$app.savedQRCodes) : window.$app.savedQRCodes;
+
+    if (Array.isArray(rawQRs)) {
+      filteredQRs = rawQRs
+        .filter(qr => {
+          // Safely combine and search including memo and tags, preventing undefined errors
+          const nameStr = (qr.name || "").toLowerCase();
+          const memoStr = (qr.memo || "").toLowerCase();
+          const tagsArray = Array.isArray(qr.tags) ? qr.tags : (typeof qr.tags === 'string' ? qr.tags.split(',') : []);
+          const tagsStr = tagsArray.join(" ").toLowerCase();
+          const combinedText = `${nameStr} ${memoStr} ${tagsStr}`;
+
+          return terms.every(term => combinedText.includes(term));
+        })
+        .map(qr => ({
+          id: `qr-${qr.id}`,
+          icon: '<svg class="w-5 h-5"><use href="icons-sprite.svg#outline-qr-code"></use></svg>',
+          title: qr.name || "Untitled",
+          action: () => {
+            // Show confirmation dialog if there are unsaved changes in the editor
+            if (window.$app.hasUnsavedEdit) {
+              if (!confirm('You have unsaved changes. Discard them to open this QR code?')) return;
+            }
+            window.$app.editQRCode(qr.id, true);
+          }
+        }));
+    }
+  }
+
+  return [...filteredCmds, ...filteredQRs];
 }
 
 function toggleCommandPalette() {
@@ -412,40 +537,36 @@ function toggleCommandPalette() {
   }
 }
 
+// --- List rendering processing ---
 function renderCommandList(query = "") {
   const list = document.getElementById("cmd-list");
   if(!list) return;
   list.innerHTML = "";
-  const terms = query.toLowerCase().split(/[\s　]+/).filter(Boolean);
 
-  const filteredCmds = commandsList.filter(c => terms.every(term => c.title.toLowerCase().includes(term) || c.id.includes(term)));
+  const combinedResults = getCommandSearchResults(query);
 
-  let filteredQRs = [];
-  if (window.$app && window.$app.savedQRCodes) {
-    filteredQRs = window.$app.savedQRCodes
-      .filter(qr => terms.every(term => (qr.name || "").toLowerCase().includes(term)))
-      .map(qr => ({
-        id: `qr-${qr.id}`,
-        icon: '<svg class="w-5 h-5"><use href="icons-sprite.svg#outline-qr-code"></use></svg>',
-        title: `Edit: ${qr.name}`,
-        action: () => window.$app.editQRCode(qr.id, true)
-      }));
-  }
-
-  currentCmdResults = [...filteredCmds, ...filteredQRs];
-
-  if (currentCmdResults.length === 0) {
+  if (combinedResults.length === 0) {
     list.innerHTML = `<div class="px-4 py-8 text-center text-slate-400 text-sm">No results found</div>`;
     return;
   }
 
-  if (selectedCommandIndex >= currentCmdResults.length) selectedCommandIndex = 0;
+  if (selectedCommandIndex >= combinedResults.length) selectedCommandIndex = 0;
 
-  currentCmdResults.forEach((item, i) => {
+  // Define helper function for HTML escaping
+  const escapeHtml = (str) => {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
+  combinedResults.forEach((item, i) => {
     const div = document.createElement("div");
     const isSelected = i === selectedCommandIndex;
     div.className = `px-4 py-3 my-1 flex justify-between items-center rounded-md cursor-pointer transition-colors ${isSelected ? "bg-primary-50 text-primary" : "text-slate-600 hover:bg-slate-100"}`;
-    div.innerHTML = `<div class="flex items-center gap-3"><span class="text-xl">${item.icon}</span><span class="font-medium tracking-wide truncate">${item.title}</span></div>`;
+    div.innerHTML = `<div class="flex items-center gap-3"><span class="text-xl">${item.icon}</span><span class="font-medium tracking-wide truncate">${escapeHtml(item.title)}</span></div>`;
     div.onclick = () => {
       toggleCommandPalette();
       item.action();
@@ -465,27 +586,27 @@ document.addEventListener("keydown", (e) => {
       return;
     }
     const input = document.getElementById("cmd-input");
+    const filtered = getCommandSearchResults(input.value);
 
-    if (currentCmdResults.length > 0) {
+    if (filtered.length > 0) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        selectedCommandIndex = (selectedCommandIndex + 1) % currentCmdResults.length;
+        selectedCommandIndex = (selectedCommandIndex + 1) % filtered.length;
         renderCommandList(input.value);
         document.querySelector('#cmd-list > div:nth-child(' + (selectedCommandIndex + 1) + ')')?.scrollIntoView({ block: 'nearest' });
         return;
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        selectedCommandIndex = (selectedCommandIndex - 1 + currentCmdResults.length) % currentCmdResults.length;
+        selectedCommandIndex = (selectedCommandIndex - 1 + filtered.length) % filtered.length;
         renderCommandList(input.value);
         document.querySelector('#cmd-list > div:nth-child(' + (selectedCommandIndex + 1) + ')')?.scrollIntoView({ block: 'nearest' });
         return;
+      } else if (e.key === "Enter" && filtered[selectedCommandIndex]) {
+        e.preventDefault();
+        toggleCommandPalette();
+        filtered[selectedCommandIndex].action();
+        return;
       }
-    }
-    if (e.key === "Enter" && currentCmdResults[selectedCommandIndex]) {
-      e.preventDefault();
-      toggleCommandPalette();
-      currentCmdResults[selectedCommandIndex].action();
-      return;
     }
     return; // Ignore other shortcuts while command palette is open.
   }
@@ -546,11 +667,6 @@ document.addEventListener("keydown", (e) => {
       return;
     }
   }
-});
-
-document.getElementById("cmd-input")?.addEventListener("input", (e) => {
-  selectedCommandIndex = 0;
-  renderCommandList(e.target.value);
 });
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -671,7 +787,7 @@ function qrCodeGenerator() {
     cornersDotStyle: "dot",
     errorCorrectionLevel: "H",
     logo: "",
-    margin: 4,
+    margin: 20,
     imageOptions: {
       hideBackgroundDots: true,
       imageSize: 0.3, // Set initial size slightly larger.
@@ -692,6 +808,7 @@ function qrCodeGenerator() {
       ssid: "",
       password: "",
       encryption: "WPA/WPA2",
+      hidden: false,
     },
     vcard: {
       firstName: "",
@@ -725,6 +842,11 @@ function qrCodeGenerator() {
     sms: {
       phone: "",
       message: "",
+    },
+    crypto: {
+      currency: "bitcoin",
+      address: "",
+      amount: "",
     },
     images: {
       url: "",
@@ -810,7 +932,7 @@ function qrCodeGenerator() {
     searchQuery: "", // Search query for dashboard filtering.
 
     // --- Static application data ---
-    presetLogos: ["ICON_EMAIL.png", "ICON_FACEBOOK.png", "ICON_INSTAGRAM.png", "ICON_TIKTOK.png", "ICON_X.png", "ICON_ZOOM.png"],
+    presetLogos: ["ICON_GOOGLE_MAPS.png", "ICON_FACEBOOK.png", "ICON_INSTAGRAM.png", "ICON_TIKTOK.png", "ICON_X.png", "ICON_ZOOM.png"],
     qrTypes: [
       {
         id: "url",
@@ -859,6 +981,12 @@ function qrCodeGenerator() {
         title: "Location",
         description: "Share a specific location.",
         icon: "map-pin",
+      },
+      {
+        id: "crypto",
+        title: "Crypto",
+        description: "Receive cryptocurrency.",
+        icon: "qr-code",
       },
       {
         id: "sns",
@@ -1049,7 +1177,8 @@ function qrCodeGenerator() {
         case 'wifi': return [
             { key: 'ssid', label: 'Network Name (SSID)', required: true },
             { key: 'password', label: 'Password', required: false },
-            { key: 'encryption', label: 'Encryption (WPA/WEP/None)', required: false }
+            { key: 'encryption', label: 'Encryption (WPA/WEP/None)', required: false },
+            { key: 'hidden', label: 'Hidden Network (true/false)', required: false }
           ];
         case 'vcard': return [
             { key: 'lastName', label: 'Last Name', required: true },
@@ -1074,6 +1203,11 @@ function qrCodeGenerator() {
         case 'sms': return [
             { key: 'phone', label: 'Phone Number', required: true },
             { key: 'message', label: 'Message', required: false }
+          ];
+        case 'crypto': return [
+            { key: 'currency', label: 'Currency (bitcoin/ethereum)', required: true },
+            { key: 'address', label: 'Wallet Address', required: true },
+            { key: 'amount', label: 'Amount', required: false }
           ];
         case 'geo': return [
             { key: 'latitude', label: 'Latitude', required: true },
@@ -1104,11 +1238,12 @@ function qrCodeGenerator() {
       }
 
       if (this.searchQuery.trim() !== "") {
-        const searchTerms = this.searchQuery.toLowerCase().trim().split(/[\s　]+/).filter(Boolean);
+        const searchTerms = this.searchQuery.toLowerCase().trim().split(/\s+/).filter(Boolean);
         filtered = filtered.filter(qr => {
           const nameStr = (qr.name || "").toLowerCase();
           const memoStr = (qr.memo || "").toLowerCase();
-          const tagsStr = (qr.tags || []).join(" ").toLowerCase();
+          const tagsArray = Array.isArray(qr.tags) ? qr.tags : (typeof qr.tags === 'string' ? qr.tags.split(',') : []);
+          const tagsStr = tagsArray.join(" ").toLowerCase();
           const combinedText = `${nameStr} ${memoStr} ${tagsStr}`;
 
           // Check if all input keywords (AND condition) are included in the text.
@@ -1265,7 +1400,12 @@ function qrCodeGenerator() {
           this.showShareModal = false;
           this.showDownloadModal = false;
           this.showSceneModal = false;
-          this.showPromptModal = false;
+          if (this.showPromptModal) {
+            this.showPromptModal = false;
+            if (this.resolvePrompt) {
+              this.resolvePrompt(null);
+            }
+          }
           history.pushState(null, '', location.href); // Push state again to prevent exit.
           return;
         }
@@ -1336,21 +1476,23 @@ function qrCodeGenerator() {
     },
 
     normalizeColors() {
-      const fixColor = (color) => {
-        if (!color) return "#000000";
-        let hex = /^[0-9A-F]{3,6}$/i.test(color) ? '#' + color : color;
+      const fixColor = (color, defaultColor) => {
+        if (!color) return defaultColor;
+        let hex = color.trim();
+        if (/^[0-9A-F]{3,6}$/i.test(hex)) hex = '#' + hex;
         if (/^#[0-9A-F]{3}$/i.test(hex)) {
           hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
         }
+        if (!/^#[0-9A-F]{6}$/i.test(hex)) return defaultColor;
         return hex;
       };
-      this.qrOptions.foregroundColor = fixColor(this.qrOptions.foregroundColor);
-      this.qrOptions.backgroundColor = fixColor(this.qrOptions.backgroundColor);
-      this.qrOptions.cornerColor = fixColor(this.qrOptions.cornerColor);
-      this.qrOptions.cornerDotColor = fixColor(this.qrOptions.cornerDotColor);
+      this.qrOptions.foregroundColor = fixColor(this.qrOptions.foregroundColor, "#000000");
+      this.qrOptions.backgroundColor = fixColor(this.qrOptions.backgroundColor, "#ffffff");
+      this.qrOptions.cornerColor = fixColor(this.qrOptions.cornerColor, "#000000");
+      this.qrOptions.cornerDotColor = fixColor(this.qrOptions.cornerDotColor, "#000000");
       if (this.qrOptions.gradient) {
-        this.qrOptions.gradient.color1 = fixColor(this.qrOptions.gradient.color1);
-        this.qrOptions.gradient.color2 = fixColor(this.qrOptions.gradient.color2);
+        this.qrOptions.gradient.color1 = fixColor(this.qrOptions.gradient.color1, "#6366f1");
+        this.qrOptions.gradient.color2 = fixColor(this.qrOptions.gradient.color2, "#a855f7");
       }
     },
 
@@ -1497,6 +1639,7 @@ function qrCodeGenerator() {
       }
       if (file.size > 2 * 1024 * 1024) {
         this.showFlashNotification("Please select a logo image smaller than 2MB.");
+        event.target.value = "";
         return;
       }
       this.logoFileName = file.name;
@@ -1568,11 +1711,8 @@ function qrCodeGenerator() {
               try {
                 let svgString = "";
                 if (href.includes("base64,")) {
-                  const binStr = atob(href.split("base64,")[1]);
-                  const bytes = new Uint8Array(binStr.length);
-                  for (let i = 0; i < binStr.length; i++) {
-                    bytes[i] = binStr.charCodeAt(i);
-                  }
+                  const binStr = atob(href.split("base64,")[1].replace(/\s/g, ''));
+                  const bytes = Uint8Array.from(binStr, c => c.charCodeAt(0));
                   svgString = new TextDecoder('utf-8').decode(bytes); // Prevent character corruption.
                 } else {
                   svgString = decodeURIComponent(href.split(",")[1]);
@@ -1644,12 +1784,12 @@ function qrCodeGenerator() {
             const image = new Image();
             image.onload = () => {
               setTimeout(() => {
-                const canvas = document.createElement("canvas");
-                canvas.width = canvasWidth;
-                canvas.height = canvasHeight;
-                const ctx = canvas.getContext("2d");
-                ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-                canvas.toBlob((pngBlob) => {
+                const renderCanvas = document.createElement("canvas");
+                renderCanvas.width = canvasWidth;
+                renderCanvas.height = canvasHeight;
+                const renderCtx = renderCanvas.getContext("2d");
+                renderCtx.drawImage(image, 0, 0, canvasWidth, canvasHeight);
+                renderCanvas.toBlob((pngBlob) => {
                   if (pngBlob) resolve(pngBlob);
                   else reject(new Error("Blob generation failed"));
                   URL.revokeObjectURL(safeSvgBlobUrl);
@@ -1737,11 +1877,8 @@ function qrCodeGenerator() {
               try {
                 let svgString = "";
                 if (href.includes("base64,")) {
-                  const binStr = atob(href.split("base64,")[1]);
-                  const bytes = new Uint8Array(binStr.length);
-                  for (let i = 0; i < binStr.length; i++) {
-                    bytes[i] = binStr.charCodeAt(i);
-                  }
+                  const binStr = atob(href.split("base64,")[1].replace(/\s/g, ''));
+                  const bytes = Uint8Array.from(binStr, c => c.charCodeAt(0));
                   svgString = new TextDecoder('utf-8').decode(bytes); // Prevent character corruption.
                 } else {
                   svgString = decodeURIComponent(href.split(",")[1]);
@@ -1818,12 +1955,15 @@ function qrCodeGenerator() {
             const image = new Image();
             image.onload = () => {
               setTimeout(() => {
-                const canvas = document.createElement("canvas");
-                canvas.width = canvasWidth;
-                canvas.height = canvasHeight;
-                const ctx = canvas.getContext("2d");
-                ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-                canvas.toBlob(resolve, "image/png");
+                const exportCanvas = document.createElement("canvas");
+                exportCanvas.width = canvasWidth;
+                exportCanvas.height = canvasHeight;
+                const context2d = exportCanvas.getContext("2d");
+                context2d.drawImage(image, 0, 0, canvasWidth, canvasHeight);
+                exportCanvas.toBlob((blobData) => {
+                  if (blobData) resolve(blobData);
+                  else reject(new Error("Failed to create PNG blob."));
+                }, "image/png");
               }, 50);
             };
             image.onerror = () => reject(new Error("SVG Rendering Error"));
@@ -1985,7 +2125,7 @@ function qrCodeGenerator() {
     getQrDataString() {
       let data = " ";
       switch (this.selectedType) {
-        case "url":
+        case "url": {
           let urlStr = this.formData.url.address.trim();
           if (urlStr && !/^[a-zA-Z][a-zA-Z0-9+.-]*:/i.test(urlStr)) {
             urlStr = "https://" + urlStr;
@@ -2010,21 +2150,25 @@ function qrCodeGenerator() {
             data = " ";
           }
           break;
-        case "text":
+        }
+        case "text": {
           data = this.formData.text.content.trim() || " ";
           break;
-        case "wifi":
-          const { ssid, password, encryption } = this.formData.wifi;
+        }
+        case "wifi": {
+          const { ssid, password, encryption, hidden } = this.formData.wifi;
           const escapeWifiStr = (str) => {
             if (!str) return "";
             return String(str).replace(/([\\;:,])/g, "\\$1");
           };
           if (ssid) {
             const encType = encryption === "WPA/WPA2" ? "WPA" : (encryption === "None" ? "nopass" : encryption);
-            data = `WIFI:T:${encType};S:${escapeWifiStr(ssid)};P:${escapeWifiStr(password)};;`;
+            const hiddenFlag = hidden ? "H:true;" : "";
+            data = `WIFI:T:${encType};S:${escapeWifiStr(ssid)};P:${escapeWifiStr(password)};${hiddenFlag};`;
           }
           break;
-        case "vcard":
+        }
+        case "vcard": {
           const { firstName, lastName, organization, phone, email, address } = this.formData.vcard;
           const escapeVCard = (str) => {
             if (!str) return "";
@@ -2049,7 +2193,8 @@ function qrCodeGenerator() {
             data = vcardLines.join("\r\n");
           }
           break;
-        case "event":
+        }
+        case "event": {
           const { summary, location, start, end, description } = this.formData.event;
           const formatDT = (dt) => {
             if (!dt) return "";
@@ -2067,10 +2212,11 @@ function qrCodeGenerator() {
           if (summary && start && end) {
             const dtstamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
             const uid = `${Date.now()}-${Math.random().toString(36).substring(2,10)}@grinds`;
-            data = `BEGIN:VEVENT\r\nVERSION:2.0\r\nPRODID:-//Grinds//QRCoder//EN\r\nUID:${uid}\r\nDTSTAMP:${dtstamp}\r\nSUMMARY:${escapeICal(summary)}\r\nLOCATION:${escapeICal(location)}\r\nDTSTART:${formatDT(start)}\r\nDTEND:${formatDT(end)}\r\nDESCRIPTION:${escapeICal(description)}\r\nEND:VEVENT`;
+            data = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Grinds//QRCoder//EN\r\nBEGIN:VEVENT\r\nUID:${uid}\r\nDTSTAMP:${dtstamp}\r\nSUMMARY:${escapeICal(summary)}\r\nLOCATION:${escapeICal(location)}\r\nDTSTART:${formatDT(start)}\r\nDTEND:${formatDT(end)}\r\nDESCRIPTION:${escapeICal(description)}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
           }
           break;
-        case "email":
+        }
+        case "email": {
           const { to, subject, body } = this.formData.email;
           if (to) {
             let query = [];
@@ -2079,7 +2225,8 @@ function qrCodeGenerator() {
             data = `mailto:${to}${query.length > 0 ? '?' + query.join('&') : ''}`;
           }
           break;
-        case "sms":
+        }
+        case "sms": {
           const smsPhone = this.formData.sms.phone;
           const smsMessage = this.formData.sms.message;
           if (smsPhone) {
@@ -2089,13 +2236,26 @@ function qrCodeGenerator() {
             data = smsData;
           }
           break;
-        case "geo":
+        }
+        case "crypto": {
+          const { currency, address, amount } = this.formData.crypto;
+          if (address) {
+            let uri = `${currency}:${address.trim()}`;
+            if (amount) {
+              uri += currency === 'ethereum' ? `?value=${amount.trim()}` : `?amount=${amount.trim()}`;
+            }
+            data = uri;
+          }
+          break;
+        }
+        case "geo": {
           const { latitude, longitude } = this.formData.geo;
           if (latitude && longitude) {
             data = `geo:${latitude},${longitude}?q=${latitude},${longitude}`;
           }
           break;
-        case "sns":
+        }
+        case "sns": {
           const { service, identifier } = this.formData.sns;
           if (identifier) {
             // Safely remove leading @ and trim if user accidentally typed it.
@@ -2158,6 +2318,9 @@ function qrCodeGenerator() {
               case "paypal":
                 data = `https://paypal.me/${encodeURIComponent(cleanId)}`;
                 break;
+              case "venmo":
+                data = `https://venmo.com/${encodeURIComponent(cleanId)}`;
+                break;
               case "paypay":
                 data = identifier.trim();
                 break;
@@ -2167,20 +2330,23 @@ function qrCodeGenerator() {
             }
           }
           break;
-        case "images":
+        }
+        case "images": {
           let imagesUrlStr = this.formData.images.url.trim();
           if (imagesUrlStr && !/^https?:\/\//i.test(imagesUrlStr)) {
             imagesUrlStr = "https://" + imagesUrlStr;
           }
           data = imagesUrlStr || " ";
           break;
-        case "video":
+        }
+        case "video": {
           let videoUrlStr = this.formData.video.url.trim();
           if (videoUrlStr && !/^https?:\/\//i.test(videoUrlStr)) {
             videoUrlStr = "https://" + videoUrlStr;
           }
           data = videoUrlStr || " ";
           break;
+        }
         default:
           data = " ";
       }
@@ -2274,10 +2440,11 @@ function qrCodeGenerator() {
       }
 
       const currentDataStr = this.getQrDataString();
-      if (currentDataStr.length > 100) {
+      const byteSize = new Blob([currentDataStr]).size;
+      if (byteSize > 100) {
         this.qrQuality.issues.push({
           status: "warning",
-          message: `Data size is large, making dots very fine. Ensure a good scanning environment.`,
+          message: `Large data size (${byteSize} Bytes) makes dots very fine. Ensure a good scanning environment.`,
           // Suggest auto-fix only if no logo is set and correction level is not L.
           action: (!this.qrOptions.logo && this.qrOptions.errorCorrectionLevel !== "L") ? () => {
             this.qrOptions.errorCorrectionLevel = "L";
@@ -2317,13 +2484,13 @@ function qrCodeGenerator() {
         // Double margin ratio because it applies to both sides.
         const marginRatio = (this.qrOptions.imageOptions.margin * 2) / baseQrSize;
         // Calculate effective loss ratio (logo size + margin).
-        const totalCoverageRatio = this.qrOptions.imageOptions.imageSize + marginRatio;
+        const lengthRatio = this.qrOptions.imageOptions.imageSize + marginRatio;
+        const areaCoverageRatio = lengthRatio * lengthRatio;
 
-        // Increase threshold to 0.45 to prevent immediate error at max UI size (0.4).
-        if (totalCoverageRatio > 0.45) {
+        if (areaCoverageRatio > 0.25) {
           this.qrQuality.issues.push({
             status: "warning",
-            message: "Logo and margin area is too large. May cause scanning errors.",
+            message: `Logo and margin cover approx ${Math.round(areaCoverageRatio * 100)}% of the area. Scanning errors may occur.`,
             action: () => {
               // Improvement action: Slightly reduce both size and margin.
               this.qrOptions.imageOptions.imageSize = Math.max(0.2, this.qrOptions.imageOptions.imageSize - 0.1);
@@ -2463,6 +2630,8 @@ function qrCodeGenerator() {
             backgroundColor: "#fff7ed",
             dotsStyle: "rounded",
             cornersStyle: "extra-rounded",
+            cornerColor: "#f43f5e",
+            cornerDotColor: "#f43f5e",
             cornersDotStyle: "extra-rounded",
           },
         },
@@ -2481,6 +2650,8 @@ function qrCodeGenerator() {
             backgroundColor: "#ecfeff",
             dotsStyle: "classy",
             cornersStyle: "extra-rounded",
+            cornerColor: "#0ea5e9",
+            cornerDotColor: "#0ea5e9",
             cornersDotStyle: "dot",
           },
         },
@@ -2499,6 +2670,8 @@ function qrCodeGenerator() {
             backgroundColor: "#111827",
             dotsStyle: "square",
             cornersStyle: "square",
+            cornerColor: "#2563EB",
+            cornerDotColor: "#2563EB",
             cornersDotStyle: "square",
           },
         },
@@ -2517,6 +2690,8 @@ function qrCodeGenerator() {
             backgroundColor: "#0f172a",
             dotsStyle: "dots",
             cornersStyle: "dot",
+            cornerColor: "#06b6d4",
+            cornerDotColor: "#06b6d4",
             cornersDotStyle: "dot",
           },
         },
@@ -2540,6 +2715,8 @@ function qrCodeGenerator() {
             backgroundColor: "#FFFBEB",
             dotsStyle: "classy-rounded",
             cornersStyle: "extra-rounded",
+            cornerColor: "#FBBF24",
+            cornerDotColor: "#FBBF24",
             cornersDotStyle: "dot",
           },
         },
@@ -2580,6 +2757,29 @@ function qrCodeGenerator() {
         },
       };
 
+      // Define Facebook template.
+      const facebookSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
+      const facebookLogoUrl = `data:image/svg+xml;base64,${btoa(facebookSvg)}`;
+
+      const facebookTemplate = {
+        name: "Facebook",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#1877F2"/></g><image x="30" y="30" width="40" height="40" href="${facebookLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: facebookLogoUrl,
+          colorType: "single",
+          foregroundColor: "#1877F2",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#1877F2",
+          cornerDotColor: "#1877F2",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8 },
+        },
+      };
+
       // Define Instagram template.
       const instagramSvg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="264.583" height="264.583" viewBox="0 0 264.583 264.583"><defs><radialGradient xlink:href="#a" id="f" cx="158.429" cy="578.088" r="52.352" fx="158.429" fy="578.088" gradientTransform="matrix(0 -4.03418 4.28018 0 -2332.227 942.236)" gradientUnits="userSpaceOnUse"/><radialGradient xlink:href="#b" id="g" cx="172.615" cy="600.692" r="65" fx="172.615" fy="600.692" gradientTransform="matrix(.67441 -1.16203 1.51283 .87801 -814.366 -47.835)" gradientUnits="userSpaceOnUse"/><radialGradient xlink:href="#c" id="h" cx="144.012" cy="51.337" r="67.081" fx="144.012" fy="51.337" gradientTransform="matrix(-2.3989 .67549 -.23008 -.81732 464.996 -26.404)" gradientUnits="userSpaceOnUse"/><radialGradient xlink:href="#d" id="e" cx="199.788" cy="628.438" r="52.352" fx="199.788" fy="628.438" gradientTransform="matrix(-3.10797 .87652 -.6315 -2.23914 1345.65 1374.198)" gradientUnits="userSpaceOnUse"/><linearGradient id="d"><stop offset="0" stop-color="#ff005f"/><stop offset="1" stop-color="#fc01d8"/></linearGradient><linearGradient id="c"><stop offset="0" stop-color="#780cff"/><stop offset="1" stop-color="#820bff" stop-opacity="0"/></linearGradient><linearGradient id="b"><stop offset="0" stop-color="#fc0"/><stop offset="1" stop-color="#fc0" stop-opacity="0"/></linearGradient><linearGradient id="a"><stop offset="0" stop-color="#fc0"/><stop offset=".124" stop-color="#fc0"/><stop offset=".567" stop-color="#fe4a05"/><stop offset=".694" stop-color="#ff0f3f"/><stop offset="1" stop-color="#fe0657" stop-opacity="0"/></linearGradient></defs><path fill="url(#e)" d="M204.15 18.143c-55.23 0-71.383.057-74.523.317-11.334.943-18.387 2.728-26.07 6.554-5.922 2.942-10.592 6.351-15.201 11.13-8.394 8.716-13.481 19.439-15.323 32.184-.895 6.188-1.156 7.45-1.209 39.056-.02 10.536 0 24.4 0 42.999 0 55.2.062 71.341.326 74.476.916 11.032 2.645 17.973 6.308 25.565 7 14.533 20.37 25.443 36.12 29.514 5.453 1.404 11.476 2.178 19.208 2.544 3.277.142 36.669.244 70.081.244 33.413 0 66.826-.04 70.02-.203 8.954-.422 14.153-1.12 19.901-2.606 15.852-4.09 28.977-14.838 36.12-29.575 3.591-7.409 5.412-14.614 6.236-25.07.18-2.28.255-38.626.255-74.924 0-36.304-.082-72.583-.26-74.863-.835-10.625-2.656-17.77-6.364-25.32-3.042-6.182-6.42-10.799-11.324-15.519-8.752-8.361-19.455-13.45-32.21-15.29-6.18-.894-7.41-1.158-39.033-1.213z" transform="translate(-71.816 -18.143)"/><path fill="url(#f)" d="M204.15 18.143c-55.23 0-71.383.057-74.523.317-11.334.943-18.387 2.728-26.07 6.554-5.922 2.942-10.592 6.351-15.201 11.13-8.394 8.716-13.481 19.439-15.323 32.184-.895 6.188-1.156 7.45-1.209 39.056-.02 10.536 0 24.4 0 42.999 0 55.2.062 71.341.326 74.476.916 11.032 2.645 17.973 6.308 25.565 7 14.533 20.37 25.443 36.12 29.514 5.453 1.404 11.476 2.178 19.208 2.544 3.277.142 36.669.244 70.081.244 33.413 0 66.826-.04 70.02-.203 8.954-.422 14.153-1.12 19.901-2.606 15.852-4.09 28.977-14.838 36.12-29.575 3.591-7.409 5.412-14.614 6.236-25.07.18-2.28.255-38.626.255-74.924 0-36.304-.082-72.583-.26-74.863-.835-10.625-2.656-17.77-6.364-25.32-3.042-6.182-6.42-10.799-11.324-15.519-8.752-8.361-19.455-13.45-32.21-15.29-6.18-.894-7.41-1.158-39.033-1.213z" transform="translate(-71.816 -18.143)"/><path fill="url(#g)" d="M204.15 18.143c-55.23 0-71.383.057-74.523.317-11.334.943-18.387 2.728-26.07 6.554-5.922 2.942-10.592 6.351-15.201 11.13-8.394 8.716-13.481 19.439-15.323 32.184-.895 6.188-1.156 7.45-1.209 39.056-.02 10.536 0 24.4 0 42.999 0 55.2.062 71.341.326 74.476.916 11.032 2.645 17.973 6.308 25.565 7 14.533 20.37 25.443 36.12 29.514 5.453 1.404 11.476 2.178 19.208 2.544 3.277.142 36.669.244 70.081.244 33.413 0 66.826-.04 70.02-.203 8.954-.422 14.153-1.12 19.901-2.606 15.852-4.09 28.977-14.838 36.12-29.575 3.591-7.409 5.412-14.614 6.236-25.07.18-2.28.255-38.626.255-74.924 0-36.304-.082-72.583-.26-74.863-.835-10.625-2.656-17.77-6.364-25.32-3.042-6.182-6.42-10.799-11.324-15.519-8.752-8.361-19.455-13.45-32.21-15.29-6.18-.894-7.41-1.158-39.033-1.213z" transform="translate(-71.816 -18.143)"/><path fill="url(#h)" d="M204.15 18.143c-55.23 0-71.383.057-74.523.317-11.334.943-18.387 2.728-26.07 6.554-5.922 2.942-10.592 6.351-15.201 11.13-8.394 8.716-13.481 19.439-15.323 32.184-.895 6.188-1.156 7.45-1.209 39.056-.02 10.536 0 24.4 0 42.999 0 55.2.062 71.341.326 74.476.916 11.032 2.645 17.973 6.308 25.565 7 14.533 20.37 25.443 36.12 29.514 5.453 1.404 11.476 2.178 19.208 2.544 3.277.142 36.669.244 70.081.244 33.413 0 66.826-.04 70.02-.203 8.954-.422 14.153-1.12 19.901-2.606 15.852-4.09 28.977-14.838 36.12-29.575 3.591-7.409 5.412-14.614 6.236-25.07.18-2.28.255-38.626.255-74.924 0-36.304-.082-72.583-.26-74.863-.835-10.625-2.656-17.77-6.364-25.32-3.042-6.182-6.42-10.799-11.324-15.519-8.752-8.361-19.455-13.45-32.21-15.29-6.18-.894-7.41-1.158-39.033-1.213z" transform="translate(-71.816 -18.143)"/><path fill="#fff" d="M132.345 33.973c-26.716 0-30.07.117-40.563.594-10.472.48-17.62 2.136-23.876 4.567-6.47 2.51-11.958 5.87-17.426 11.335-5.472 5.464-8.834 10.948-11.354 17.412-2.44 6.252-4.1 13.397-4.57 23.858-.47 10.486-.593 13.838-.593 40.535 0 26.697.119 30.037.594 40.522.482 10.465 2.14 17.609 4.57 23.859 2.515 6.465 5.876 11.95 11.346 17.414 5.466 5.468 10.955 8.834 17.42 11.345 6.26 2.431 13.41 4.088 23.881 4.567 10.493.477 13.844.594 40.559.594 26.719 0 30.061-.117 40.555-.594 10.472-.48 17.63-2.136 23.888-4.567 6.468-2.51 11.948-5.877 17.414-11.345 5.472-5.464 8.834-10.949 11.354-17.412 2.419-6.252 4.079-13.398 4.57-23.858.472-10.486.595-13.828.595-40.525s-.123-30.047-.594-40.533c-.492-10.465-2.152-17.608-4.57-23.858-2.521-6.466-5.883-11.95-11.355-17.414-5.472-5.468-10.944-8.827-17.42-11.335-6.271-2.431-13.424-4.088-23.897-4.567-10.493-.477-13.834-.594-40.558-.594zm-8.825 17.715c2.62-.004 5.542 0 8.825 0 26.266 0 29.38.094 39.752.565 9.591.438 14.797 2.04 18.264 3.385 4.591 1.782 7.864 3.912 11.305 7.352 3.443 3.44 5.575 6.717 7.362 11.305 1.346 3.46 2.951 8.663 3.388 18.247.47 10.363.573 13.475.573 39.71 0 26.233-.102 29.346-.573 39.709-.44 9.584-2.042 14.786-3.388 18.247-1.783 4.587-3.919 7.854-7.362 11.292-3.443 3.441-6.712 5.57-11.305 7.352-3.463 1.352-8.673 2.95-18.264 3.388-10.37.47-13.486.573-39.752.573-26.268 0-29.38-.102-39.751-.573-9.592-.443-14.797-2.044-18.267-3.39-4.59-1.781-7.87-3.911-11.313-7.352-3.443-3.44-5.574-6.709-7.362-11.298-1.346-3.461-2.95-8.663-3.387-18.247-.472-10.363-.566-13.476-.566-39.726s.094-29.347.566-39.71c.438-9.584 2.04-14.786 3.387-18.25 1.783-4.588 3.919-7.865 7.362-11.305 3.443-3.441 6.722-5.57 11.313-7.357 3.468-1.351 8.675-2.949 18.267-3.389 9.075-.41 12.592-.532 30.926-.553zm61.337 16.322c-6.518 0-11.805 5.277-11.805 11.792 0 6.512 5.287 11.796 11.805 11.796 6.517 0 11.804-5.284 11.804-11.796 0-6.513-5.287-11.796-11.805-11.796zm-52.512 13.782c-27.9 0-50.519 22.603-50.519 50.482 0 27.879 22.62 50.471 50.52 50.471s50.51-22.592 50.51-50.471c0-27.879-22.613-50.482-50.513-50.482zm0 17.715c18.11 0 32.792 14.67 32.792 32.767 0 18.096-14.683 32.767-32.792 32.767-18.11 0-32.791-14.671-32.791-32.767 0-18.098 14.68-32.767 32.791-32.767z"/></svg>`;
       const instagramLogoUrl = `data:image/svg+xml;base64,${btoa(instagramSvg)}`;
@@ -2605,29 +2805,6 @@ function qrCodeGenerator() {
           cornerDotColor: "#d6249f",
           cornersDotStyle: "dot",
           imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8 },
-        },
-      };
-
-      // Define Facebook template.
-      const facebookSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="666.667" height="666.667" viewBox="0 0 666.667 666.667"><defs><clipPath id="a" clipPathUnits="userSpaceOnUse"><path d="M0 700h700V0H0Z"/></clipPath></defs><g clip-path="url(#a)" transform="matrix(1.33333 0 0 -1.33333 -133.333 800)"><path d="M0 0c0 138.071-111.929 250-250 250S-500 138.071-500 0c0-117.245 80.715-215.622 189.606-242.638v166.242h-51.552V0h51.552v32.919c0 85.092 38.508 124.532 122.048 124.532 15.838 0 43.167-3.105 54.347-6.211V81.986c-5.901.621-16.149.932-28.882.932-40.993 0-56.832-15.528-56.832-55.9V0h81.659l-14.028-76.396h-67.631v-171.773C-95.927-233.218 0-127.818 0 0" style="fill:#0866ff;fill-opacity:1;fill-rule:nonzero;stroke:none" transform="translate(600 350)"/><path d="m0 0 14.029 76.396H-67.63v27.019c0 40.372 15.838 55.899 56.831 55.899 12.733 0 22.981-.31 28.882-.931v69.253c-11.18 3.106-38.509 6.212-54.347 6.212-83.539 0-122.048-39.441-122.048-124.533V76.396h-51.552V0h51.552v-166.242a250.559 250.559 0 0 1 60.394-7.362c10.254 0 20.358.632 30.288 1.831V0Z" style="fill:#fff;fill-opacity:1;fill-rule:nonzero;stroke:none" transform="translate(447.918 273.604)"/></g></svg>`;
-      const facebookLogoUrl = `data:image/svg+xml;base64,${btoa(facebookSvg)}`;
-
-      const facebookTemplate = {
-        name: "Facebook",
-        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#0866ff"/></g><image x="30" y="30" width="40" height="40" href="${facebookLogoUrl}" /></svg>`,
-        options: {
-          ...defaultQrOptions,
-          errorCorrectionLevel: "H",
-          logo: facebookLogoUrl,
-          colorType: "single",
-          foregroundColor: "#0866ff",
-          backgroundColor: "#ffffff",
-          dotsStyle: "rounded",
-          cornersStyle: "extra-rounded",
-          cornerColor: "#0866ff",
-          cornerDotColor: "#0866ff",
-          cornersDotStyle: "dot",
-          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 6 },
         },
       };
 
@@ -2678,12 +2855,12 @@ function qrCodeGenerator() {
       };
 
       // Define ZOOM template.
-      const zoomSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" preserveAspectRatio="xMidYMid" viewBox="0 0 256 256"><defs><linearGradient id="a" x1="23.666%" x2="76.334%" y1="95.6118%" y2="4.3882%"><stop offset=".00006%" stop-color="#0845BF"/><stop offset="19.11%" stop-color="#0950DE"/><stop offset="38.23%" stop-color="#0B59F6"/><stop offset="50%" stop-color="#0B5CFF"/><stop offset="67.32%" stop-color="#0E5EFE"/><stop offset="77.74%" stop-color="#1665FC"/><stop offset="86.33%" stop-color="#246FF9"/><stop offset="93.88%" stop-color="#387FF4"/><stop offset="100%" stop-color="#4F90EE"/></linearGradient></defs><path fill="url(#a)" d="M256 128c0 13.568-1.024 27.136-3.328 40.192-6.912 43.264-41.216 77.568-84.48 84.48C155.136 254.976 141.568 256 128 256c-13.568 0-27.136-1.024-40.192-3.328-43.264-6.912-77.568-41.216-84.48-84.48C1.024 155.136 0 141.568 0 128c0-13.568 1.024-27.136 3.328-40.192 6.912-43.264 41.216-77.568 84.48-84.48C100.864 1.024 114.432 0 128 0c13.568 0 27.136 1.024 40.192 3.328 43.264 6.912 77.568 41.216 84.48 84.48C254.976 100.864 256 114.432 256 128Z"/><path fill="#FFF" d="M204.032 207.872H75.008c-8.448 0-16.64-4.608-20.48-12.032-4.608-8.704-2.816-19.2 4.096-26.112l89.856-89.856H83.968c-17.664 0-32-14.336-32-32h118.784c8.448 0 16.64 4.608 20.48 12.032 4.608 8.704 2.816 19.2-4.096 26.112l-89.6 90.112h74.496c17.664 0 32 14.08 32 31.744Z"/></svg>`;
+      const zoomSvg = `<svg enable-background="new 0 0 351.8447266 80" viewBox="0 0 351.8447266 80" width="351.8447266" height="80" xmlns="http://www.w3.org/2000/svg"><path d="m73.7864151 78.8349609h-62.90728c-4.4136801 0-8.3570995-2.6350098-10.0460796-6.712677s-.76362-8.7295189 2.3573999-11.849968l43.5734711-43.573288h-31.2299404c-8.5792007 0-15.5339804-6.9547901-15.5339804-15.5339794h58.0143013c4.4132996 0 8.3565331 2.6342499 10.0456963 6.7119198 1.6893616 4.0776696.7645569 8.7287598-2.3560791 11.850729l-43.5736485 43.5732709h36.1221657c8.5792007 0 15.5339813 6.9547768 15.5339813 15.5339775zm278.0582809-48.5437011c0-16.7028199-13.588623-30.2912598-30.2912597-30.2912598-8.9343262 0-16.9751282 3.8903201-22.5242615 10.0633297-5.5491638-6.1730096-13.5899658-10.0633297-22.524292-10.0633297-16.7026367 0-30.2912598 13.5884399-30.2912598 30.2912598v48.5436859c8.5791626 0 15.5339661-6.9547882 15.5339661-15.5339699v-33.009716c0-8.1371403 6.6201477-14.7572803 14.7572937-14.7572803s14.7572937 6.6201496 14.7572937 14.7572803v33.0097313c0 8.5791664 6.9548035 15.5339699 15.5339661 15.5339699v-48.5437012c0-8.1371403 6.6201477-14.7572803 14.7572937-14.7572803s14.7572937 6.6201495 14.7572937 14.7572803v33.0097313c0 8.5791664 6.9548035 15.5339699 15.5339661 15.5339699l.0000305-48.5436897zm-113.3980712 9.7087402c0 22.0914078-17.9085846 40-40 40s-40-17.9085922-40-40 17.9086456-40 40-40 40 17.9085903 40 40zm-15.5339814 0c0-13.5122108-10.9538116-24.4660206-24.4660187-24.4660206s-24.4660186 10.9538098-24.4660186 24.4660206 10.9538116 24.4660187 24.4660187 24.4660187 24.4660186-10.9538117 24.4660186-24.4660187zm-70.6796112 0c0 22.0914078-17.9085846 40-39.9999924 40s-40-17.9085922-40-40 17.9086304-40 40-40 39.9999924 17.9085903 39.9999924 40zm-15.5339813 0c0-13.5122108-10.953804-24.4660206-24.466011-24.4660206s-24.4660187 10.9538098-24.4660187 24.4660206 10.9538116 24.4660187 24.4660187 24.4660187 24.466011-10.9538117 24.466011-24.4660187z" fill="#0b5cff"/></svg>`;
       const zoomLogoUrl = `data:image/svg+xml;base64,${btoa(zoomSvg)}`;
 
       const zoomTemplate = {
         name: "Zoom",
-        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#0b5cff"/></g><image x="30" y="30" width="40" height="40" href="${zoomLogoUrl}" /></svg>`,
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#0b5cff"/></g><image x="15" y="42" width="70" height="16" href="${zoomLogoUrl}" /></svg>`,
         options: {
           ...defaultQrOptions,
           errorCorrectionLevel: "H",
@@ -3045,6 +3222,103 @@ function qrCodeGenerator() {
         },
       };
 
+      // Define Bitcoin template.
+      const bitcoinSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><path d="M63.043 39.76C58.766 56.866 41.424 67.32 24.24 63.043 7.134 58.766-3.32 41.424.957 24.24 5.234 7.134 22.576-3.32 39.76.957 56.866 5.234 67.32 22.576 63.043 39.76z" fill="#f7931a"/><path d="M46.096 27.407c.634-4.276-2.613-6.573-7.048-8.077l1.425-5.78-3.484-.87-1.425 5.623c-.95-.238-1.9-.475-2.85-.634l1.425-5.623-3.484-.87-1.425 5.78c-.792-.158-1.505-.317-2.217-.554l-4.83-1.188-.95 3.722 2.534.634c1.425.317 1.663 1.267 1.663 2.06l-1.666 6.57c.08 0 .238.08.396.08-.08 0-.238-.08-.396-.08l-2.297 9.186c-.158.396-.634 1.1-1.584.87 0 .08-2.534-.634-2.534-.634l-1.742 4.04 4.593 1.1c.87.238 1.663.475 2.534.634l-1.425 5.86 3.484.87 1.425-5.78L29 45.07l-1.425 5.78 3.484.87 1.425-5.86c6.018 1.1 10.453.713 12.354-4.75 1.505-4.355-.08-6.9-3.247-8.553 2.376-.475 4.04-1.98 4.514-5.147zM38.098 38.73c-1.1 4.355-8.394 1.98-10.77 1.425l1.9-7.76c2.376.554 9.978 1.742 8.87 6.335zm1.1-11.324c-.95 3.96-7.127 1.98-9.107 1.425l1.742-7.048c1.98.554 8.394 1.425 7.365 5.623z" fill="#fff"/></svg>`;
+      const bitcoinLogoUrl = `data:image/svg+xml;base64,${btoa(bitcoinSvg)}`;
+
+      const bitcoinTemplate = {
+        name: "Bitcoin",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#F7931A"/></g><image x="30" y="30" width="40" height="40" href="${bitcoinLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: bitcoinLogoUrl,
+          colorType: "single",
+          foregroundColor: "#F7931A",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#F7931A",
+          cornerDotColor: "#F7931A",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10 },
+        },
+      };
+
+      // Define Ethereum template.
+      const ethereumSvg = `<svg enable-background="new 0 0 1920 1920" viewBox="0 0 1920 1920" width="1920" height="1920" xmlns="http://www.w3.org/2000/svg"><path d="m959.8 80.7-539.7 895.6 539.7-245.3z" fill="#8a92b2"/><path d="m959.8 731-539.7 245.3 539.7 319.1z" fill="#62688f"/><path d="m1499.6 976.3-539.8-895.6v650.3z" fill="#62688f"/><path d="m959.8 1295.4 539.8-319.1-539.8-245.3z" fill="#454a75"/><path d="m420.1 1078.7 539.7 760.6v-441.7z" fill="#8a92b2"/><path d="m959.8 1397.6v441.7l540.1-760.6z" fill="#62688f"/></svg>`;
+      const ethereumLogoUrl = `data:image/svg+xml;base64,${btoa(ethereumSvg)}`;
+
+      const ethereumTemplate = {
+        name: "Ethereum",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#627EEA"/></g><image x="30" y="30" width="40" height="40" href="${ethereumLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: ethereumLogoUrl,
+          colorType: "single",
+          foregroundColor: "#627EEA",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#627EEA",
+          cornerDotColor: "#627EEA",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10 },
+        },
+      };
+
+      // Define Solana template.
+      const solanaSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 100 100" fill="none"><path fill="url(#solana-gradient)" d="M86.619 69.036 74.403 82.101a2.837 2.837 0 0 1-2.075.899h-57.91a1.421 1.421 0 0 1-1.3-.85 1.411 1.411 0 0 1 .263-1.53l12.225-13.064a2.837 2.837 0 0 1 2.07-.899h57.906a1.423 1.423 0 0 1 1.3.85 1.412 1.412 0 0 1-.263 1.53ZM74.403 42.727a2.837 2.837 0 0 0-2.075-.898h-57.91a1.421 1.421 0 0 0-1.3.85 1.412 1.412 0 0 0 .263 1.529l12.225 13.065a2.84 2.84 0 0 0 2.07.898h57.906a1.422 1.422 0 0 0 1.3-.85 1.412 1.412 0 0 0-.263-1.529L74.403 42.727Zm-59.985-9.384h57.91a2.844 2.844 0 0 0 2.075-.899l12.216-13.065A1.414 1.414 0 0 0 85.582 17H27.676a2.845 2.845 0 0 0-2.07.899L13.384 30.964a1.412 1.412 0 0 0 1.034 2.379Z"/><defs><linearGradient id="solana-gradient" x1="19.247" x2="79.786" y1="84.573" y2="16.138" gradientUnits="userSpaceOnUse"><stop offset=".08" stop-color="#9945FF"/><stop offset=".3" stop-color="#8752F3"/><stop offset=".5" stop-color="#5497D5"/><stop offset=".6" stop-color="#43B4CA"/><stop offset=".72" stop-color="#28E0B9"/><stop offset=".97" stop-color="#19FB9B"/></linearGradient></defs></svg>`;
+      const solanaLogoUrl = `data:image/svg+xml;base64,${btoa(solanaSvg)}`;
+
+      const solanaTemplate = {
+        name: "Solana",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#9945FF"/></g><image x="20" y="20" width="60" height="60" href="${solanaLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: solanaLogoUrl,
+          colorType: "gradient",
+          gradient: {
+            type: "linear",
+            rotation: "135",
+            color1: "#9945FF",
+            color2: "#19FB9B",
+          },
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#9945FF",
+          cornerDotColor: "#19FB9B",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.35, margin: 8 },
+        },
+      };
+
+      // Define Venmo template.
+      const venmoSvg = `<svg width="1400" height="265.26" viewBox="0 0 1400 265.26" xmlns="http://www.w3.org/2000/svg"><path d="m148.37 16.49c5.2 10.85 8.52 24.02 8.52 43.36 0 35.33-25.07 87.15-45.38 120.12l-21.74-174.33-89.77 8.49 41.12 244.99h102.52c44.89-58.89 100.19-142.75 100.19-207.31 0-20.24-4.26-36.26-13.71-51.82l-81.75 16.49zm247.23-15.56c-93.56 0-138.94 81.05-138.94 157.37 0 58.89 27.9 106 105.85 106 30.73 0 62.39-6.6 82.7-16.49l10.86-73.48c-28.83 14.6-51.02 20.24-74.18 20.24-21.28 0-37.32-11.28-37.32-40.04 48.21-.47 131.35-20.24 131.35-84.8 0-40.04-28.8-68.8-80.31-68.8zm-49.14 106.95c2.37-28.26 24.08-48.04 40.62-48.04 9.46 0 17.48 5.64 17.48 16.95 0 23.55-41.59 31.08-58.11 31.08zm328.48-106.94c-33.53 0-57.17 12.74-75.12 24.51l-.96-20.27h-76.08l-40.16 253.95h87.9l27.87-178.08c7.56-3.78 18.91-8.96 30.23-8.96 8.53 0 15.62 2.82 15.62 14.13 0 4.71-1.43 13.2-1.9 17.42l-24.57 155.49h87.41s26.94-169.62 26.94-169.62c1.43-8.93 2.86-22.6 2.86-32.02 0-33.94-15.62-56.56-60.04-56.55zm400.8-.01c-32.59 0-56.23 9.91-81.27 27.8-9-16.02-26.94-27.8-54.35-27.79-31.66 0-55.27 12.74-72.76 25.44l-2.36-21.2h-75.15l-40.16 253.95h87.87l27.89-178.08c7.56-3.78 18.89-8.96 30.23-8.96 8.49 0 15.59 2.82 15.59 15.56 0 3.28-.94 8.46-1.4 12.71l-25.04 158.77h87.41l27.87-178.08c8.06-4.25 18.91-8.96 29.77-8.96 8.52 0 15.62 2.82 15.62 15.56 0 3.28-.97 8.46-1.43 12.71l-25.04 158.77h87.43l26.91-169.62c1.43-8.93 2.86-22.6 2.86-32.02 0-33.94-15.61-56.56-60.49-56.56zm223.6 0c-97.82 0-140.34 74.94-140.34 155.02 0 60.77 24.57 109.31 98.75 109.31 100.18 0 142.24-81.97 142.24-161.13 0-59.84-26.94-103.2-100.66-103.2zm-29.31 196.95c-15.58 0-22.2-14.6-22.2-38.18 0-31.09 7.08-91.86 41.58-91.86 15.58 0 20.78 14.13 20.78 34.87 0 31.09-7.56 95.18-40.17 95.18z" fill="#008cff"/></svg>`;
+      const venmoLogoUrl = `data:image/svg+xml;base64,${btoa(venmoSvg)}`;
+
+      const venmoTemplate = {
+        name: "Venmo",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#008CFF"/></g><image x="15" y="43" width="70" height="14" href="${venmoLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: venmoLogoUrl,
+          colorType: "single",
+          foregroundColor: "#008CFF",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#008CFF",
+          cornerDotColor: "#008CFF",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8 },
+        },
+      };
+
       // Define Slack template.
       const slackSvg = `<svg width="2448" height="2453" enable-background="new 0 0 2447.6 2452.5" viewBox="0 0 2447.6 2452.5" xmlns="http://www.w3.org/2000/svg"><g clip-rule="evenodd" fill-rule="evenodd"><path d="m897.4 0c-135.3.1-244.8 109.9-244.7 245.2-.1 135.3 109.5 245.1 244.8 245.2h244.8v-245.1c.1-135.3-109.5-245.1-244.9-245.3.1 0 .1 0 0 0m0 654h-652.6c-135.3.1-244.9 109.9-244.8 245.2-.2 135.3 109.4 245.1 244.7 245.3h652.7c135.3-.1 244.9-109.9 244.8-245.2.1-135.4-109.5-245.2-244.8-245.3z" fill="#36c5f0"/><path d="m2447.6 899.2c.1-135.3-109.5-245.1-244.8-245.2-135.3.1-244.9 109.9-244.8 245.2v245.3h244.8c135.3-.1 244.9-109.9 244.8-245.3zm-652.7 0v-654c.1-135.2-109.4-245-244.7-245.2-135.3.1-244.9 109.9-244.8 245.2v654c-.2 135.3 109.4 245.1 244.7 245.3 135.3-.1 244.9-109.9 244.8-245.3z" fill="#2eb67d"/><path d="m1550.1 2452.5c135.3-.1 244.9-109.9 244.8-245.2.1-135.3-109.5-245.1-244.8-245.2h-244.8v245.2c-.1 135.2 109.5 245 244.8 245.2zm0-654.1h652.7c135.3-.1 244.9-109.9 244.8-245.2.2-135.3-109.4-245.1-244.7-245.3h-652.7c-135.3.1-244.9 109.9-244.8 245.2-.1 135.4 109.4 245.2 244.7 245.3z" fill="#ecb22e"/><path d="m0 1553.2c-.1 135.3 109.5 245.1 244.8 245.2 135.3-.1 244.9-109.9 244.8-245.2v-245.2h-244.8c-135.3.1-244.9 109.9-244.8 245.2zm652.7 0v654c-.2 135.3 109.4 245.1 244.7 245.3 135.3-.1 244.9-109.9 244.8-245.2v-653.9c.2-135.3-109.4-245.1-244.7-245.3-135.4 0-244.9 109.8-244.8 245.1 0 0 0 .1 0 0" fill="#e01e5a"/></g></svg>`;
       const slackLogoUrl = `data:image/svg+xml;base64,${btoa(slackSvg)}`;
@@ -3206,6 +3480,121 @@ function qrCodeGenerator() {
         },
       };
 
+      // Define Wi-Fi template.
+      const wifiSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path fill-rule="evenodd" d="M1.371 8.143c5.858-5.857 15.356-5.857 21.213 0a.75.75 0 0 1 0 1.061l-.53.53a.75.75 0 0 1-1.06 0c-4.98-4.979-13.053-4.979-18.032 0a.75.75 0 0 1-1.06 0l-.53-.53a.75.75 0 0 1 0-1.06Zm3.182 3.182c4.1-4.1 10.749-4.1 14.85 0a.75.75 0 0 1 0 1.061l-.53.53a.75.75 0 0 1-1.062 0 8.25 8.25 0 0 0-11.667 0 .75.75 0 0 1-1.06 0l-.53-.53a.75.75 0 0 1 0-1.06Zm3.204 3.182a6 6 0 0 1 8.486 0 .75.75 0 0 1 0 1.061l-.53.53a.75.75 0 0 1-1.061 0 3.75 3.75 0 0 0-5.304 0 .75.75 0 0 1-1.06 0l-.53-.53a.75.75 0 0 1 0-1.06Zm3.182 3.182a1.5 1.5 0 0 1 2.122 0 .75.75 0 0 1 0 1.061l-.53.53a.75.75 0 0 1-1.061 0l-.53-.53a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" /></svg>`;
+      const wifiLogoUrl = `data:image/svg+xml;base64,${btoa(wifiSvg)}`;
+
+      const wifiTemplate = {
+        name: "Wi-Fi",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#0284c7"/></g><image x="30" y="30" width="40" height="40" href="${wifiLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: wifiLogoUrl,
+          colorType: "single",
+          foregroundColor: "#0284c7",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#0284c7",
+          cornerDotColor: "#0284c7",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 8 },
+        },
+      };
+
+      // Define Google Maps template.
+      const gmapsSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="92.3" height="132.3" viewBox="0 0 92.3 132.3"><path fill="#1a73e8" d="M60.2 2.2C55.8.8 51 0 46.1 0 32 0 19.3 6.4 10.8 16.5l21.8 18.3L60.2 2.2z"/><path fill="#ea4335" d="M10.8 16.5C4.1 24.5 0 34.9 0 46.1c0 8.7 1.7 15.7 4.6 22l28-33.3-21.8-18.3z"/><path fill="#4285f4" d="M46.2 28.5c9.8 0 17.7 7.9 17.7 17.7 0 4.3-1.6 8.3-4.2 11.4 0 0 13.9-16.6 27.5-32.7-5.6-10.8-15.3-19-27-22.7L32.6 34.8c3.3-3.8 8.1-6.3 13.6-6.3"/><path fill="#fbbc04" d="M46.2 63.8c-9.8 0-17.7-7.9-17.7-17.7 0-4.3 1.5-8.3 4.1-11.3l-28 33.3c4.8 10.6 12.8 19.2 21 29.9l34.1-40.5c-3.3 3.9-8.1 6.3-13.5 6.3"/><path fill="#34a853" d="M59.1 109.2c15.4-24.1 33.3-35 33.3-63 0-7.7-1.9-14.9-5.2-21.3L25.6 98c2.6 3.4 5.3 7.3 7.9 11.3 9.4 14.5 6.8 23.1 12.8 23.1s3.4-8.7 12.8-23.2"/></svg>`;
+      const gmapsLogoUrl = `data:image/svg+xml;base64,${btoa(gmapsSvg)}`;
+
+      const gmapsTemplate = {
+        name: "Google Maps",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#EA4335"/></g><image x="36" y="30" width="28" height="40" href="${gmapsLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: gmapsLogoUrl,
+          colorType: "single",
+          foregroundColor: "#EA4335",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#EA4335",
+          cornerDotColor: "#EA4335",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.25, margin: 8 },
+        },
+      };
+
+      // Define Microsoft Teams template.
+      const teamsSvg = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" width="36" height="38" viewBox="4 4 36 38"><path fill="url(#a)" d="M22 20h12a6 6 0 0 1 6 6v10a6 6 0 0 1-12 0V26a6 6 0 0 0-6-6Z"/><path fill="url(#b)" d="M8 24a6 6 0 0 1 6-6h8a6 6 0 0 1 6 6v12a6 6 0 0 0 6 6H18c-5.523 0-10-4.477-10-10v-8Z"/><path fill="url(#c)" fill-opacity=".7" d="M8 24a6 6 0 0 1 6-6h8a6 6 0 0 1 6 6v12a6 6 0 0 0 6 6H18c-5.523 0-10-4.477-10-10v-8Z"/><path fill="url(#d)" fill-opacity=".7" d="M8 24a6 6 0 0 1 6-6h8a6 6 0 0 1 6 6v12a6 6 0 0 0 6 6H18c-5.523 0-10-4.477-10-10v-8Z"/><path fill="url(#e)" d="M33 18a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"/><path fill="url(#f)" fill-opacity=".46" d="M33 18a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"/><path fill="url(#g)" fill-opacity=".4" d="M33 18a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"/><path fill="url(#h)" d="M18 16a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"/><path fill="url(#i)" fill-opacity=".6" d="M18 16a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"/><path fill="url(#j)" fill-opacity=".5" d="M18 16a6 6 0 1 0 0-12 6 6 0 0 0 0 12Z"/><rect width="16" height="16" x="4" y="23" fill="url(#k)" rx="3.25"/><rect width="16" height="16" x="4" y="23" fill="url(#l)" fill-opacity=".7" rx="3.25"/><path fill="#fff" d="M15.48 28.105h-2.448v7.466h-2.065v-7.466H8.52V26.43h6.96v1.676Z"/><defs><radialGradient id="a" cx="0" cy="0" r="1" gradientTransform="matrix(13.4784 0 0 33.2694 39.797 22.174)" gradientUnits="userSpaceOnUse"><stop stop-color="#A98AFF"/><stop offset=".14" stop-color="#8C75FF"/><stop offset=".565" stop-color="#5F50E2"/><stop offset=".9" stop-color="#3C2CB8"/></radialGradient><radialGradient id="b" cx="0" cy="0" r="1" gradientTransform="matrix(12.1875 30.39997 -30.74442 12.3256 8.812 16.4)" gradientUnits="userSpaceOnUse"><stop stop-color="#85C2FF"/><stop offset=".69" stop-color="#7588FF"/><stop offset="1" stop-color="#6459FE"/></radialGradient><radialGradient id="d" cx="0" cy="0" r="1" gradientTransform="rotate(113.326 8.093 17.645) scale(19.2186 15.4273)" gradientUnits="userSpaceOnUse"><stop stop-color="#BD96FF"/><stop offset=".687" stop-color="#BD96FF" stop-opacity="0"/></radialGradient><radialGradient id="e" cx="0" cy="0" r="1" gradientTransform="matrix(0 -10 12.6216 0 33 11.571)" gradientUnits="userSpaceOnUse"><stop offset=".268" stop-color="#6868F7"/><stop offset="1" stop-color="#3923B1"/></radialGradient><radialGradient id="f" cx="0" cy="0" r="1" gradientTransform="matrix(5.47024 4.59847 -6.65117 7.91208 28.867 10.544)" gradientUnits="userSpaceOnUse"><stop offset=".271" stop-color="#A1D3FF"/><stop offset=".813" stop-color="#A1D3FF" stop-opacity="0"/></radialGradient><radialGradient id="g" cx="0" cy="0" r="1" gradientTransform="rotate(-41.658 32.118 -43.42) scale(8.51275 20.8824)" gradientUnits="userSpaceOnUse"><stop stop-color="#E3ACFD"/><stop offset=".816" stop-color="#9FA2FF" stop-opacity="0"/></radialGradient><radialGradient id="h" cx="0" cy="0" r="1" gradientTransform="matrix(0 -12 15.146 0 18 8.286)" gradientUnits="userSpaceOnUse"><stop offset=".268" stop-color="#8282FF"/><stop offset="1" stop-color="#3923B1"/></radialGradient><radialGradient id="i" cx="0" cy="0" r="1" gradientTransform="rotate(40.052 -3.155 21.416) scale(8.57554 12.4035)" gradientUnits="userSpaceOnUse"><stop offset=".271" stop-color="#A1D3FF"/><stop offset=".813" stop-color="#A1D3FF" stop-opacity="0"/></radialGradient><radialGradient id="j" cx="0" cy="0" r="1" gradientTransform="rotate(-41.658 20.382 -26.516) scale(10.2153 25.0589)" gradientUnits="userSpaceOnUse"><stop stop-color="#E3ACFD"/><stop offset=".816" stop-color="#9FA2FF" stop-opacity="0"/></radialGradient><radialGradient id="k" cx="0" cy="0" r="1" gradientTransform="rotate(45 -25.763 16.328) scale(22.6274)" gradientUnits="userSpaceOnUse"><stop offset=".047" stop-color="#688EFF"/><stop offset=".947" stop-color="#230F94"/></radialGradient><radialGradient id="l" cx="0" cy="0" r="1" gradientTransform="matrix(0 11.2 -13.0702 0 12 32.6)" gradientUnits="userSpaceOnUse"><stop offset=".571" stop-color="#6965F6" stop-opacity="0"/><stop offset="1" stop-color="#8F8FFF"/></radialGradient><linearGradient id="c" x1="20.594" x2="20.594" y1="18" y2="42" gradientUnits="userSpaceOnUse"><stop offset=".801" stop-color="#6864F6" stop-opacity="0"/><stop offset="1" stop-color="#5149DE"/></linearGradient></defs></svg>`;
+      const teamsLogoUrl = `data:image/svg+xml;base64,${btoa(teamsSvg)}`;
+
+      const teamsTemplate = {
+        name: "Teams",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#6264A7"/></g><image x="31" y="29" width="38" height="42" href="${teamsLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: teamsLogoUrl,
+          colorType: "single",
+          foregroundColor: "#6264A7",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#6264A7",
+          cornerDotColor: "#6264A7",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.35, margin: 6 },
+        },
+      };
+
+      // Define WeChat template.
+      const wechatSvg = `<svg fill="#07C160" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24"><title>WeChat</title><path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.047c.134 0 .24-.111.24-.247 0-.06-.023-.12-.038-.177l-.327-1.233a.582.582 0 0 1-.023-.156.49.49 0 0 1 .201-.398C23.024 18.48 24 16.82 24 14.98c0-3.21-2.931-5.837-6.656-6.088V8.89c-.135-.01-.27-.027-.407-.03zm-2.53 3.274c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.969-.982z"/></svg>`;
+      const wechatLogoUrl = `data:image/svg+xml;base64,${btoa(wechatSvg)}`;
+
+      const wechatTemplate = {
+        name: "WeChat",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#07C160"/></g><image x="30" y="30" width="40" height="40" href="${wechatLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: wechatLogoUrl,
+          colorType: "single",
+          foregroundColor: "#07C160",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "extra-rounded",
+          cornerColor: "#07C160",
+          cornerDotColor: "#07C160",
+          cornersDotStyle: "dot",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.35, margin: 6 },
+        },
+      };
+
+      // Define Linktree template.
+      const linktreeSvg = `<svg fill="#43E55E" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="24" height="24"><title>Linktree</title><path d="m13.73635 5.85251 4.00467-4.11665 2.3248 2.3808-4.20064 4.00466h5.9085v3.30473h-5.9365l4.22865 4.10766-2.3248 2.3338L12.0005 12.099l-5.74052 5.76852-2.3248-2.3248 4.22864-4.10766h-5.9375V8.12132h5.9085L3.93417 4.11666l2.3248-2.3808 4.00468 4.11665V0h3.4727zm-3.4727 10.30614h3.4727V24h-3.4727z"/></svg>`;
+      const linktreeLogoUrl = `data:image/svg+xml;base64,${btoa(linktreeSvg)}`;
+
+      const linktreeTemplate = {
+        name: "Linktree",
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#43E55E"/></g><image x="30" y="30" width="40" height="40" href="${linktreeLogoUrl}" /></svg>`,
+        options: {
+          ...defaultQrOptions,
+          errorCorrectionLevel: "H",
+          logo: linktreeLogoUrl,
+          colorType: "single",
+          foregroundColor: "#000000",
+          backgroundColor: "#ffffff",
+          dotsStyle: "rounded",
+          cornersStyle: "square",
+          cornerColor: "#000000",
+          cornerDotColor: "#43E55E",
+          cornersDotStyle: "square",
+          imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10 },
+        },
+      };
+
       // Define LINE template.
       const lineTemplates = [
         // 1. Icon (Green)
@@ -3259,6 +3648,7 @@ function qrCodeGenerator() {
           templates: [
             facebookTemplate,
             whatsappTemplate,
+            wechatTemplate,
             instagramTemplate,
             tiktokTemplate,
             xTemplate,
@@ -3267,6 +3657,7 @@ function qrCodeGenerator() {
             threadsTemplate,
             pinterestTemplate,
             twitchTemplate,
+            linktreeTemplate,
             lineTemplates[0],
             lineTemplates[1]
           ]
@@ -3274,18 +3665,30 @@ function qrCodeGenerator() {
         {
           name: "Business & Tools",
           templates: [
+            wifiTemplate,
+            gmapsTemplate,
             linkedinTemplate,
             gmailTemplate,
             googleDriveTemplate,
             dropboxTemplate,
             slackTemplate,
+            teamsTemplate,
             zoomTemplate,
             notionTemplate,
             figmaTemplate,
             githubTemplate,
-            youtubeTemplate,
+            youtubeTemplate
+          ]
+        },
+        {
+          name: "Finance & Crypto",
+          templates: [
             paypalTemplate,
-            paypayTemplate
+            venmoTemplate,
+            paypayTemplate,
+            bitcoinTemplate,
+            ethereumTemplate,
+            solanaTemplate
           ]
         },
         {
@@ -3345,6 +3748,7 @@ function qrCodeGenerator() {
         discord: "Server invite code or URL",
         twitch: "Channel name (e.g. grinds_channel)",
         paypal: "PayPal.me ID (e.g. grinds)",
+        venmo: "Venmo Username (e.g. john-doe)",
         paypay: "Payment link URL (e.g. https://qr.paypay.ne.jp/...)",
       };
       return placeholders[this.formData.sns.service] || "";
@@ -3427,10 +3831,10 @@ function qrCodeGenerator() {
       const current = this.qrOptions;
       const tempOpts = template.options;
 
-      // カラータイプの比較
+      // Compare color type
       if (current.colorType !== tempOpts.colorType) return false;
 
-      // 色の比較
+      // Compare colors
       if (current.colorType === "single") {
         if (current.foregroundColor?.toLowerCase() !== tempOpts.foregroundColor?.toLowerCase() ||
             current.backgroundColor?.toLowerCase() !== tempOpts.backgroundColor?.toLowerCase()) return false;
@@ -3440,12 +3844,12 @@ function qrCodeGenerator() {
             current.gradient.color2?.toLowerCase() !== tempOpts.gradient.color2?.toLowerCase()) return false;
       }
 
-      // ロゴの比較
+      // Compare logos
       const currentLogo = current.logo || "";
       const tempLogo = tempOpts.logo || "";
       if (currentLogo !== tempLogo) return false;
 
-      // 形状の比較
+      // Compare shapes
       return current.dotsStyle === tempOpts.dotsStyle && current.cornersStyle === tempOpts.cornersStyle;
     },
     applyFrame() {
@@ -3609,7 +4013,7 @@ function qrCodeGenerator() {
     loadScenePreset(presetName) {
       if (!this.scenePresets[presetName]) return;
 
-      // 古いBlob URLが存在すればメモリを解放する
+      // Free memory if an old Blob URL exists
       if (this.mainSceneBackgroundUrl && this.mainSceneBackgroundUrl.startsWith('blob:')) {
         URL.revokeObjectURL(this.mainSceneBackgroundUrl);
       }
@@ -3622,12 +4026,12 @@ function qrCodeGenerator() {
       this.mainSceneOptions.rotation = preset.rotation;
       this.mainSceneBackgroundUrl = preset.backgroundUrl;
 
-      // ファイルインプットの表示をリセット
+      // Reset file input display
       const fileInput = document.getElementById("scene-upload");
       if (fileInput) fileInput.value = "";
     },
     resetSceneOptions() {
-      // 古いBlob URLが存在すればメモリを解放する
+      // Free memory if an old Blob URL exists
       if (this.mainSceneBackgroundUrl && this.mainSceneBackgroundUrl.startsWith('blob:')) {
         URL.revokeObjectURL(this.mainSceneBackgroundUrl);
       }
@@ -3641,7 +4045,7 @@ function qrCodeGenerator() {
       this.previewScene = "custom";
       this.mainSceneBackgroundUrl = this.scenePresets.custom.backgroundUrl;
 
-      // ファイルインプットの表示をリセット
+      // Reset file input display
       const fileInput = document.getElementById("scene-upload");
       if (fileInput) fileInput.value = "";
     },
@@ -3653,7 +4057,7 @@ function qrCodeGenerator() {
           event.target.value = "";
           return;
         }
-        // 古い Blob URL が存在する場合はメモリリークを防ぐため解放する
+        // Free memory if an old Blob URL exists to prevent memory leaks
         if (this.mainSceneBackgroundUrl && this.mainSceneBackgroundUrl.startsWith('blob:')) {
           URL.revokeObjectURL(this.mainSceneBackgroundUrl);
         }
@@ -3750,7 +4154,7 @@ function qrCodeGenerator() {
           store.clear().onsuccess = () => {
             if (this.savedQRCodes.length === 0) return;
             this.savedQRCodes.forEach(qr => {
-              // 劇的なパフォーマンス改善: 文字列化のオーバーヘッドを完全に排除
+              // Dramatic performance improvement: completely eliminate stringification overhead
               store.put(window.Alpine.raw(qr));
             });
           };
@@ -3832,18 +4236,15 @@ function qrCodeGenerator() {
         }
       }
 
-      // --- 古いサムネイル（crossorigin属性付き）の自動修復マイグレーション ---
+      // --- Automatic repair migration for old thumbnails (with crossorigin attribute) ---
       let needsSave = false;
       this.savedQRCodes.forEach(qr => {
         if (qr.previewSvgUrl && qr.previewSvgUrl.includes("base64,")) {
           try {
-            const b64 = qr.previewSvgUrl.split("base64,")[1];
+            const b64 = qr.previewSvgUrl.split("base64,")[1].replace(/\s/g, '');
             const binStr = atob(b64);
             if (binStr.toLowerCase().includes("crossorigin")) {
-              const bytes = new Uint8Array(binStr.length);
-              for (let i = 0; i < binStr.length; i++) {
-                bytes[i] = binStr.charCodeAt(i);
-              }
+              const bytes = Uint8Array.from(binStr, c => c.charCodeAt(0));
               let svgString = new TextDecoder('utf-8').decode(bytes);
 
               svgString = svgString.replace(/crossorigin="[^"]*"/gi, "");
@@ -3951,7 +4352,7 @@ function qrCodeGenerator() {
     },
     async createNewProject() {
       const name = await appPrompt("Enter project name:", "text");
-      if (!name || !name.trim()) return;
+      if (!name || !name.trim()) return null;
 
       const newProject = {
         id: this.generateUniqueId(),
@@ -3962,6 +4363,7 @@ function qrCodeGenerator() {
       await this.persistProjects();
       this.currentProjectId = newProject.id;
       this.showFlashNotification("Project created.");
+      return newProject.id;
     },
     async renameProject(projectId) {
       if (projectId === 'default') {
@@ -4122,6 +4524,12 @@ function qrCodeGenerator() {
         if (!loadedFormData.sms) {
           loadedFormData.sms = { phone: "", message: "" };
         }
+        if (!loadedFormData.crypto) {
+          loadedFormData.crypto = { currency: "bitcoin", address: "", amount: "" };
+        }
+        if (loadedFormData.wifi && typeof loadedFormData.wifi.hidden === 'undefined') {
+          loadedFormData.wifi.hidden = false;
+        }
         this.formData = loadedFormData;
         this.qrOptions = JSON.parse(JSON.stringify(qrToEdit.qrOptions));
         this.logoFileName = qrToEdit.logoFileName;
@@ -4178,7 +4586,7 @@ function qrCodeGenerator() {
     async duplicateQRCode(id) {
       const originalQr = this.savedQRCodes.find((qr) => qr.id === id);
       if (originalQr) {
-        // ディープコピー時のOOMクラッシュ対策とProxyの回避
+        // Prevent OOM crashes during deep copy and bypass Proxy
         const rawOriginalQr = window.Alpine.raw(originalQr);
         const { qrOptions, ...restQr } = rawOriginalQr;
         const { logo, ...restOptions } = qrOptions;
@@ -4246,7 +4654,8 @@ function qrCodeGenerator() {
       if (navigator.share && navigator.canShare) {
         try {
           const blob = await this.svgDataUrlToPngBlob(qr.previewSvgUrl, 512);
-          const file = new File([blob], `${qr.name || 'qrcode'}.png`, { type: 'image/png' });
+          const safeShareName = (qr.name || 'qrcode').trim().replace(/[\\/:*?"<>|]/g, "_");
+          const file = new File([blob], `${safeShareName}.png`, { type: 'image/png' });
 
           if (navigator.canShare({ files: [file] })) {
             await navigator.share({
@@ -4259,6 +4668,9 @@ function qrCodeGenerator() {
         } catch (error) {
           if (error.name !== 'AbortError') {
              console.error("Image sharing failed", error);
+             this.showFlashNotification("Sharing failed. Please try downloading the image instead.");
+             this.hapticFeedback('error');
+             this.prepareDownloadFromDashboard(qr);
           } else {
              return; // User cancelled
           }
@@ -4348,11 +4760,8 @@ function qrCodeGenerator() {
                   try {
                     let svgString = "";
                     if (href.includes("base64,")) {
-                      const binStr = atob(href.split("base64,")[1]);
-                      const bytes = new Uint8Array(binStr.length);
-                      for (let i = 0; i < binStr.length; i++) {
-                        bytes[i] = binStr.charCodeAt(i);
-                      }
+                      const binStr = atob(href.split("base64,")[1].replace(/\s/g, ''));
+                      const bytes = Uint8Array.from(binStr, c => c.charCodeAt(0));
                       svgString = new TextDecoder('utf-8').decode(bytes); // Prevent character corruption.
                     } else {
                       svgString = decodeURIComponent(href.split(",")[1]);
@@ -4419,24 +4828,29 @@ function qrCodeGenerator() {
           }
           URL.revokeObjectURL(safeSvgUrl);
 
-          // メモリ回収(GC)をブラウザに促すため、数ミリ秒だけ処理を譲る
+          // Yield thread for a few milliseconds to prompt browser garbage collection (GC)
           await new Promise(resolve => setTimeout(resolve, 50));
 
           let baseName = qr.name ? qr.name.trim() : "";
-          // 名前が空の場合は、属しているプロジェクト名＋QR をデフォルト名にする
+          // If name is empty, use project name + Image as default
           if (!baseName) {
             const projName = this.projects.find(p => p.id === (qr.projectId || 'default'))?.name || "QR";
             baseName = `${projName}_Image`;
           }
           let safeName = baseName.replace(/[\\/:*?"<>|]/g, "-");
 
+          let finalName = safeName;
           if (nameCountMap[safeName] !== undefined) {
-            nameCountMap[safeName]++;
-            safeName = `${safeName}(${nameCountMap[safeName]})`;
+            let counter = ++nameCountMap[safeName];
+            finalName = `${safeName}(${counter})`;
+            while (zipData[`${finalName}.${format}`] !== undefined) {
+              counter++;
+              finalName = `${safeName}(${counter})`;
+            }
           } else {
             nameCountMap[safeName] = 0;
           }
-          zipData[`${safeName}.${format}`] = fileBytes;
+          zipData[`${finalName}.${format}`] = fileBytes;
         }
 
         this.exportProgress = "Compressing...";
@@ -4454,10 +4868,11 @@ function qrCodeGenerator() {
         const a = document.createElement('a');
         a.href = url;
 
-        let finalZipName = (this.download.zipName || "QR_Export").trim().replace(/[\\/:*?"<>|]/g, "-");
-        if (!finalZipName.toLowerCase().endsWith('.zip')) {
-          finalZipName += '.zip';
+        let rawZipName = (this.download.zipName || "QR_Export").trim();
+        if (rawZipName.toLowerCase().endsWith('.zip')) {
+          rawZipName = rawZipName.slice(0, -4);
         }
+        let finalZipName = rawZipName.replace(/[\\/:*?"<>|]/g, "-") + '.zip';
 
         a.download = finalZipName;
         document.body.appendChild(a);
@@ -4466,6 +4881,8 @@ function qrCodeGenerator() {
 
         setTimeout(() => URL.revokeObjectURL(url), 10000); // Safari fix
 
+        this.exportProgress = "Completed!";
+        await new Promise(resolve => setTimeout(resolve, 400));
         this.showFlashNotification(`${total} QR codes exported successfully!`);
         this.hapticFeedback('success');
         this.selectedIds = [];
@@ -4483,57 +4900,63 @@ function qrCodeGenerator() {
     },
     async svgDataUrlToPngBlob(svgDataUrl, size = 512) {
       return new Promise(async (resolve, reject) => {
+        let imageElement = null;
         const timeoutId = setTimeout(() => {
+          if (svgDataUrl && svgDataUrl.startsWith("blob:")) {
+            URL.revokeObjectURL(svgDataUrl);
+          }
+          if (imageElement) imageElement.src = "";
           reject(new Error("Image rendering timeout"));
         }, 5000);
 
         try {
           if (svgDataUrl && svgDataUrl.startsWith("data:image/svg+xml")) {
-            let svgString = "";
-            if (svgDataUrl.includes("base64,")) {
-              const binStr = atob(svgDataUrl.split("base64,")[1]);
-              const bytes = new Uint8Array(binStr.length);
-              for (let i = 0; i < binStr.length; i++) {
-                bytes[i] = binStr.charCodeAt(i);
-              }
-              svgString = new TextDecoder('utf-8').decode(bytes);
+            let decodedSvgText = "";
+            const isBase64Encoded = svgDataUrl.includes("base64,");
+
+            if (isBase64Encoded) {
+              const base64Data = svgDataUrl.split("base64,")[1];
+              const binaryString = atob(base64Data);
+              const uint8Array = Uint8Array.from(binaryString, char => char.charCodeAt(0));
+              decodedSvgText = new TextDecoder('utf-8').decode(uint8Array);
             } else if (svgDataUrl.includes(",")) {
-              svgString = decodeURIComponent(svgDataUrl.split(",")[1]);
+              decodedSvgText = decodeURIComponent(svgDataUrl.split(",")[1]);
             }
 
-            // This is no longer necessary as we removed the root cause, but kept for safety.
-            svgString = svgString.replace(/crossorigin="[^"]*"/gi, "");
+            // Safe fallback: strip legacy attributes to prevent Canvas tainting
+            if (decodedSvgText.includes("crossorigin")) {
+              decodedSvgText = decodedSvgText.replace(/\s*crossorigin=(?:"[^"]*"|'[^']*')/gi, "");
+            }
 
-            const blob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-            svgDataUrl = URL.createObjectURL(blob);
+            const cleanSvgBlob = new Blob([decodedSvgText], { type: "image/svg+xml;charset=utf-8" });
+            svgDataUrl = URL.createObjectURL(cleanSvgBlob);
           }
 
           const image = new Image();
+          imageElement = image;
           image.onload = () => {
             clearTimeout(timeoutId);
-            setTimeout(() => {
-              const canvas = document.createElement("canvas");
-              canvas.width = size;
-              canvas.height = size;
-              const ctx = canvas.getContext("2d");
-              ctx.clearRect(0, 0, size, size);
+            const renderCanvas = document.createElement("canvas");
+            renderCanvas.width = size;
+            renderCanvas.height = size;
+            const renderCtx = renderCanvas.getContext("2d");
+            renderCtx.clearRect(0, 0, size, size);
 
-              if (!this.download?.transparentBg) {
-                ctx.fillStyle = this.qrOptions?.backgroundColor || "#ffffff";
-                ctx.fillRect(0, 0, size, size);
-              }
+            if (!this.download?.transparentBg) {
+              renderCtx.fillStyle = this.qrOptions?.backgroundColor || "#ffffff";
+              renderCtx.fillRect(0, 0, size, size);
+            }
 
-              ctx.drawImage(image, 0, 0, size, size);
-              canvas.toBlob((blob) => {
-                if (svgDataUrl.startsWith("blob:")) URL.revokeObjectURL(svgDataUrl);
+            renderCtx.drawImage(image, 0, 0, size, size);
+            renderCanvas.toBlob((blobData) => {
+              if (svgDataUrl.startsWith("blob:")) URL.revokeObjectURL(svgDataUrl);
 
-                canvas.width = 0;
-                canvas.height = 0;
+              renderCanvas.width = 0;
+              renderCanvas.height = 0;
 
-                if (blob) resolve(blob);
-                else reject(new Error("Blob conversion failed"));
-              }, "image/png");
-            }, 50);
+              if (blobData) resolve(blobData);
+              else reject(new Error("Blob conversion failed"));
+            }, "image/png");
           };
           image.onerror = () => {
             clearTimeout(timeoutId);
@@ -4548,7 +4971,7 @@ function qrCodeGenerator() {
       });
     },
 
-    // --- CSVアップロードとパース処理 ---
+    // --- CSV upload and parsing ---
     openImportModal() {
       this.importTargetProject = this.currentProjectId !== 'all' ? this.currentProjectId : 'default';
       this.resetImportState();
@@ -4559,13 +4982,89 @@ function qrCodeGenerator() {
       this.csvHeaders = [];
       this.csvData = [];
       this.csvMapping = { name: "", memo: "", tags: "", dynamic: {} };
-      this.activeTypeFields.forEach(f => {
-        this.csvMapping.dynamic[f.key] = "";
-      });
+      this.reMapCsvHeaders();
       this.isImporting = false;
       this.importProgress = 0;
       const fileInput = document.getElementById("csv-upload-input");
       if (fileInput) fileInput.value = "";
+    },
+    downloadSampleCSV() {
+      // Common field headers and sample data
+      const headers = ["Name", "Memo", "Tags"];
+      const sampleRow = [`Sample ${this.getActiveType().title} QR`, "Generated from sample", "sample, grinds"];
+
+      // Add dynamic fields required for the currently selected QR type
+      this.activeTypeFields.forEach(field => {
+        headers.push(field.label); // Use the label name (display name on UI) as the header
+
+        // Generate appropriate dummy data based on field type
+        const key = field.key.toLowerCase();
+        if (key.includes('url') || key === 'address') {
+          sampleRow.push("https://example.com");
+        } else if (key.includes('phone')) {
+          sampleRow.push("+1234567890");
+        } else if (key.includes('email') || key === 'to') {
+          sampleRow.push("sample@example.com");
+        } else if (key === 'latitude') {
+          sampleRow.push("35.681236");
+        } else if (key === 'longitude') {
+          sampleRow.push("139.767125");
+        } else if (key === 'start' || key === 'end') {
+          sampleRow.push("2026-07-01T10:00");
+        } else {
+          sampleRow.push(`Sample ${field.label}`);
+        }
+      });
+
+      // Function to escape CSV cells with double quotes
+      const escapeCSV = (str) => `"${String(str).replace(/"/g, '""')}"`;
+
+      const csvContent = [
+        headers.map(escapeCSV).join(","),
+        sampleRow.map(escapeCSV).join(",")
+      ].join("\r\n");
+
+      // Add BOM (Byte Order Mark) to prevent character corruption in Excel
+      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `grinds_${this.selectedType}_sample.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      this.showFlashNotification("Sample CSV downloaded.");
+      this.hapticFeedback('light');
+    },
+    reMapCsvHeaders() {
+      const newDynamic = {};
+      this.activeTypeFields.forEach(f => {
+        newDynamic[f.key] = "";
+      });
+      this.csvMapping.dynamic = newDynamic;
+
+      if (this.csvHeaders.length === 0) return;
+
+      this.activeTypeFields.forEach((f, index) => {
+         let regex;
+         if (f.key === 'url') regex = /url|link|address/i;
+         else if (f.key === 'content') regex = /content|text/i;
+         else if (f.key === 'ssid') regex = /ssid|wifi|network/i;
+         else if (f.key === 'password') regex = /pass|pw/i;
+         else if (f.key === 'lastName') regex = /last.*name|surname/i;
+         else if (f.key === 'firstName') regex = /first.*name|given.*name/i;
+         else if (f.key === 'phone') regex = /phone|tel/i;
+         else if (f.key === 'email' || f.key === 'to') regex = /mail/i;
+         else if (f.key === 'summary') regex = /event|summary/i;
+         else if (f.key === 'start') regex = /start/i;
+         else if (f.key === 'end') regex = /end/i;
+         else regex = new RegExp(f.key, 'i');
+
+         this.csvMapping.dynamic[f.key] = this.csvHeaders.find(h => regex.test(h)) || (f.required ? (this.csvHeaders[index] || "") : "");
+      });
     },
     handleCsvDrop(event) {
       const file = event.dataTransfer?.files[0] || event.target.files[0];
@@ -4606,31 +5105,15 @@ function qrCodeGenerator() {
         this.csvData = parsed.slice(1);
 
         // Header name inference (Smart UX)
-        this.csvMapping.name = this.csvHeaders.find(h => /name|title|名前|件名/i.test(h)) || "";
-        this.csvMapping.memo = this.csvHeaders.find(h => /memo|desc|note|メモ|備考/i.test(h)) || "";
-        this.csvMapping.tags = this.csvHeaders.find(h => /tag|category|タグ|カテゴリ/i.test(h)) || "";
+        this.csvMapping.name = this.csvHeaders.find(h => /name|title/i.test(h)) || "";
+        this.csvMapping.memo = this.csvHeaders.find(h => /memo|desc|note/i.test(h)) || "";
+        this.csvMapping.tags = this.csvHeaders.find(h => /tag|category/i.test(h)) || "";
 
-        this.activeTypeFields.forEach((f, index) => {
-           let regex;
-           if (f.key === 'url') regex = /url|link|address|リンク/i;
-           else if (f.key === 'content') regex = /content|text|テキスト|内容/i;
-           else if (f.key === 'ssid') regex = /ssid|wifi|network|ネットワーク/i;
-           else if (f.key === 'password') regex = /pass|pw|パスワード/i;
-           else if (f.key === 'lastName') regex = /last.*name|surname|姓|名字/i;
-           else if (f.key === 'firstName') regex = /first.*name|given.*name|名/i;
-           else if (f.key === 'phone') regex = /phone|tel|電話/i;
-           else if (f.key === 'email' || f.key === 'to') regex = /mail|メール/i;
-           else if (f.key === 'summary') regex = /event|summary|イベント/i;
-           else if (f.key === 'start') regex = /start|開始/i;
-           else if (f.key === 'end') regex = /end|終了/i;
-           else regex = new RegExp(f.key, 'i');
-
-           this.csvMapping.dynamic[f.key] = this.csvHeaders.find(h => regex.test(h)) || (f.required ? (this.csvHeaders[index] || "") : "");
-        });
+        this.reMapCsvHeaders();
       };
       reader.readAsArrayBuffer(file);
     },
-    // ダブルクォートで囲まれたカンマ等にも対応する堅牢な簡易CSVパーサー
+    // Robust simple CSV parser that also handles commas enclosed in double quotes
     parseCSV(text) {
       const result = [];
       let row = [], inQuotes = false, val = '';
@@ -4643,17 +5126,17 @@ function qrCodeGenerator() {
         } else {
           if (char === '"') inQuotes = true;
           else if (char === ',') { row.push(val); val = ''; }
-          else if (char === '\n' || (char === '\r' && nextChar === '\n')) {
-            if (char === '\r') i++;
+          else if (char === '\n' || char === '\r') {
+            if (char === '\r' && nextChar === '\n') i++;
             row.push(val); result.push(row); row = []; val = '';
           } else val += char;
         }
       }
       if (val || row.length > 0) { row.push(val); result.push(row); }
-      return result.filter(r => r.some(c => c.trim() !== '')); // 空行を除外
+      return result.filter(r => r.some(c => c.trim() !== '')); // Exclude empty rows
     },
 
-    // --- 一括生成（バルクインポート）実行 ---
+    // --- Execute bulk generation (bulk import) ---
     async executeBulkImport() {
       const requiredFields = this.activeTypeFields.filter(f => f.required);
       for (const f of requiredFields) {
@@ -4675,17 +5158,28 @@ function qrCodeGenerator() {
       const idxMemo = this.csvMapping.memo ? this.csvHeaders.indexOf(this.csvMapping.memo) : -1;
       const idxTags = this.csvMapping.tags ? this.csvHeaders.indexOf(this.csvMapping.tags) : -1;
 
-      // テンプレートとして「現在のエディタのデザイン設定」を取得
+      // Get "current editor design settings" as a template
       const rawOptions = window.Alpine.raw(this.qrOptions);
       const { logo, ...restOptions } = rawOptions;
       const baseFrame = JSON.parse(JSON.stringify(window.Alpine.raw(this.frame)));
       const baseFormData = JSON.parse(JSON.stringify(window.Alpine.raw(this.formData)));
 
-      const fixHex = (c) => /^#?([0-9a-fA-F]{3,8})$/.test(c) ? (c.startsWith('#') ? c : '#' + c) : '#ffffff';
+      const fixHex = (c) => {
+        if (!c) return "#ffffff";
+        let hex = c.trim().toUpperCase();
+        if (!hex.startsWith('#')) hex = '#' + hex;
+        if (/^#(?:[0-9A-F]{3}){1,2}$|^#(?:[0-9A-F]{4}){1,2}$/i.test(hex)) {
+          if (hex.length === 4 || hex.length === 5) {
+            hex = '#' + hex.split('').slice(1).map(x => x + x).join('');
+          }
+          return hex;
+        }
+        return "#ffffff";
+      };
 
       for (const row of this.csvData) {
         count++;
-        // 進捗をUIに反映するため、定期的にメインスレッドを解放する
+        // Periodically release the main thread to reflect progress in the UI
         if (count % 10 === 0) await new Promise(r => setTimeout(r, 10));
         this.importProgress = Math.round((count / total) * 100);
 
@@ -4694,7 +5188,7 @@ function qrCodeGenerator() {
 
         this.activeTypeFields.forEach(f => {
             const h = this.csvMapping.dynamic[f.key];
-            // フィールドがマッピングされている場合のみ上書き（未マッピングならエディタの固定値を継承）
+            // Overwrite only if the field is mapped (inherit editor's fixed value if unmapped)
             if (h) {
               const idx = this.csvHeaders.indexOf(h);
               const val = (idx !== -1 && row[idx]) ? row[idx].trim() : "";
@@ -4708,6 +5202,7 @@ function qrCodeGenerator() {
               else if (this.selectedType === 'event') specificFormData.event[f.key] = val;
               else if (this.selectedType === 'email') specificFormData.email[f.key] = val;
               else if (this.selectedType === 'sms') specificFormData.sms[f.key] = val;
+              else if (this.selectedType === 'crypto') specificFormData.crypto[f.key] = val;
               else if (this.selectedType === 'geo') specificFormData.geo[f.key] = val;
               else if (this.selectedType === 'sns') specificFormData.sns[f.key] = val;
               else if (this.selectedType === 'images') specificFormData.images.url = val;
@@ -4715,14 +5210,14 @@ function qrCodeGenerator() {
             }
         });
 
-        if (!hasData) continue; // 空データの場合はスキップ
+        if (!hasData) continue; // Skip if data is empty
 
         const nameStr = idxName !== -1 && row[idxName] ? row[idxName].trim() : `Bulk QR ${count}`;
         const memoStr = idxMemo !== -1 && row[idxMemo] ? row[idxMemo].trim() : "";
         const tagsStr = idxTags !== -1 && row[idxTags] ? row[idxTags].trim() : "";
         const tagsArray = tagsStr ? tagsStr.split(',').map(t => t.trim()).filter(t => t) : [];
 
-        // デザインオプションのディープコピー（参照を切るため）
+        // Deep copy of design options (to break reference)
         const specificOptions = JSON.parse(JSON.stringify(restOptions));
         specificOptions.logo = logo;
 
@@ -4757,7 +5252,10 @@ function qrCodeGenerator() {
         let previewSvgUrl = "";
         try {
           previewSvgUrl = await this.getPreviewSvgUrl(previewOptions);
-        } catch(e) { console.warn("Failed to generate preview", e); }
+        } catch(e) {
+          console.warn("Skipped row due to capacity error", e);
+          continue;
+        }
 
         newQRCodes.push({
           id: this.generateUniqueId(),
@@ -4776,15 +5274,25 @@ function qrCodeGenerator() {
         });
       }
 
-      // 生成したデータをダッシュボードに反映して保存
+      // Reflect generated data to dashboard and save
       if (newQRCodes.length > 0) {
         this.savedQRCodes = [...newQRCodes, ...this.savedQRCodes];
         await this.persistSavedQRCodes();
         this.currentProjectId = this.importTargetProject;
         this.currentPage = 1;
         if (typeof setDirty === 'function') setDirty(true);
-        this.showFlashNotification(`Successfully generated ${newQRCodes.length} QR codes.`);
-        this.hapticFeedback('success');
+        this.importProgress = 100;
+        await new Promise(resolve => setTimeout(resolve, 400));
+
+        let msg = `Successfully generated ${newQRCodes.length} QR codes.`;
+        if (newQRCodes.length < this.csvData.length) {
+          const skipped = this.csvData.length - newQRCodes.length;
+          msg += ` (${skipped} row${skipped > 1 ? 's' : ''} skipped due to data limit)`;
+          this.hapticFeedback('error');
+        } else {
+          this.hapticFeedback('success');
+        }
+        this.showFlashNotification(msg);
       } else {
         this.showFlashNotification("No valid URLs found in the CSV.");
         this.hapticFeedback('error');
@@ -4813,7 +5321,7 @@ function qrCodeGenerator() {
     },
     toggleQuietZone() {
       this.includeQuietZone = !this.includeQuietZone;
-      this.qrOptions.margin = this.includeQuietZone ? 4 : 0;
+      this.qrOptions.margin = this.includeQuietZone ? 20 : 0;
       this.updateQrCode();
     },
     getActiveBrandKit() {
@@ -4907,6 +5415,7 @@ function qrCodeGenerator() {
         this.logoFileName = file.name;
         this.updateQrCode();
         this.saveBrandKits(false);
+        event.target.value = "";
       };
       reader.readAsDataURL(file);
     },
@@ -4930,7 +5439,7 @@ function qrCodeGenerator() {
           });
           if (this.brandKits.length > 0) this.activeBrandKitId = this.brandKits[0].id;
         } else {
-          // v1 (Single object) からの自動マイグレーション
+          // Automatic migration from v1 (Single object)
           const oldKit = localStorage.getItem("qrBrandKit");
           if (oldKit) {
             const parsed = JSON.parse(oldKit);
@@ -4943,7 +5452,7 @@ function qrCodeGenerator() {
             };
             this.brandKits = [migratedKit];
             this.activeBrandKitId = migratedKit.id;
-            localStorage.removeItem("qrBrandKit"); // 古いデータを削除
+            localStorage.removeItem("qrBrandKit"); // Delete old data
             this.saveBrandKits(false);
           } else {
             this.brandKits = [];
@@ -4999,6 +5508,11 @@ function qrCodeGenerator() {
       const lum1 = this.getLuminance(rgb1.r, rgb1.g, rgb1.b);
       const lum2 = this.getLuminance(rgb2.r, rgb2.g, rgb2.b);
       return (Math.max(lum1, lum2) + 0.05) / (Math.min(lum1, lum2) + 0.05);
+    },
+    isDotColorBright() {
+      const rgb = this.hexToRgb(this.qrOptions.foregroundColor);
+      if (!rgb) return false;
+      return this.getLuminance(rgb.r, rgb.g, rgb.b) > 0.5;
     },
   };
 }
