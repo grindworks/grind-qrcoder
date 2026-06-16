@@ -21,8 +21,8 @@
     {
       "action": "./index.html",
       "accept": {
-        "application/json": [".qrcoder"],
-        "application/octet-stream": [".qrcoder"]
+        "application/json": [".qrcoder", ".qrcoder-theme"],
+        "application/octet-stream": [".qrcoder", ".qrcoder-theme"]
       }
     }
   ],

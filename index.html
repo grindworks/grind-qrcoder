@@ -2,11 +2,24 @@
 <html lang="en">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
     <!-- Content Security Policy (Supply chain attack prevention, defense in depth) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com ws://127.0.0.1:* ws://localhost:* data: blob:; object-src 'none'; base-uri 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://grindsite.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://grindsite.com https://cdn.jsdelivr.net ws://127.0.0.1:* ws://localhost:* data: blob:; object-src 'none'; base-uri 'self';">
     <title>GRINDS - Advanced QR Code Generator Pro</title>
+
+    <!-- SEO / OGP Settings -->
+    <meta name="description" content="A privacy-first, highly functional QR code generator that works completely offline.">
+    <meta property="og:title" content="GRINDS - Advanced QR Code Generator Pro">
+    <meta property="og:description" content="A privacy-first, highly functional QR code generator that works completely offline.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://grindsite.com/tools/qrcoder/">
+    <meta property="og:image" content="https://grindsite.com/tools/qrcoder/grind-qrcoder.jpg">
+    <meta property="og:site_name" content="Grind Tools">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="GRINDS - Advanced QR Code Generator Pro">
+    <meta name="twitter:description" content="A privacy-first, highly functional QR code generator that works completely offline.">
+    <meta name="twitter:image" content="https://grindsite.com/tools/qrcoder/grind-qrcoder.jpg">
 
     <!-- Sync OS status bar color with theme -->
     <meta id="meta-theme-color" name="theme-color" content="#f8fafc">
@@ -14,14 +27,7 @@
 
     <!-- JavaScript-based Frame Busting (Clickjacking defense) -->
     <style id="antiClickjack">body{display:none !important;}</style>
-    <script type="text/javascript">
-      if (self === top) {
-        var antiClickjack = document.getElementById("antiClickjack");
-        antiClickjack.parentNode.removeChild(antiClickjack);
-      } else {
-        top.location = self.location;
-      }
-    </script>
+    <!-- Frame busting script moved to main.js for CSP compliance -->
 
     <!-- Setup for PWA (Manifest and Icons) -->
     <link rel="manifest" href="manifest.json">
@@ -40,7 +46,10 @@
     <link rel="stylesheet" href="styles.css">
 
     <!-- Load application logic (Must be loaded before Alpine.js) -->
-    <script defer src="main.js"></script>
+    <script defer src="main.js?v=clear-cache-2"></script>
+
+    <!-- Global Footer Script -->
+    <script src="https://grindsite.com/tools/footer.js" defer></script>
 
     <!-- Load required libraries for QR code generation -->
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.13.5/dist/cdn.min.js" integrity="sha256-K9XZcZtTfN2DuA4XH9cl2pzdr5lD1RD8tKwBQNs5pHo=" crossorigin="anonymous"></script>
@@ -48,6 +57,8 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js" integrity="sha256-ygV4Me+b49juR+FAeAif0jgdx4ILS7f724WkkPW49ow=" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js" crossorigin="anonymous"></script>
+    <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js" crossorigin="anonymous"></script>
 
     <!-- Define basic global styles -->
     <style>
@@ -191,18 +202,29 @@
     </style>
   </head>
 
-  <body x-data="qrCodeGenerator()" x-init="init()" class="min-h-screen bg-[#fafbfc] text-slate-800 font-sans antialiased selection:bg-primary/20 selection:text-primary transition-colors duration-300" x-cloak>
+  <body x-data="qrCodeGenerator()" x-init="init()" class="min-h-screen bg-[#fafbfc] text-slate-800 font-sans antialiased selection:bg-primary/20 selection:text-primary transition-colors duration-300">
+    <!-- Loading Screen (Visible only before Alpine.js initializes) -->
+    <div id="initial-loader" class="fixed inset-0 z-200 flex flex-col items-center justify-center bg-[#fafbfc] transition-opacity duration-300" x-data x-init="$el.style.opacity = '0'; setTimeout(() => $el.remove(), 300)">
+      <div class="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-primary/20 bg-linear-to-br from-primary/10 to-primary/5 shadow-inner-soft animate-pulse">
+        <svg class="h-9 w-9 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z" />
+        </svg>
+      </div>
+      <p class="mt-4 text-sm font-bold text-slate-500 animate-pulse">Loading GRINDS...</p>
+    </div>
+
     <!-- Global Dropzone for Drag & Drop -->
     <div id="global-dropzone" class="pointer-events-none fixed inset-0 z-100 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-200">
       <div class="pointer-events-none flex flex-col items-center rounded-3xl border-4 border-dashed border-primary bg-white/10 p-12 text-white shadow-2xl backdrop-blur-md">
         <svg class="mb-4 h-16 w-16 animate-bounce text-primary-400" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>
-        <h2 class="text-3xl font-black tracking-tight">Drop backup file here</h2>
-        <p class="mt-2 text-sm font-medium text-slate-300">Restore your dashboard data instantly.</p>
+        <h2 class="text-3xl font-black tracking-tight">Drop backup or theme file here</h2>
+        <p class="mt-2 text-sm font-medium text-slate-300">Restore data or import design assets instantly.</p>
       </div>
     </div>
 
     <!-- Main content area -->
-    <main class="min-h-screen px-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 lg:px-8 w-full transition-all duration-300">
+    <main class="min-h-screen px-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 lg:px-8 w-full transition-all duration-300" x-cloak>
       <div class="mx-auto max-w-7xl w-full px-2 py-6 pb-24 md:p-6 md:pb-6">
         <!-- Header -->
         <header class="relative z-20 flex w-full lg:flex-row flex-col justify-between items-start lg:items-center gap-5 mb-10 bg-white/70 backdrop-blur-xl border border-slate-200/60 shadow-softer rounded-2xl p-4 transition-all duration-300 hover:shadow-soft hover:bg-white/90">
@@ -231,8 +253,14 @@
 
           <!-- Right side: Control buttons -->
           <div class="flex flex-wrap justify-start lg:justify-end items-center gap-2 sm:gap-3 w-full lg:w-auto">
+            <!-- Install App Button (Hidden by default, shown via JS when PWA is installable) -->
+            <button id="install-button"
+              class="hidden bg-primary hover:bg-primary-hover shadow-sm px-4 py-2 rounded-md font-bold text-white text-sm transition-all shrink-0" aria-label="Install App" title="Install as an application for offline use">
+              &darr; Install App
+            </button>
+
             <!-- Encryption password input -->
-            <form @submit.prevent class="relative flex items-center">
+            <form @submit.prevent="document.getElementById('btn-save').click()" class="relative flex items-center">
               <!-- Hidden username field to satisfy browser password manager requirements -->
               <input type="text" name="username" autocomplete="username" class="sr-only" aria-hidden="true" tabindex="-1" value="encryption-user">
               <label for="file-password" class="sr-only">Encryption Password</label>
@@ -240,7 +268,7 @@
                 data-lpignore="true" data-1p-ignore spellcheck="false" autocorrect="off" autocapitalize="off"
                 class="bg-white shadow-sm py-2 pr-10 pl-3 border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/20 rounded-md outline-none w-48 md:w-56 text-slate-900 text-base md:text-sm transition-all placeholder-slate-400"
                 title="Enter a password to strongly encrypt the file when saving">
-              <button type="button" onclick="togglePasswordVisibility()" aria-label="Toggle password visibility"
+              <button type="button" aria-label="Toggle password visibility"
                 class="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Show/Hide Password">
                 <svg id="icon-eye-open" class="hidden w-4 h-4">
                   <use href="icons-sprite.svg#outline-eye"></use>
@@ -251,19 +279,27 @@
               </button>
             </form>
 
-            <button onclick="loadQRCoderFile()"
-              class="bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-600 hover:text-slate-900 text-sm transition-colors cursor-pointer shrink-0" aria-label="Open Backup"
+            <button aria-label="Open Backup"
+              class="bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-600 hover:text-slate-900 text-sm transition-all duration-300 cursor-pointer shrink-0"
               title="Open Backup">
               <svg class="w-4 h-4">
                 <use href="icons-sprite.svg#outline-folder"></use>
               </svg>
             </button>
-            <button id="btn-save" @click="saveQRCoderFile()"
-              :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')"
-              class="relative bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-900 text-sm transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Save Backup"
+            <button id="btn-save" @click="isSavingBackup = true; saveQRCoderFile().finally(() => isSavingBackup = false)"
+              :disabled="isSavingBackup || isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')"
+              :class="{ 'ring-2 ring-green-500/40 bg-green-50 shadow-[0_0_15px_rgba(34,197,94,0.3)]': isSaveSuccess }"
+              class="relative bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-900 text-sm transition-all duration-300 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Save Backup"
               title="Backup to file">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg x-show="!isSavingBackup && !isSaveSuccess" class="w-4 h-4 transition-all duration-300" fill="none" stroke="currentColor" stroke-width="1.5">
                 <use href="icons-sprite.svg#outline-arrow-down-tray"></use>
+              </svg>
+              <svg x-show="isSavingBackup" x-cloak class="w-4 h-4 animate-spin text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <svg x-show="isSaveSuccess" x-cloak class="w-4 h-4 text-green-500 scale-125 drop-shadow-[0_0_8px_rgba(34,197,94,0.8)] transition-all duration-300" fill="none" stroke="currentColor" stroke-width="2.5">
+                <use href="icons-sprite.svg#outline-check"></use>
               </svg>
               <!-- Unsaved badge -->
               <span id="dirty-badge" class="hidden -top-1 -right-1 absolute w-3 h-3">
@@ -272,8 +308,8 @@
             </button>
 
             <!-- Command palette toggle button -->
-            <button onclick="toggleCommandPalette()"
-              class="flex items-center gap-2 bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-600 hover:text-slate-900 text-sm transition-colors cursor-pointer shrink-0" aria-label="Open Command Palette"
+            <button aria-label="Open Command Palette"
+              class="flex items-center gap-2 bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-600 hover:text-slate-900 text-sm transition-all duration-300 cursor-pointer shrink-0"
               title="Open Command Palette">
               <svg class="w-4 h-4">
                 <use href="icons-sprite.svg#outline-magnifying-glass"></use>
@@ -283,24 +319,30 @@
           </div>
         </header>
 
-        <!-- Toggle tabs for "Create" and "Manage" -->
+        <!-- Toggle tabs for "Create", "Manage", and "Verify" -->
         <div class="mb-8 flex w-full items-center justify-between">
           <nav class="flex items-center gap-1 rounded-full bg-slate-200/60 p-1.5 shadow-inner-soft backdrop-blur-sm">
-            <button @click="currentView = 'generator'" :class="currentView === 'generator' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'" class="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300">
+            <button @click="if(isExportingBulk || isImporting) { showFlashNotification('Please wait until the process completes.'); return; }; currentView = 'generator'" :class="currentView === 'generator' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'" class="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300">
               <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                 <use href="icons-sprite.svg#outline-qr-code"></use>
               </svg>
               <span>Create</span>
             </button>
-            <button @click="if(hasUnsavedEdit && !confirm('You have unsaved changes. Are you sure you want to leave?')) return; hasUnsavedEdit = false; currentView = 'dashboard'" :class="currentView === 'dashboard' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'" class="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300">
+            <button @click="if(isExportingBulk || isImporting) { showFlashNotification('Please wait until the process completes.'); return; }; if(hasUnsavedEdit && !confirm('You have unsaved changes. Are you sure you want to leave?')) return; hasUnsavedEdit = false; currentView = 'dashboard'" :class="currentView === 'dashboard' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'" class="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300">
               <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                 <use href="icons-sprite.svg#outline-folder"></use>
               </svg>
               <span>Manage</span>
               <span x-show="savedQRCodes.length > 0" class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary" x-text="savedQRCodes.length"></span>
             </button>
+            <button @click="if(isExportingBulk || isImporting) { showFlashNotification('Please wait until the process completes.'); return; }; if(hasUnsavedEdit && !confirm('You have unsaved changes. Are you sure you want to leave?')) return; hasUnsavedEdit = false; currentView = 'scanner'" :class="currentView === 'scanner' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'" class="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
+                <use href="icons-sprite.svg#outline-viewfinder-circle"></use>
+              </svg>
+              <span>Verify</span>
+            </button>
           </nav>
-          <button @click="if(hasUnsavedEdit && !confirm('You have unsaved changes. Discard them and create a new one?')) return; resetGenerator(); currentView='generator'; currentStep='typeSelection'" class="group relative flex items-center gap-x-2 overflow-hidden rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-glow transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-[0_0_28px_-4px_rgba(0,82,255,0.4)] focus:outline-none focus:ring-4 focus:ring-primary/30">
+          <button @click="if(isExportingBulk || isImporting) { showFlashNotification('Please wait until the process completes.'); return; }; if(hasUnsavedEdit && !confirm('You have unsaved changes. Discard them and create a new one?')) return; resetGenerator(); currentView='generator'; currentStep='typeSelection'" class="group relative flex items-center gap-x-2 overflow-hidden rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-glow transition-all duration-300 hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-[0_0_28px_-4px_rgba(0,82,255,0.4)] focus:outline-none focus:ring-4 focus:ring-primary/30">
             <span class="absolute inset-0 bg-white/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></span>
             <svg class="relative z-10 h-5 w-5" fill="none" stroke="currentColor" stroke-width="2.5">
               <use href="icons-sprite.svg#outline-plus"></use>
@@ -360,7 +402,7 @@
               </div>
             </div>
 
-            <div class="fixed bottom-24 md:bottom-6 right-6 z-110 transform rounded-xl bg-slate-900/95 px-5 py-4 text-white shadow-soft backdrop-blur-md transition-all" style="z-index: 110;" x-show="showNotification" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4" x-text="notificationMessage"></div>
+            <div id="flash-toast" class="fixed top-6 md:top-auto md:bottom-6 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-[90%] md:w-auto max-w-sm z-120 transform rounded-xl bg-slate-900/95 px-5 py-4 text-white shadow-soft backdrop-blur-md transition-all" style="z-index: 120;" x-show="showNotification" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4" :class="{ 'cursor-pointer hover:bg-slate-800': isUpdateNotification }" @click="if(isUpdateNotification) window.location.reload()" x-text="notificationMessage"></div>
 
             <div class="flex flex-col gap-8 xl:flex-row">
               <!-- Left side: Configuration panel -->
@@ -382,45 +424,135 @@
                           Website URL
                           <span class="ml-2 inline-flex items-center rounded-md bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600 ring-1 ring-inset ring-red-500/10">Required</span>
                         </label>
-                          <input type="url" id="website-url" autocapitalize="off" autocorrect="off" spellcheck="false" x-model="formData.url.address" @input.debounce.300ms="updateQrCode(false)" @blur="validateUrl(); recordState()" placeholder="https://www.example.com" class="block w-full rounded-xl border-0 bg-slate-50/50 px-4 py-3.5 text-base md:text-sm text-slate-900 shadow-inner-soft ring-1 ring-inset transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset" :class="urlError ? 'ring-red-500 focus:ring-red-500' : 'ring-slate-200 focus:ring-primary'" />
+                          <input type="url" id="website-url" autocapitalize="off" autocorrect="off" spellcheck="false" x-model="formData.url.address" @paste="handleSmartUrlPaste($event)" @input.debounce.300ms="updateQrCode(false)" @blur="validateUrl(); recordState()" placeholder="https://www.example.com" class="block w-full rounded-xl border-0 bg-slate-50/50 px-4 py-3.5 text-base md:text-sm text-slate-900 shadow-inner-soft ring-1 ring-inset transition-all focus:bg-white focus:outline-none focus:ring-2 focus:ring-inset" :class="urlError ? 'ring-red-500 focus:ring-red-500' : 'ring-slate-200 focus:ring-primary'" />
                         <p x-show="urlError" x-text="urlError" class="mt-2 text-sm text-red-600"></p>
-                        <!-- UTM Parameters Builder -->
+
+                        <div class="mt-3 flex items-start gap-2 rounded-lg bg-blue-50/50 p-3 text-[11px] text-slate-500 ring-1 ring-inset ring-blue-100/50">
+                          <svg class="mt-0.5 h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-sparkles"></use></svg>
+                          <p class="leading-relaxed"><strong class="font-semibold text-slate-700">Smart Paste:</strong> Try pasting a list of URLs, or a URL containing UTM parameters (e.g., <code class="rounded border border-slate-200 bg-white px-1 py-0.5 font-mono text-[10px] text-slate-600">?utm_source=...</code>) into the field above. We'll automatically extract the parameters and generate tracking variants for you.</p>
+                        </div>
+
+                        <!-- Campaign & UTM Manager -->
                         <div x-data="{ showUtm: false }" class="mt-5 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 transition-all duration-300">
                           <button @click="showUtm = !showUtm" class="flex w-full items-center justify-between px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none">
                             <span class="flex items-center gap-2">
                               <svg class="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-chart-bar"></use></svg>
-                              UTM Parameters Builder
-                              <span x-show="formData.url.utm.source || formData.url.utm.medium || formData.url.utm.campaign || formData.url.utm.term || formData.url.utm.content" class="ml-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary" x-cloak>Active</span>
+                              Campaign & UTM Manager
+                              <span x-show="formData.url.utm.source || formData.url.utm.medium || formData.url.utm.campaign || (formData.url.variations?.length || 0) > 0" class="ml-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary" x-cloak>Active</span>
+                              <span x-show="(formData.url.variations?.length || 0) > 0" class="ml-0.5 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600 ring-1 ring-inset ring-indigo-500/10" x-text="(formData.url.variations?.length || 0) + ' Variant' + ((formData.url.variations?.length || 0) > 1 ? 's' : '')" x-cloak></span>
                             </span>
                             <svg class="h-4 w-4 text-slate-400 transition-transform duration-300" :class="showUtm ? 'rotate-180' : ''"><use href="icons-sprite.svg#outline-chevron-down"></use></svg>
                           </button>
                           <div x-show="showUtm" x-collapse>
-                            <div class="space-y-3 border-t border-slate-200 p-4">
-                              <div class="flex items-center justify-between mb-3">
-                                <p class="text-xs text-slate-500">Add tracking parameters to measure campaign performance in Google Analytics.</p>
-                                <button type="button" @click="formData.url.utm = { source: '', medium: '', campaign: '', term: '', content: '' }; updateQrCode()" class="text-xs font-semibold text-rose-500 hover:text-rose-600 transition-colors">Clear All</button>
+                            <div class="space-y-4 border-t border-slate-200 p-4">
+
+                              <!-- UTM Presets Bar -->
+                              <div x-show="utmPresets.length > 0">
+                                <div class="flex items-center justify-between mb-2">
+                                  <p class="text-xs font-semibold text-slate-600 flex items-center gap-1.5">
+                                    <svg class="h-3.5 w-3.5 text-amber-500" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-bolt"></use></svg>
+                                    UTM Presets
+                                  </p>
+                                  <button type="button" @click="showUtmPresetManager = true" class="text-[10px] font-bold text-slate-400 hover:text-slate-600 transition-colors">Manage</button>
+                                </div>
+                                <div class="flex flex-wrap gap-1.5">
+                                  <template x-for="preset in utmPresets" :key="preset.id">
+                                    <button type="button" @click="addVariationFromPreset(preset)" class="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 shadow-sm ring-1 ring-slate-200 transition-all hover:ring-primary/40 hover:text-primary hover:bg-primary/5 active:scale-95" :title="'Source: ' + preset.utm.source + ' / Medium: ' + preset.utm.medium">
+                                      <svg class="h-3 w-3 text-primary/60" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-plus"></use></svg>
+                                      <span x-text="preset.name"></span>
+                                    </button>
+                                  </template>
+                                </div>
                               </div>
-                              <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                <div>
-                                  <label class="mb-1 block text-xs font-semibold text-slate-600">Source (utm_source) <span class="text-red-500">*</span></label>
-                                  <input type="text" x-model="formData.url.utm.source" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="e.g. google, newsletter" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+
+                              <!-- Base UTM Parameters -->
+                              <div>
+                                <div class="flex items-center justify-between mb-2">
+                                  <p class="text-xs text-slate-500">Base UTM parameters (applied when no variants are set).</p>
+                                  <button type="button" @click="formData.url.utm = { source: '', medium: '', campaign: '', term: '', content: '' }; updateQrCode()" class="text-xs font-semibold text-rose-500 hover:text-rose-600 transition-colors">Clear</button>
                                 </div>
-                                <div>
-                                  <label class="mb-1 block text-xs font-semibold text-slate-600">Medium (utm_medium) <span class="text-red-500">*</span></label>
-                                  <input type="text" x-model="formData.url.utm.medium" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="e.g. cpc, email, flyer" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                  <div>
+                                    <label class="mb-1 block text-xs font-semibold text-slate-600">Source (utm_source) <span class="text-red-500">*</span></label>
+                                    <input type="text" x-model="formData.url.utm.source" @input.debounce.300ms="updateQrCode(false)" @blur="formatUtmParam('source'); recordState()" placeholder="e.g. google, newsletter" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  </div>
+                                  <div>
+                                    <label class="mb-1 block text-xs font-semibold text-slate-600">Medium (utm_medium) <span class="text-red-500">*</span></label>
+                                    <input type="text" x-model="formData.url.utm.medium" @input.debounce.300ms="updateQrCode(false)" @blur="formatUtmParam('medium'); recordState()" placeholder="e.g. cpc, email, flyer" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  </div>
+                                  <div class="sm:col-span-2">
+                                    <label class="mb-1 block text-xs font-semibold text-slate-600">Campaign (utm_campaign) <span class="text-red-500">*</span></label>
+                                    <input type="text" x-model="formData.url.utm.campaign" @input.debounce.300ms="updateQrCode(false)" @blur="formatUtmParam('campaign'); recordState()" placeholder="e.g. summer-sale, spring-event" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  </div>
+                                  <div>
+                                    <label class="mb-1 block text-xs font-semibold text-slate-600">Term (utm_term)</label>
+                                    <input type="text" x-model="formData.url.utm.term" @input.debounce.300ms="updateQrCode(false)" @blur="formatUtmParam('term'); recordState()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  </div>
+                                  <div>
+                                    <label class="mb-1 block text-xs font-semibold text-slate-600">Content (utm_content)</label>
+                                    <input type="text" x-model="formData.url.utm.content" @input.debounce.300ms="updateQrCode(false)" @blur="formatUtmParam('content'); recordState()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                  </div>
                                 </div>
-                                <div class="sm:col-span-2">
-                                  <label class="mb-1 block text-xs font-semibold text-slate-600">Campaign (utm_campaign) <span class="text-red-500">*</span></label>
-                                  <input type="text" x-model="formData.url.utm.campaign" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="e.g. summer_sale, spring_event" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                              </div>
+
+                              <!-- Variation Table -->
+                              <div class="border-t border-slate-200 pt-4">
+                                <div class="flex items-center justify-between mb-3">
+                                  <p class="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                                    <svg class="h-3.5 w-3.5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-squares-2x2"></use></svg>
+                                    UTM Variants
+                                    <span class="text-slate-400 font-normal">(Same design, different tracking)</span>
+                                  </p>
                                 </div>
-                                <div>
-                                  <label class="mb-1 block text-xs font-semibold text-slate-600">Term (utm_term)</label>
-                                  <input type="text" x-model="formData.url.utm.term" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                                </div>
-                                <div>
-                                  <label class="mb-1 block text-xs font-semibold text-slate-600">Content (utm_content)</label>
-                                  <input type="text" x-model="formData.url.utm.content" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="Optional" class="block w-full rounded-lg border border-slate-300 bg-white p-2 text-base md:text-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
-                                </div>
+
+                                <template x-for="(variation, vIndex) in formData.url.variations" :key="variation.id">
+                                  <div class="mb-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition-all hover:shadow-md">
+                                    <div class="flex items-center justify-between mb-2">
+                                      <input type="text" x-model="variation.name" @input.debounce.300ms="hasUnsavedEdit = true" placeholder="Variant name" class="w-full max-w-[200px] rounded border-0 bg-slate-50 px-2 py-1 text-xs font-bold text-slate-700 ring-1 ring-inset ring-slate-200 transition focus:ring-2 focus:ring-primary/30 focus:outline-none" />
+                                      <div class="flex items-center gap-1.5 shrink-0 ml-2">
+                                        <button type="button" @click="saveCurrentRowAsPreset(variation)" class="flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="Save as Preset">
+                                          <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-bookmark"></use></svg>
+                                          <span class="hidden sm:inline">Save Preset</span>
+                                        </button>
+                                        <button type="button" @click="removeVariation(variation.id)" class="rounded p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors" title="Delete Variant">
+                                          <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-trash"></use></svg>
+                                        </button>
+                                      </div>
+                                    </div>
+                                    <div class="mb-3">
+                                      <label class="mb-0.5 block text-[10px] font-semibold text-slate-500">Direct URL (Overrides base URL & UTMs)</label>
+                                      <input type="text" x-model="variation.customUrl" @input.debounce.300ms="updateQrCode(false)" placeholder="Optional: https://..." class="block w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20" />
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                      <div>
+                                        <label class="mb-0.5 block text-[10px] font-semibold text-slate-500">Source</label>
+                                        <input type="text" x-model="variation.utm.source" @input.debounce.300ms="updateQrCode(false)" @blur="formatVariationUtmParam(variation, 'source')" placeholder="google" class="block w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20" />
+                                      </div>
+                                      <div>
+                                        <label class="mb-0.5 block text-[10px] font-semibold text-slate-500">Medium</label>
+                                        <input type="text" x-model="variation.utm.medium" @input.debounce.300ms="updateQrCode(false)" @blur="formatVariationUtmParam(variation, 'medium')" placeholder="cpc" class="block w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20" />
+                                      </div>
+                                      <div>
+                                        <label class="mb-0.5 block text-[10px] font-semibold text-slate-500">Campaign</label>
+                                        <input type="text" x-model="variation.utm.campaign" @input.debounce.300ms="updateQrCode(false)" @blur="formatVariationUtmParam(variation, 'campaign')" placeholder="summer-sale" class="block w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20" />
+                                      </div>
+                                      <div>
+                                        <label class="mb-0.5 block text-[10px] font-semibold text-slate-500">Term</label>
+                                        <input type="text" x-model="variation.utm.term" @input.debounce.300ms="updateQrCode(false)" @blur="formatVariationUtmParam(variation, 'term')" placeholder="Optional" class="block w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20" />
+                                      </div>
+                                      <div>
+                                        <label class="mb-0.5 block text-[10px] font-semibold text-slate-500">Content</label>
+                                        <input type="text" x-model="variation.utm.content" @input.debounce.300ms="updateQrCode(false)" @blur="formatVariationUtmParam(variation, 'content')" placeholder="Optional" class="block w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20" />
+                                      </div>
+                                    </div>
+                                    <p class="mt-1.5 truncate text-[10px] text-slate-400 font-mono" x-text="buildVariationUrl(variation)"></p>
+                                  </div>
+                                </template>
+
+                                <button type="button" @click="addEmptyVariation()" class="flex w-full items-center justify-center gap-1.5 rounded-lg border-2 border-dashed border-slate-300 bg-white/50 px-3 py-2.5 text-xs font-bold text-slate-500 transition-all hover:border-primary/40 hover:text-primary hover:bg-primary/5 active:scale-[0.98]">
+                                  <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-plus"></use></svg>
+                                  Add Variant
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -613,11 +745,11 @@
                             </label>
                             <input type="text" id="crypto-address" x-model="formData.crypto.address" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="e.g. 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
-                          <div>
-                            <label for="crypto-amount" class="mb-2 block text-sm font-medium text-slate-700">Amount (Optional)</label>
-                            <input type="number" step="any" inputmode="decimal" id="crypto-amount" x-model="formData.crypto.amount" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="e.g. 0.01" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
-                          </div>
                         </div>
+                        <p class="mt-4 text-xs font-semibold text-rose-600 flex items-start gap-1.5 bg-rose-50 p-3 rounded-lg border border-rose-200">
+                          <svg class="h-4 w-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-exclamation-triangle"></use></svg>
+                          <span>Disclaimer: Please ask the sender to carefully verify the wallet address before executing any transaction. We take no responsibility for lost funds.</span>
+                        </p>
                       </div>
                       <div x-show="selectedType === 'geo'">
                         <h3 class="mb-1 text-lg font-semibold text-slate-800">Location (Geo)</h3>
@@ -628,14 +760,14 @@
                               Latitude
                               <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
                             </label>
-                            <input type="number" inputmode="decimal" step="any" id="geo-latitude" x-model="formData.geo.latitude" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="35.681236" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="text" inputmode="decimal" id="geo-latitude" x-model="formData.geo.latitude" @input.debounce.300ms="formData.geo.latitude = String(formData.geo.latitude).replace(/[^0-9.,\-]/g, ''); updateQrCode(false)" @blur="recordState()" placeholder="35.681236" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                           <div>
                             <label for="geo-longitude" class="mb-2 block text-sm font-medium text-slate-700">
                               Longitude
                               <span class="ml-2 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Required</span>
                             </label>
-                            <input type="number" inputmode="decimal" step="any" id="geo-longitude" x-model="formData.geo.longitude" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" placeholder="139.767125" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <input type="text" inputmode="decimal" id="geo-longitude" x-model="formData.geo.longitude" @input.debounce.300ms="formData.geo.longitude = String(formData.geo.longitude).replace(/[^0-9.,\-]/g, ''); updateQrCode(false)" @blur="recordState()" placeholder="139.767125" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                           </div>
                         </div>
                         <p class="mt-2 text-xs text-slate-500">Example: Tokyo Station (Latitude: 35.681236, Longitude: 139.767125)</p>
@@ -794,7 +926,7 @@
                             <div x-show="qrOptions.colorType === 'single'">
                               <label for="fg-color" class="mb-2 block text-sm font-medium text-slate-700">Dot Color (Foreground)</label>
                               <div class="flex items-center gap-3">
-                                <input type="color" id="fg-color" x-model.debounce.50ms="qrOptions.foregroundColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="color" id="fg-color" x-model="qrOptions.foregroundColor" @input="updateQrCode(false)" @change="updateQrCode(true)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
                                 <input type="text" name="fg-color-hex" spellcheck="false" aria-label="Foreground Hex Color" x-model="qrOptions.foregroundColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               </div>
                             </div>
@@ -816,14 +948,14 @@
                               <div>
                                 <label for="gradient-start" class="mb-2 block text-sm font-medium text-slate-700">Start Color</label>
                                 <div class="flex items-center gap-3">
-                                  <input type="color" id="gradient-start" x-model.debounce.50ms="qrOptions.gradient.color1" @input.debounce.300ms="updateQrCode()" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                  <input type="color" id="gradient-start" x-model="qrOptions.gradient.color1" @input="updateQrCode(false)" @change="updateQrCode(true)" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
                                 <input type="text" name="gradient-start-hex" spellcheck="false" aria-label="Gradient Start Hex Color" x-model="qrOptions.gradient.color1" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                                 </div>
                               </div>
                               <div>
                                 <label for="gradient-end" class="mb-2 block text-sm font-medium text-slate-700">End Color</label>
                                 <div class="flex items-center gap-3">
-                                  <input type="color" id="gradient-end" x-model.debounce.50ms="qrOptions.gradient.color2" @input.debounce.300ms="updateQrCode()" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                  <input type="color" id="gradient-end" x-model="qrOptions.gradient.color2" @input="updateQrCode(false)" @change="updateQrCode(true)" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
                                 <input type="text" name="gradient-end-hex" spellcheck="false" aria-label="Gradient End Hex Color" x-model="qrOptions.gradient.color2" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                                 </div>
                               </div>
@@ -834,21 +966,21 @@
                             <div>
                               <label for="bg-color" class="mb-2 block text-sm font-medium text-slate-700">Background Color</label>
                               <div class="flex items-center gap-3">
-                                <input type="color" id="bg-color" x-model.debounce.50ms="qrOptions.backgroundColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="color" id="bg-color" x-model="qrOptions.backgroundColor" @input="updateQrCode(false)" @change="updateQrCode(true)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
                                 <input type="text" name="bg-color-hex" spellcheck="false" aria-label="Background Hex Color" x-model="qrOptions.backgroundColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               </div>
                             </div>
                             <div>
                               <label for="corner-color" class="mb-2 block text-sm font-medium text-slate-700">Corner Border Color</label>
                               <div class="flex items-center gap-3">
-                                <input type="color" id="corner-color" x-model.debounce.50ms="qrOptions.cornerColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="color" id="corner-color" x-model="qrOptions.cornerColor" @input="updateQrCode(false)" @change="updateQrCode(true)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
                                 <input type="text" name="corner-color-hex" spellcheck="false" aria-label="Corner Border Hex Color" x-model="qrOptions.cornerColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               </div>
                             </div>
                             <div>
                               <label for="corner-dot-color" class="mb-2 block text-sm font-medium text-slate-700">Corner Dot Color</label>
                               <div class="flex items-center gap-3">
-                                <input type="color" id="corner-dot-color" x-model.debounce.50ms="qrOptions.cornerDotColor" @input.debounce.300ms="updateQrCode()" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="color" id="corner-dot-color" x-model="qrOptions.cornerDotColor" @input="updateQrCode(false)" @change="updateQrCode(true)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
                                 <input type="text" name="corner-dot-color-hex" spellcheck="false" aria-label="Corner Dot Hex Color" x-model="qrOptions.cornerDotColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               </div>
                             </div>
@@ -1190,7 +1322,7 @@
                                       <div>
                                         <label class="mb-1.5 block text-xs font-semibold text-slate-500">Main Color</label>
                                         <div class="flex items-center gap-3">
-                                          <input type="color" x-model.debounce.50ms="getActiveBrandKit().colors[0]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                          <input type="color" x-model="getActiveBrandKit().colors[0]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
                                           <input type="text" x-model="getActiveBrandKit().colors[0]" spellcheck="false" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                         </div>
                                       </div>
@@ -1199,7 +1331,7 @@
                                       <div>
                                         <label class="mb-1.5 block text-xs font-semibold text-slate-500">Background Color</label>
                                         <div class="flex items-center gap-3">
-                                          <input type="color" x-model.debounce.50ms="getActiveBrandKit().colors[1]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                          <input type="color" x-model="getActiveBrandKit().colors[1]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
                                           <input type="text" x-model="getActiveBrandKit().colors[1]" spellcheck="false" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                         </div>
                                       </div>
@@ -1225,7 +1357,7 @@
               </div>
 
               <!-- Right side: Preview and download -->
-              <div class="order-first xl:order-0 mb-8 xl:mb-0 xl:top-6 h-fit w-full xl:sticky xl:w-[420px] xl:shrink-0 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto scrollbar-hide xl:pb-4">
+              <div class="order-first xl:order-0 mb-8 xl:mb-0 sticky top-4 z-40 xl:top-6 h-fit w-full xl:w-[420px] xl:shrink-0 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto scrollbar-hide xl:pb-4 transition-all">
                 <div class="rounded-xl border border-slate-200 bg-white p-4 pt-5 shadow-lg md:p-6 md:pt-7 transition-all duration-300"
                      :class="{ 'ring-4 ring-primary/20 scale-[1.01] shadow-xl': isUpdatingPreview }">
                   <div class="mb-4 flex items-center justify-between">
@@ -1256,43 +1388,91 @@
                   </div>
 
                   <div class="mt-6 space-y-3">
-                    <h3 class="text-sm font-bold text-slate-700">QR Code Quality Score</h3>
-                    <div class="flex items-center gap-4">
-                      <div class="relative h-24 w-24">
-                        <svg class="h-full w-full" viewBox="0 0 36 36">
-                          <path class="text-slate-200" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
-                          <path :class="qrQuality.score > 80 ? 'text-green-500' : qrQuality.score > 50 ? 'text-yellow-500' : 'text-red-500'"
-                                style="transition: stroke-dasharray 1s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s ease;"
-                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" :stroke-dasharray="qrQuality.score + ', 100'"></path>
-                        </svg>
-                        <div class="absolute inset-0 flex flex-col items-center justify-center">
-                          <span class="text-2xl font-bold text-slate-800" x-text="qrQuality.score"></span>
-                          <span class="text-xs text-slate-500">/ 100</span>
+                    <h3 class="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <svg class="h-5 w-5 text-indigo-500" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-sparkles"></use></svg>
+                      QR Reliability Lab
+                    </h3>
+
+                    <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <!-- Overall -->
+                      <div class="flex items-center gap-4 border-b border-slate-200 pb-4">
+                        <div class="relative h-16 w-16 shrink-0">
+                          <svg class="h-full w-full" viewBox="0 0 36 36">
+                            <path class="text-slate-200" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
+                            <path :class="qrQuality.score >= 80 ? 'text-green-500' : qrQuality.score >= 50 ? 'text-yellow-500' : 'text-red-500'"
+                                  style="transition: stroke-dasharray 1s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s ease;"
+                                  d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" :stroke-dasharray="qrQuality.score + ', 100'"></path>
+                          </svg>
+                          <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span class="text-xl font-bold text-slate-800" x-text="qrQuality.score"></span>
+                          </div>
+                        </div>
+                        <div class="flex-1">
+                          <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Overall</p>
+                          <div class="flex items-center gap-1.5" :class="qrQuality.score >= 80 ? 'text-green-600' : qrQuality.score >= 50 ? 'text-yellow-600' : 'text-red-600'">
+                            <svg class="h-4 w-4" fill="currentColor"><use :href="qrQuality.score >= 80 ? 'icons-sprite.svg#solid-check-circle' : qrQuality.score >= 50 ? 'icons-sprite.svg#solid-exclamation-triangle' : 'icons-sprite.svg#solid-x-circle'"></use></svg>
+                            <span class="text-sm font-bold" x-text="qrQuality.score >= 80 ? 'Production Ready' : qrQuality.score >= 50 ? 'Review Needed' : 'Not Recommended'"></span>
+                          </div>
                         </div>
                       </div>
-                      <div class="flex-1">
-                        <template x-if="qrQuality.issues.length === 0">
-                          <div class="flex items-center gap-2 rounded-lg bg-green-50 p-3 text-sm text-green-800">
-                            <svg class="h-5 w-5 shrink-0" fill="currentColor">
-                              <use href="icons-sprite.svg#solid-check-circle"></use>
-                            </svg>
-                            <span>Great design!</span>
+
+                      <!-- Evaluations Table -->
+                      <div class="py-3 space-y-2">
+                        <template x-for="item in qrQuality.evaluations" :key="item.name">
+                          <div class="flex items-center justify-between text-xs">
+                            <div class="flex items-center gap-2 w-28">
+                              <span class="rounded px-1.5 py-0.5 font-bold uppercase tracking-wider text-[9px] w-10 text-center"
+                                    :class="item.pass ? 'bg-green-100 text-green-700' : item.warn ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'"
+                                    x-text="item.pass ? 'PASS' : item.warn ? 'WARN' : 'FAIL'"></span>
+                              <span class="font-medium text-slate-700" x-text="item.name"></span>
+                            </div>
+                            <div class="flex-1 text-right font-mono text-slate-600" x-text="item.value"></div>
+                            <div class="w-14 text-right font-mono text-slate-400">
+                              <span :class="item.pass ? 'text-green-600 font-medium' : item.warn ? 'text-yellow-600 font-medium' : 'text-red-600 font-medium'" x-text="item.score"></span>
+                              <span x-text="'/' + item.max"></span>
+                            </div>
                           </div>
                         </template>
-                        <div class="space-y-1">
-                          <template x-for="(issue, index) in qrQuality.issues" :key="index">
-                            <div class="flex items-center gap-2 rounded-lg p-2 text-xs" :class="{ 'bg-yellow-50 text-yellow-800': issue.status === 'warning', 'bg-red-50 text-red-800': issue.status === 'bad' }">
-                              <svg class="h-4 w-4 shrink-0" fill="currentColor">
-                                <use x-show="issue.status === 'warning'" href="icons-sprite.svg#solid-exclamation-triangle"></use>
-                                <use x-show="issue.status === 'bad'" href="icons-sprite.svg#solid-x-circle"></use>
-                              </svg>
-                              <span class="grow" x-text="issue.message"></span>
-                              <button x-show="issue.action" @click="issue.action" class="ml-1 whitespace-nowrap rounded bg-white/60 px-1.5 py-0.5 text-xs font-bold hover:bg-white">Fix</button>
-                            </div>
-                          </template>
+                      </div>
+
+                      <!-- Print Suitability -->
+                      <div class="border-t border-slate-200 pt-3">
+                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                          <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-printer"></use></svg>
+                          Print Suitability
+                        </p>
+                        <div class="flex items-center justify-between text-xs mb-2">
+                          <span class="text-slate-600">Minimum Size:</span>
+                          <span class="font-mono font-medium text-slate-800"><span x-text="qrQuality.minSize"></span> x <span x-text="qrQuality.minSize"></span> mm</span>
+                        </div>
+                        <div class="flex gap-2 text-[10px] font-bold">
+                          <span class="flex items-center gap-1 rounded bg-slate-100 px-2 py-1" :class="qrQuality.minSize <= 15 ? 'text-slate-700' : 'text-slate-400 opacity-50'">
+                            <svg class="h-3 w-3" fill="currentColor"><use :href="qrQuality.minSize <= 15 ? 'icons-sprite.svg#solid-check-circle' : 'icons-sprite.svg#solid-x-circle'"></use></svg> Business Card
+                          </span>
+                          <span class="flex items-center gap-1 rounded bg-slate-100 px-2 py-1" :class="qrQuality.minSize <= 30 ? 'text-slate-700' : 'text-slate-400 opacity-50'">
+                            <svg class="h-3 w-3" fill="currentColor"><use :href="qrQuality.minSize <= 30 ? 'icons-sprite.svg#solid-check-circle' : 'icons-sprite.svg#solid-x-circle'"></use></svg> Flyer
+                          </span>
+                          <span class="flex items-center gap-1 rounded bg-slate-100 px-2 py-1 text-slate-700">
+                            <svg class="h-3 w-3" fill="currentColor"><use href="icons-sprite.svg#solid-check-circle"></use></svg> Poster
+                          </span>
                         </div>
                       </div>
                     </div>
+
+                    <template x-if="qrQuality.issues.length > 0">
+                      <div class="space-y-1 mt-2">
+                        <template x-for="(issue, index) in qrQuality.issues" :key="index">
+                          <div class="flex items-center gap-2 rounded-lg p-2 text-xs" :class="{ 'bg-yellow-50 text-yellow-800': issue.status === 'warning', 'bg-red-50 text-red-800': issue.status === 'bad' }">
+                            <svg class="h-4 w-4 shrink-0" fill="currentColor">
+                              <use x-show="issue.status === 'warning'" href="icons-sprite.svg#solid-exclamation-triangle"></use>
+                              <use x-show="issue.status === 'bad'" href="icons-sprite.svg#solid-x-circle"></use>
+                            </svg>
+                            <span class="grow" x-text="issue.message"></span>
+                            <button x-show="issue.action" @click="issue.action()" class="ml-1 whitespace-nowrap rounded bg-white/60 px-1.5 py-0.5 text-xs font-bold hover:bg-white">Fix</button>
+                          </div>
+                        </template>
+                      </div>
+                    </template>
                   </div>
 
                   <!-- Raw Data Inspector -->
@@ -1301,17 +1481,41 @@
                       <span class="flex items-center gap-2">
                         <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-code-bracket"></use></svg>
                         Inspect Raw Data
+                        <span x-show="selectedType === 'url' && (formData.url.variations?.length || 0) > 0" class="ml-1 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600" x-cloak x-text="((formData.url.variations?.length || 0) + 1) + ' URLs'"></span>
                       </span>
                       <svg class="h-4 w-4 transition-transform duration-300" :class="showRawData ? 'rotate-180' : ''"><use href="icons-sprite.svg#outline-chevron-down"></use></svg>
                     </button>
                     <div x-show="showRawData" x-collapse>
-                      <div class="relative mt-3 group rounded-lg bg-slate-900 p-4 shadow-inner">
-                        <button @click="if(rawDataString.trim()) { navigator.clipboard.writeText(rawDataString.trim()); copiedRaw = true; hapticFeedback('light'); setTimeout(() => copiedRaw = false, 2000); }" class="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-slate-700 p-1.5 text-slate-400 transition-colors hover:bg-slate-600 hover:text-white opacity-0 group-hover:opacity-100" title="Copy Raw Data">
-                          <svg x-show="!copiedRaw" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
-                          <svg x-show="copiedRaw" x-cloak class="h-3.5 w-3.5 text-green-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                        </button>
-                        <pre class="scrollbar-hide max-h-32 overflow-y-auto overflow-x-hidden break-all whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-slate-300" x-text="rawDataString.trim() || '(No data)'"></pre>
-                      </div>
+                      <!-- Variation list view -->
+                      <template x-if="selectedType === 'url' && formData.url.variations && formData.url.variations.length > 0">
+                        <div class="mt-3 space-y-2">
+                          <template x-for="item in getRawDataList()" :key="item.label">
+                            <div class="group relative rounded-lg bg-slate-900 px-3 py-2.5 shadow-inner">
+                              <div class="flex items-center justify-between mb-1">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500" x-text="item.label"></span>
+                                <button @click="if(item.url) { copyToTextClipboard(item.url); hapticFeedback('light'); showFlashNotification('Copied!'); }" class="rounded bg-slate-700 p-1 text-slate-400 transition-colors hover:bg-slate-600 hover:text-white opacity-0 group-hover:opacity-100" title="Copy">
+                                  <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
+                                </button>
+                              </div>
+                              <p class="break-all font-mono text-[11px] leading-relaxed text-slate-300" x-text="item.url || '(No data)'"></p>
+                            </div>
+                          </template>
+                          <button @click="const allText = getRawDataList().map(i => i.label + ': ' + i.url).join('\n'); copyToTextClipboard(allText); hapticFeedback('light'); showFlashNotification('Copied all URLs!');" class="flex w-full items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-400 transition-colors hover:bg-slate-700 hover:text-white">
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
+                            Copy All
+                          </button>
+                        </div>
+                      </template>
+                      <!-- Simple single view (default / non-URL types) -->
+                      <template x-if="selectedType !== 'url' || !formData.url.variations || formData.url.variations.length === 0">
+                        <div class="relative mt-3 group rounded-lg bg-slate-900 p-4 shadow-inner">
+                          <button @click="if(rawDataString.trim()) { copyToTextClipboard(rawDataString.trim()); copiedRaw = true; hapticFeedback('light'); setTimeout(() => copiedRaw = false, 2000); }" class="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-slate-700 p-1.5 text-slate-400 transition-colors hover:bg-slate-600 hover:text-white opacity-0 group-hover:opacity-100" title="Copy Raw Data">
+                            <svg x-show="!copiedRaw" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
+                            <svg x-show="copiedRaw" x-cloak class="h-3.5 w-3.5 text-green-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                          </button>
+                          <pre class="scrollbar-hide max-h-32 overflow-y-auto overflow-x-hidden break-all whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-slate-300" x-text="rawDataString.trim() || '(No data)'"></pre>
+                        </div>
+                      </template>
                     </div>
                   </div>
 
@@ -1330,7 +1534,7 @@
                         </button>
                       </div>
                       <div class="flex gap-2 w-full">
-                        <button x-show="editingQRCodeId" type="button" @click="currentView = 'dashboard'; resetGenerator()" class="relative z-30 flex items-center justify-center gap-x-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:outline-none">
+                        <button x-show="editingQRCodeId" type="button" @click="if(hasUnsavedEdit && !confirm('You have unsaved changes. Are you sure you want to cancel?')) return; currentView = 'dashboard'; resetGenerator()" class="relative z-30 flex items-center justify-center gap-x-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:outline-none">
                           Cancel
                         </button>
                         <button type="button" @click="showSaveModal = true; setTimeout(() => $refs.saveNameInput.focus(), 310)" :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex flex-1 items-center justify-center gap-x-2 rounded-lg border border-slate-300 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-100 hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
@@ -1415,6 +1619,39 @@
                   </button>
                 </div>
               </template>
+
+              <!-- Type Filters -->
+              <div x-show="activeTypes.length > 0" x-cloak class="pt-6 pb-2">
+                <div class="flex items-center justify-between px-2 mb-3">
+                  <h3 class="text-xs font-black tracking-wider text-slate-500 uppercase">Types</h3>
+                </div>
+                <div class="flex flex-wrap gap-1.5 px-2">
+                  <button @click="activeTypeFilter = 'all'; currentPage = 1" class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5" :class="activeTypeFilter === 'all' ? 'bg-primary text-white shadow-md scale-105' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'">
+                    All
+                  </button>
+                  <template x-for="type in activeTypes" :key="type.id">
+                    <button @click="activeTypeFilter = type.id; currentPage = 1" class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5" :class="activeTypeFilter === type.id ? 'bg-primary text-white shadow-md scale-105' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'" :title="type.title">
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2"><use :href="'icons-sprite.svg#outline-' + type.icon"></use></svg>
+                      <span class="text-[10px] font-normal opacity-80" x-text="type.count"></span>
+                    </button>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Tag Cloud / Filters -->
+              <div x-show="allTags.length > 0" x-cloak class="pt-6 pb-2">
+                <div class="flex items-center justify-between px-2 mb-3">
+                  <h3 class="text-xs font-black tracking-wider text-slate-500 uppercase">Tags</h3>
+                </div>
+                <div class="flex flex-wrap gap-1.5 px-2">
+                  <template x-for="tag in allTags" :key="tag.name">
+                    <button @click="searchQuery = tag.name; currentPage = 1" class="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5" :class="searchQuery === tag.name ? 'bg-primary text-white shadow-md scale-105' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'">
+                      <span class="truncate max-w-[120px]" x-text="tag.name"></span>
+                      <span class="text-[10px] opacity-70 font-normal" x-text="tag.count"></span>
+                    </button>
+                  </template>
+                </div>
+              </div>
             </div>
 
             <!-- Main Content (List Area) -->
@@ -1483,7 +1720,13 @@
                         </button>
                         <div class="min-w-0 flex-1">
                           <p class="font-semibold text-slate-800 truncate max-w-full" x-text="qr.name" :title="qr.name"></p>
-                          <p class="text-sm text-slate-500" x-text="qrTypes.find(t => t.id === qr.type)?.title || 'Unknown'"></p>
+                          <div class="flex items-center gap-2 mt-0.5">
+                            <p class="text-sm text-slate-500" x-text="qrTypes.find(t => t.id === qr.type)?.title || 'Unknown'"></p>
+                            <span x-show="qr.type === 'url' && (qr.formData?.url?.variations?.length || 0) > 0" class="inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600 ring-1 ring-inset ring-indigo-500/10" x-cloak>
+                              <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-folder"></use></svg>
+                              <span x-text="(qr.formData?.url?.variations?.length || 0) + ' Variants'"></span>
+                            </span>
+                          </div>
                         </div>
                       </div>
 
@@ -1525,6 +1768,11 @@
                       <div class="col-span-12 flex items-center justify-end gap-4 md:col-span-4">
                         <p class="hidden text-sm text-slate-500 md:block whitespace-nowrap" x-text="new Date(qr.createdAt).toLocaleDateString()"></p>
                         <div class="flex items-center justify-end gap-2">
+                          <button @click.stop="toggleFavorite(qr.id)" class="rounded-lg p-2 transition-all hover:bg-slate-100" :class="qr.isFavorite ? 'text-amber-400 hover:text-slate-400' : 'text-slate-400 hover:text-amber-400'" :title="qr.isFavorite ? 'Unpin' : 'Pin to top'">
+                            <svg class="h-5 w-5 drop-shadow-sm" :fill="qr.isFavorite ? 'currentColor' : 'none'" :stroke-width="qr.isFavorite ? '0' : '2'" stroke="currentColor">
+                              <use x-bind:href="qr.isFavorite ? 'icons-sprite.svg#solid-star' : 'icons-sprite.svg#outline-star'"></use>
+                            </svg>
+                          </button>
                           <button @click="prepareDownloadFromDashboard(qr)" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" title="Download">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                               <use href="icons-sprite.svg#outline-arrow-down-tray"></use>
@@ -1600,13 +1848,24 @@
                             </button>
                           </td>
                           <td class="px-4 py-3 max-w-[200px]">
-                            <div class="font-bold text-slate-800 truncate" x-text="qr.name" :title="qr.name"></div>
+                            <div class="flex items-center gap-1.5 mb-0.5">
+                              <button @click.stop="toggleFavorite(qr.id)" class="shrink-0 transition-all hover:scale-110 focus:outline-none" :class="qr.isFavorite ? 'text-amber-400 drop-shadow-sm' : 'text-slate-300 hover:text-amber-400'" :title="qr.isFavorite ? 'Unpin' : 'Pin to top'">
+                                <svg class="h-4 w-4" :fill="qr.isFavorite ? 'currentColor' : 'none'" :stroke-width="qr.isFavorite ? '0' : '2'" stroke="currentColor"><use x-bind:href="qr.isFavorite ? 'icons-sprite.svg#solid-star' : 'icons-sprite.svg#outline-star'"></use></svg>
+                              </button>
+                              <div class="font-bold text-slate-800 truncate" x-text="qr.name" :title="qr.name"></div>
+                            </div>
                             <div class="text-xs text-slate-500 truncate mt-0.5" x-text="qr.memo || 'No memo'" :title="qr.memo"></div>
+                            <div x-show="qr.type === 'url' && (qr.formData?.url?.variations?.length || 0) > 0" class="mt-1" x-cloak>
+                              <span class="inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600 ring-1 ring-inset ring-indigo-500/10">
+                                <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-folder"></use></svg>
+                                <span x-text="(qr.formData?.url?.variations?.length || 0) + ' Variants'"></span>
+                              </span>
+                            </div>
                           </td>
                           <td class="px-4 py-3">
                             <div class="flex flex-wrap gap-1">
                               <template x-for="tag in (qr.tags || []).slice(0, 2)" :key="tag">
-                                <span class="px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-medium" x-text="tag"></span>
+                                <button @click.stop="searchQuery = tag; currentPage = 1; window.scrollTo({top: 0, behavior: 'smooth'})" class="px-1.5 py-0.5 bg-primary/10 text-primary hover:bg-primary/20 hover:scale-105 transition-all rounded text-[10px] font-medium cursor-pointer" title="Filter by this tag" x-text="tag"></button>
                               </template>
                               <span x-show="(qr.tags || []).length > 2" class="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-medium" x-text="'+' + ((qr.tags || []).length - 2)"></span>
                             </div>
@@ -1629,13 +1888,16 @@
               </div>
 
               <!-- Show when no search results found -->
-              <div x-show="displayedItems.length === 0 && searchQuery" x-cloak class="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 py-12 text-center">
+              <div x-show="displayedItems.length === 0 && (searchQuery || currentProjectId !== 'all' || activeTypeFilter !== 'all')" x-cloak class="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 py-12 text-center">
                 <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.5">
                   <use href="icons-sprite.svg#outline-magnifying-glass"></use>
                 </svg>
                 <h3 class="mt-4 text-lg font-semibold text-slate-900">No matching QR codes found</h3>
-                <p class="mt-2 text-sm text-slate-500">No results found for "<span x-text="searchQuery" class="font-bold"></span>".<br>Try another keyword.</p>
-                <button @click="searchQuery = ''; currentPage = 1" class="mt-4 rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300">Clear Search</button>
+                <p class="mt-2 text-sm text-slate-500">
+                  <template x-if="searchQuery"><span>No results found for "<span x-text="searchQuery" class="font-bold"></span>".<br></span></template>
+                  Try adjusting your filters or search keywords.
+                </p>
+                <button @click="searchQuery = ''; currentProjectId = 'all'; activeTypeFilter = 'all'; currentPage = 1" class="mt-4 rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300">Clear All Filters</button>
               </div>
 
               <nav x-show="totalPages > 1" class="flex items-center justify-between rounded-lg bg-slate-100 px-4 py-3 sm:px-6">
@@ -1692,6 +1954,22 @@
                 <span x-text="selectedIds.length" class="text-primary-400 mr-1"></span> Selected
               </span>
               <div class="h-5 w-px bg-slate-700"></div>
+
+              <button @click="openBulkMoveModal()" :disabled="isExportingBulk" class="flex items-center gap-2 rounded-full bg-slate-700 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-slate-600 active:scale-95 disabled:opacity-50">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-folder-arrow-down"></use></svg>
+                <span class="hidden sm:inline">Move</span>
+              </button>
+
+              <button @click="openBulkTagModal()" :disabled="isExportingBulk" class="flex items-center gap-2 rounded-full bg-slate-700 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-slate-600 active:scale-95 disabled:opacity-50">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-tag"></use></svg>
+                <span class="hidden sm:inline">Tags</span>
+              </button>
+
+              <button @click="exportSelectedAsCsv()" :disabled="isExportingBulk" class="flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-600 active:scale-95 disabled:opacity-50" title="Export metadata as CSV for CRM (People)">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-table-cells"></use></svg>
+                <span class="hidden sm:inline">Export CSV</span>
+              </button>
+
               <button @click="isBulkDownload = true; download.format = 'png'; download.size = 1024; download.zipName = getActiveProjectName() + '_' + new Date().toISOString().slice(0,10).replace(/-/g, ''); showDownloadModal = true" :disabled="isExportingBulk" class="flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-hover active:scale-95 disabled:opacity-50 disabled:cursor-wait">
                 <template x-if="!isExportingBulk">
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>
@@ -1701,6 +1979,12 @@
                 </template>
                 <span x-text="isExportingBulk ? exportProgress : 'Export ZIP'"></span>
               </button>
+
+              <button @click="if (savedQRCodes.filter(qr => selectedIds.includes(qr.id) && qr.type === 'url').length > 0) { showUrlExportModal = true; } else { showFlashNotification('No URL-type QR codes selected.'); hapticFeedback('error'); }" :disabled="isExportingBulk" class="flex items-center gap-2 rounded-full bg-indigo-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-indigo-600 active:scale-95 disabled:opacity-50">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-link"></use></svg>
+                <span class="hidden sm:inline">Copy URLs</span>
+              </button>
+
               <button @click="bulkDeleteQRCodes()" :disabled="isExportingBulk" class="flex items-center gap-2 rounded-full bg-rose-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-rose-600 active:scale-95 disabled:opacity-50">
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-trash"></use></svg>
                 <span class="hidden sm:inline">Delete</span>
@@ -1730,22 +2014,211 @@
           </div>
         </div>
       </div>
+
+        <!-- Scan & Validate View -->
+        <div x-show="currentView === 'scanner'" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="w-full">
+          <div class="mx-auto max-w-3xl">
+            <!-- Header -->
+            <div class="mb-8 rounded-2xl border border-white bg-white/50 p-6 shadow-softer backdrop-blur-md md:p-8">
+              <div class="flex flex-col items-start gap-4 md:flex-row md:items-center">
+                <div class="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-primary/20 bg-linear-to-br from-primary/10 to-primary/5 shadow-inner-soft">
+                  <svg class="h-8 w-8 text-primary" fill="none" stroke="currentColor" stroke-width="2">
+                    <use href="icons-sprite.svg#outline-viewfinder-circle"></use>
+                  </svg>
+                </div>
+                <div>
+                  <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">Scan & Validate</h1>
+                  <p class="mt-1 text-sm leading-relaxed text-slate-500">Scan QR codes with your camera or upload images to verify the encoded data. All processing is done locally for maximum security.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Scanner Controls -->
+            <div class="mb-6 flex flex-wrap items-center gap-3">
+              <button @click="isScannerActive ? stopScanner() : startScanner()" class="group flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold shadow-sm transition-all active:scale-95" :class="isScannerActive ? 'bg-rose-500 text-white hover:bg-rose-600' : 'bg-primary text-white hover:bg-primary-hover'">
+                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-camera"></use></svg>
+                <span x-text="isScannerActive ? 'Stop Camera' : 'Start Camera'"></span>
+              </button>
+              <label class="group flex cursor-pointer items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-slate-200 transition-all hover:bg-slate-50 hover:ring-primary/30 active:scale-95">
+                <svg class="h-5 w-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-photo"></use></svg>
+                <span>Scan from Image</span>
+                <input type="file" accept="image/*" multiple @change="scanFromImage($event)" class="sr-only" />
+              </label>
+            </div>
+
+            <!-- Camera Viewport -->
+            <div x-show="isScannerActive" x-transition class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-black shadow-soft">
+              <div id="qr-scanner-viewport" class="w-full"></div>
+            </div>
+            <!-- Hidden container for image scanning -->
+            <div id="qr-scanner-temp" style="width: 0; height: 0; overflow: hidden; position: absolute; visibility: hidden;"></div>
+
+            <!-- Results -->
+            <div class="rounded-2xl border border-white bg-white p-5 shadow-softer sm:p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+                  Scan Results
+                  <span x-show="scannerResults.length > 0" class="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary" x-text="scannerResults.length" x-cloak></span>
+                </h2>
+                <div class="flex items-center gap-2" x-show="scannerResults.length > 0">
+                  <button @click="copyAllScanResults()" class="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200 active:scale-95">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
+                    Copy All
+                  </button>
+                  <button @click="clearScanResults()" class="flex items-center gap-1.5 rounded-lg bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-600 transition-colors hover:bg-rose-100 active:scale-95">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-trash"></use></svg>
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              <!-- Empty state -->
+              <div x-show="scannerResults.length === 0" class="py-12 text-center">
+                <div class="inline-flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
+                  <svg class="h-8 w-8 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.5"><use href="icons-sprite.svg#outline-viewfinder-circle"></use></svg>
+                </div>
+                <p class="mt-4 text-sm text-slate-500">No scans yet. Start the camera or upload an image to begin.</p>
+              </div>
+
+              <!-- Results list -->
+              <div class="space-y-2" x-show="scannerResults.length > 0">
+                <template x-for="result in scannerResults" :key="result.id">
+                  <div class="group flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-slate-300">
+                    <div class="flex items-start gap-3">
+                      <template x-if="result.filePreview">
+                        <img :src="result.filePreview" class="mt-0.5 h-12 w-12 shrink-0 rounded object-contain border border-slate-200 bg-white shadow-sm" alt="Preview">
+                      </template>
+                      <template x-if="!result.filePreview">
+                        <div class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-600">
+                          <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        </div>
+                      </template>
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                          <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Decoded Content</p>
+                          <template x-if="result.fileName">
+                            <span class="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-500 truncate max-w-[150px]" x-text="result.fileName" :title="result.fileName"></span>
+                          </template>
+                        </div>
+                        <template x-if="result.isUrl">
+                          <a :href="result.text" target="_blank" rel="noopener noreferrer" class="block break-all text-sm font-medium text-primary hover:underline" x-text="result.text"></a>
+                        </template>
+                        <template x-if="!result.isUrl">
+                          <p class="break-all text-sm font-medium text-slate-800" x-text="result.text"></p>
+                        </template>
+                        <p class="mt-1 text-[10px] text-slate-400" x-text="result.timestamp"></p>
+                      </div>
+                      <button @click="copyToTextClipboard(result.text); hapticFeedback('light'); showFlashNotification('Copied!')" class="shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 opacity-0 group-hover:opacity-100" title="Copy">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
+                      </button>
+                    </div>
+
+                    <template x-if="result.analysis">
+                      <div class="mt-2 rounded-lg bg-slate-900 p-4 text-slate-300 shadow-inner">
+                        <div class="flex items-center justify-between border-b border-slate-700 pb-2 mb-3">
+                          <div>
+                            <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+                              <svg class="h-4 w-4 text-indigo-400" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-sparkles"></use></svg>
+                              Reliability Analysis
+                            </h4>
+                            <p class="text-[9px] text-slate-500 mt-0.5">[Local Analysis - No Data Sent]</p>
+                          </div>
+                          <div class="text-right">
+                            <span class="text-xs font-bold" :class="result.analysis.score >= 80 ? 'text-green-400' : result.analysis.score >= 50 ? 'text-yellow-400' : 'text-red-400'" x-text="result.analysis.score + '/100'"></span>
+                            <p class="text-[10px] text-slate-400" x-text="'(' + result.analysis.status + ')'"></p>
+                          </div>
+                        </div>
+
+                        <div class="space-y-2 text-xs">
+                          <div class="flex items-center gap-2">
+                            <svg class="h-3.5 w-3.5 text-green-400 shrink-0" fill="currentColor"><use href="icons-sprite.svg#solid-check-circle"></use></svg>
+                            <span>Decode Status: <span class="font-bold text-white" x-text="result.analysis.decodeStatus"></span></span>
+                          </div>
+
+                          <div class="flex items-center gap-2">
+                            <svg class="h-3.5 w-3.5 shrink-0" :class="result.analysis.contrast.pass ? 'text-green-400' : 'text-red-400'" fill="currentColor"><use :href="result.analysis.contrast.pass ? 'icons-sprite.svg#solid-check-circle' : 'icons-sprite.svg#solid-x-circle'"></use></svg>
+                            <span>Contrast Check: <span class="font-bold text-white" x-text="(result.analysis.contrast.pass ? 'Pass' : 'Fail') + ' (Est. ' + result.analysis.contrast.ratio + ')'"></span></span>
+                          </div>
+
+                          <div class="flex items-center gap-2">
+                            <svg class="h-3.5 w-3.5 shrink-0" :class="result.analysis.quietZone.pass ? 'text-green-400' : 'text-yellow-400'" fill="currentColor"><use :href="result.analysis.quietZone.pass ? 'icons-sprite.svg#solid-check-circle' : 'icons-sprite.svg#solid-exclamation-triangle'"></use></svg>
+                            <span>Quiet Zone: <span class="font-bold text-white" x-text="result.analysis.quietZone.message"></span></span>
+                          </div>
+
+                          <div class="flex items-center gap-2">
+                            <svg class="h-3.5 w-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-information-circle"></use></svg>
+                            <span>Est. Density: <span class="font-bold text-white" x-text="'Version ' + result.analysis.density.version"></span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Global Footer Placeholder -->
+        <div id="grind-global-footer" class="mt-16 w-full opacity-80 hover:opacity-100 transition-opacity"></div>
       </div>
     </main>
 
+    <!-- UTM Preset Manager Modal -->
+    <div x-show="showUtmPresetManager" @keydown.escape.window="showUtmPresetManager = false" class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" x-trap.noscroll="showUtmPresetManager">
+      <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
+        <div x-show="showUtmPresetManager" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showUtmPresetManager = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
+        <div x-show="showUtmPresetManager" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-md transform-gpu rounded-t-3xl sm:rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <h3 class="text-xl font-black text-slate-900 mb-1">Manage UTM Presets</h3>
+          <p class="text-sm text-slate-500 mb-5">Edit or delete your saved UTM parameter presets.</p>
+
+          <div x-show="utmPresets.length === 0" class="py-8 text-center text-sm text-slate-400">
+            No presets saved yet. Save a variant row as a preset to get started.
+          </div>
+
+          <div class="space-y-2 max-h-80 overflow-y-auto">
+            <template x-for="preset in utmPresets" :key="preset.id">
+              <div class="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-3 transition-all hover:border-slate-300">
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-bold text-slate-700 truncate" x-text="preset.name"></p>
+                  <p class="text-[10px] text-slate-400 truncate" x-text="[preset.utm.source, preset.utm.medium, preset.utm.campaign].filter(Boolean).join(' / ') || '(Empty)'"></p>
+                </div>
+                <div class="flex items-center gap-1 ml-2 shrink-0">
+                  <button @click="renameUtmPreset(preset.id)" class="rounded p-1.5 text-slate-400 hover:text-slate-600 hover:bg-white transition-colors" title="Rename">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-pencil"></use></svg>
+                  </button>
+                  <button @click="deleteUtmPreset(preset.id)" class="rounded p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors" title="Delete">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-trash"></use></svg>
+                  </button>
+                </div>
+              </div>
+            </template>
+          </div>
+
+          <button @click="showUtmPresetManager = false" class="mt-5 w-full rounded-xl bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-200">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Mobile Bottom Navigation -->
     <nav class="sm:hidden fixed bottom-0 left-0 z-40 w-full backdrop-blur-md bg-white/80 border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
-      <div class="flex items-center justify-around px-2 py-1">
-        <button @click="if(currentView === 'generator') { if(hasUnsavedEdit && !confirm('Discard changes and start new?')) return; resetGenerator(); currentStep='typeSelection'; } else { currentView = 'generator'; }" class="flex flex-col items-center justify-center w-full py-2 rounded-2xl transition-all" :class="currentView === 'generator' ? 'text-primary scale-105' : 'text-slate-400 active:bg-slate-100'">
+      <div class="grid grid-cols-3 items-center px-2 py-1">
+        <button @click="if(isExportingBulk || isImporting) { showFlashNotification('Please wait until the process completes.'); return; }; if(currentView === 'generator') { if(hasUnsavedEdit && !confirm('Discard changes and start new?')) return; resetGenerator(); currentStep='typeSelection'; } else { currentView = 'generator'; }" class="flex flex-col items-center justify-center py-2 rounded-2xl transition-all" :class="currentView === 'generator' ? 'text-primary scale-105' : 'text-slate-400 active:bg-slate-100'">
           <svg class="h-6 w-6 mb-0.5" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-qr-code"></use></svg>
           <span class="text-[10px] font-black tracking-wide">Create</span>
         </button>
-        <button @click="if(hasUnsavedEdit && !confirm('You have unsaved changes. Are you sure you want to leave?')) return; hasUnsavedEdit = false; currentView = 'dashboard'" class="flex flex-col items-center justify-center w-full py-2 rounded-2xl transition-all" :class="currentView === 'dashboard' ? 'text-primary scale-105' : 'text-slate-400 active:bg-slate-100'">
+        <button @click="if(isExportingBulk || isImporting) { showFlashNotification('Please wait until the process completes.'); return; }; if(hasUnsavedEdit && !confirm('You have unsaved changes. Are you sure you want to leave?')) return; hasUnsavedEdit = false; currentView = 'dashboard'" class="flex flex-col items-center justify-center py-2 rounded-2xl transition-all" :class="currentView === 'dashboard' ? 'text-primary scale-105' : 'text-slate-400 active:bg-slate-100'">
           <div class="relative">
             <svg class="h-6 w-6 mb-0.5" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-folder"></use></svg>
             <span x-show="savedQRCodes.length > 0" class="absolute -top-1 -right-2 flex h-4 min-w-4 px-1 items-center justify-center rounded-full border-2 border-white bg-rose-500 text-[8px] font-black text-white" x-text="savedQRCodes.length"></span>
           </div>
           <span class="text-[10px] font-black tracking-wide">Manage</span>
+        </button>
+        <button @click="if(isExportingBulk || isImporting) { showFlashNotification('Please wait until the process completes.'); return; }; if(hasUnsavedEdit && !confirm('You have unsaved changes. Are you sure you want to leave?')) return; hasUnsavedEdit = false; currentView = 'scanner'" class="flex flex-col items-center justify-center py-2 rounded-2xl transition-all" :class="currentView === 'scanner' ? 'text-primary scale-105' : 'text-slate-400 active:bg-slate-100'">
+          <svg class="h-6 w-6 mb-0.5" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-camera"></use></svg>
+          <span class="text-[10px] font-black tracking-wide">Verify</span>
         </button>
       </div>
     </nav>
@@ -1810,7 +2283,7 @@
                   <p class="mb-4 text-sm text-slate-500" x-text="`Data content of \x22${qrToShare.name}\x22`"></p>
                   <div class="flex rounded-lg shadow-sm">
                     <textarea readonly :value="getShareDataText(qrToShare)" rows="4" class="resize-none overflow-y-auto block w-full min-w-0 flex-1 rounded-none rounded-l-lg border-slate-300 bg-slate-50 p-3 font-mono text-xs focus:border-primary focus:ring-primary"></textarea>
-                    <button @click="navigator.clipboard.writeText(getShareDataText(qrToShare)); copied = true; hapticFeedback('light'); setTimeout(() => copied = false, 2000)" type="button" class="relative -ml-px inline-flex w-24 items-center justify-center gap-x-1.5 rounded-r-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 ring-1 ring-inset ring-slate-300 transition-all hover:bg-slate-200">
+                    <button @click="copyToTextClipboard(getShareDataText(qrToShare)); copied = true; hapticFeedback('light'); setTimeout(() => copied = false, 2000)" type="button" class="relative -ml-px inline-flex w-24 items-center justify-center gap-x-1.5 rounded-r-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 ring-1 ring-inset ring-slate-300 transition-all hover:bg-slate-200">
                       <template x-if="!copied">
                         <span class="flex items-center gap-1.5">
                           <svg class="h-4 w-4 text-slate-500"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
@@ -1837,6 +2310,116 @@
           </div>
           <div class="bg-slate-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
             <button @click="showShareModal = false" type="button" class="mt-3 inline-flex w-full justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-base font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- URL Export Modal -->
+    <div x-show="showUrlExportModal" @keydown.escape.window="showUrlExportModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="url-export-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showUrlExportModal" x-cloak>
+      <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
+        <div x-show="showUrlExportModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showUrlExportModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
+        <div x-show="showUrlExportModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block w-full transform-gpu overflow-hidden rounded-xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:align-middle">
+          <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+            <div class="sm:flex sm:items-start">
+              <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-50 sm:mx-0 sm:h-10 sm:w-10">
+                <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <use href="icons-sprite.svg#outline-link"></use>
+                </svg>
+              </div>
+              <div class="mt-3 w-full text-center sm:ml-4 sm:mt-0 sm:text-left">
+                <h3 class="text-lg font-medium leading-6 text-slate-900" id="url-export-modal-title">Export URLs for Campaigns</h3>
+                <div class="mt-4 w-full">
+                  <p class="mb-4 text-sm text-slate-500">Export the generated URLs and their UTM parameters from the selected URL-type QR codes.</p>
+
+                  <div class="space-y-3">
+                    <button @click="downloadUrlsAsCsv()" class="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-50 px-4 py-4 text-sm font-bold text-indigo-700 transition-colors hover:bg-indigo-100 ring-1 ring-inset ring-indigo-200">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-table-cells"></use></svg>
+                      <span>Download as CSV</span>
+                    </button>
+                    <button @click="copyUrlsAsMarkdown()" class="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-4 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-200 ring-1 ring-inset ring-slate-200">
+                      <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
+                      <span>Copy as Markdown</span>
+                    </button>
+                  </div>
+
+                  <div class="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <p class="text-xs text-slate-600"><span class="font-bold">Info:</span> This will extract the base URL and all associated tracking variants. Non-URL type QR codes are automatically excluded.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bg-slate-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+            <button @click="showUrlExportModal = false" type="button" class="mt-3 inline-flex w-full justify-center rounded-lg border border-slate-300 bg-white px-4 py-2 text-base font-medium text-slate-700 shadow-sm hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 sm:mt-0 sm:w-auto sm:text-sm">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QA Preview Modal (For Variations) -->
+    <div x-show="showQaModal" @keydown.escape.window="showQaModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="qa-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showQaModal">
+      <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
+        <div x-show="showQaModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showQaModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
+        <div x-show="showQaModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block w-full max-w-4xl transform-gpu overflow-hidden rounded-2xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle border border-slate-200">
+          <div class="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+            <div class="sm:flex sm:items-start">
+              <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-50 sm:mx-0 sm:h-10 sm:w-10 ring-1 ring-indigo-500/20">
+                <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document-check"></use></svg>
+              </div>
+              <div class="mt-3 w-full text-center sm:ml-4 sm:mt-0 sm:text-left">
+                <h3 class="text-xl font-extrabold text-slate-900" id="qa-modal-title">QA Verification List</h3>
+                <p class="mt-1 text-sm text-slate-500">Please review the generated variations and their links before exporting to ZIP.</p>
+
+                <div class="mt-6 w-full overflow-hidden rounded-xl border border-slate-200 shadow-sm bg-white">
+                  <div class="max-h-[50vh] overflow-y-auto">
+                    <table class="min-w-full divide-y divide-slate-200">
+                      <thead class="bg-slate-50 sticky top-0 z-10 shadow-sm">
+                        <tr>
+                          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider w-20">Thumbnail</th>
+                          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">File Name</th>
+                          <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Generated URL</th>
+                          <th scope="col" class="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider w-24">Test Link</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-slate-200 bg-white" x-show="qaCurrentQr">
+                        <template x-for="(variant, idx) in qaCurrentQr?.formData?.url?.variations" :key="idx">
+                          <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-4 py-3 whitespace-nowrap">
+                              <div class="h-12 w-12 rounded border border-slate-200 bg-white p-1 shadow-sm">
+                                <img :src="qaCurrentQr.previewSvgUrl" class="h-full w-full object-contain" alt="QR Preview" />
+                              </div>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-slate-900 font-medium">
+                              <span x-text="`${qaCurrentQr.name} - ${variant.name}.png`"></span>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-slate-500 max-w-xs truncate">
+                              <span x-text="generateVariantUrl(qaCurrentQr.formData.url.address, variant)" class="font-mono text-xs bg-slate-100 px-2 py-1 rounded select-all"></span>
+                            </td>
+                            <td class="px-4 py-3 text-center whitespace-nowrap">
+                              <a :href="generateVariantUrl(qaCurrentQr.formData.url.address, variant)" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center rounded-lg p-2 text-primary hover:bg-primary-50 transition-colors" title="Test Link">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-top-right-on-square"></use></svg>
+                              </a>
+                            </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="bg-slate-50 px-4 py-4 sm:flex sm:flex-row-reverse sm:px-6 gap-3 rounded-b-2xl">
+            <button @click="downloadVariationsAsZip(qaCurrentQr); showQaModal = false" type="button" class="inline-flex w-full justify-center items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-hover active:scale-95 focus:outline-none sm:w-auto">
+              <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>
+              Download ZIP
+            </button>
+            <button @click="showQaModal = false" type="button" class="mt-3 inline-flex w-full justify-center rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition-all focus:outline-none sm:mt-0 sm:w-auto">
+              Cancel
+            </button>
           </div>
         </div>
       </div>
@@ -2023,7 +2606,10 @@
                   <option :value="type.id" x-text="type.title"></option>
                 </template>
               </select>
-              <p class="text-[11px] text-slate-500 mt-2">The current design from the editor will be applied.</p>
+              <div class="mt-3 flex items-start gap-2 rounded-lg bg-blue-50/50 p-3 text-[11px] text-slate-500 ring-1 ring-inset ring-blue-100/50">
+                <svg class="mt-0.5 h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-sparkles"></use></svg>
+                <p class="leading-relaxed"><strong class="font-semibold text-slate-700">Pro Tip:</strong> The design currently set in the editor (Logo, Frame, Colors) will be automatically applied to all generated QR codes.</p>
+              </div>
             </div>
 
             <label @dragover.prevent.stop="$el.classList.add('border-primary', 'bg-primary-50')" @dragleave.prevent.stop="$el.classList.remove('border-primary', 'bg-primary-50')" @drop.prevent.stop="$el.classList.remove('border-primary', 'bg-primary-50'); handleCsvDrop($event)" class="group flex w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 py-16 transition-all hover:border-primary/50 hover:bg-primary-50/50">
@@ -2176,7 +2762,7 @@
                 </div>
 
                 <div class="flex gap-3">
-                  <button type="button" @click="resetImportState()" :disabled="isImporting" class="flex-1 py-3.5 rounded-xl bg-slate-100 font-bold text-slate-700 active:scale-95 transition-all disabled:opacity-50">Back</button>
+                  <button type="button" @click="resetImportState()" :disabled="isImporting" class="flex-1 py-3.5 rounded-xl bg-slate-100 font-bold text-slate-700 active:scale-95 transition-all disabled:opacity-50">Cancel & Select New File</button>
                   <button type="button" @click="executeBulkImport()" :disabled="isImporting || activeTypeFields.filter(f => f.required).some(f => !csvMapping.dynamic[f.key])" class="flex-1 py-3.5 rounded-xl bg-primary font-bold text-white shadow-md hover:bg-primary-hover active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
                     <template x-if="isImporting">
                       <svg class="h-5 w-5 animate-spin text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -2187,6 +2773,64 @@
               </div>
 
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Move Modal -->
+    <div x-show="showBulkMoveModal" @keydown.escape.window="showBulkMoveModal = false" class="fixed inset-0 z-105 overflow-y-auto" role="dialog" aria-modal="true" x-trap.noscroll="showBulkMoveModal" x-cloak>
+      <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
+        <div x-show="showBulkMoveModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showBulkMoveModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity"></div>
+        <span class="hidden sm:inline-block sm:h-screen sm:align-middle">&#8203;</span>
+        <div x-show="showBulkMoveModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-sm transform-gpu rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 sm:mx-0 sm:h-10 sm:w-10 mb-4">
+            <svg class="h-6 w-6 text-primary" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-folder-arrow-down"></use></svg>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mb-1">Move to Project</h3>
+          <p class="text-sm text-slate-500 mb-4">Move <span x-text="selectedIds.length" class="font-bold"></span> selected items to:</p>
+
+          <div class="mb-6">
+            <select x-model="bulkMoveTargetProject" class="block w-full rounded-lg border border-slate-300 bg-slate-50 p-3 text-base md:text-sm text-slate-900 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+              <template x-for="p in projects" :key="p.id">
+                <option :value="p.id" x-text="p.name"></option>
+              </template>
+            </select>
+          </div>
+
+          <div class="flex gap-3">
+            <button type="button" @click="showBulkMoveModal = false" class="flex-1 py-3 rounded-xl bg-slate-100 font-bold text-slate-700 active:scale-95 transition-transform hover:bg-slate-200">Cancel</button>
+            <button type="button" @click="executeBulkMove()" class="flex-1 py-3 rounded-xl bg-primary font-bold text-white active:scale-95 transition-transform hover:bg-primary-hover">Move</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bulk Tag Modal -->
+    <div x-show="showBulkTagModal" @keydown.escape.window="showBulkTagModal = false" class="fixed inset-0 z-105 overflow-y-auto" role="dialog" aria-modal="true" x-trap.noscroll="showBulkTagModal" x-cloak>
+      <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
+        <div x-show="showBulkTagModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showBulkTagModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity"></div>
+        <span class="hidden sm:inline-block sm:h-screen sm:align-middle">&#8203;</span>
+        <div x-show="showBulkTagModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-sm transform-gpu rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-50 sm:mx-0 sm:h-10 sm:w-10 mb-4">
+            <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-tag"></use></svg>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mb-1">Edit Tags</h3>
+          <p class="text-sm text-slate-500 mb-4">Update tags for <span x-text="selectedIds.length" class="font-bold"></span> selected items.</p>
+
+          <div class="mb-4">
+            <div class="grid grid-cols-3 gap-2 p-1 bg-slate-100 rounded-lg mb-3">
+              <button @click="bulkTagMode = 'add'" :class="bulkTagMode === 'add' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-600 hover:bg-white/50'" class="px-2 py-1.5 rounded-md text-xs font-bold transition-colors">Add</button>
+              <button @click="bulkTagMode = 'replace'" :class="bulkTagMode === 'replace' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-600 hover:bg-white/50'" class="px-2 py-1.5 rounded-md text-xs font-bold transition-colors">Replace</button>
+              <button @click="bulkTagMode = 'remove'" :class="bulkTagMode === 'remove' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-600 hover:bg-white/50'" class="px-2 py-1.5 rounded-md text-xs font-bold transition-colors">Remove</button>
+            </div>
+            <input type="text" x-model="bulkTagInput" placeholder="tag1, tag2..." class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 shadow-sm transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20" autofocus />
+            <p class="mt-2 text-xs text-slate-500">Comma-separated values.</p>
+          </div>
+
+          <div class="flex gap-3 mt-6">
+            <button type="button" @click="showBulkTagModal = false" class="flex-1 py-3 rounded-xl bg-slate-100 font-bold text-slate-700 active:scale-95 transition-transform hover:bg-slate-200">Cancel</button>
+            <button type="button" @click="executeBulkTag()" class="flex-1 py-3 rounded-xl bg-indigo-600 font-bold text-white active:scale-95 transition-transform hover:bg-indigo-700">Apply</button>
           </div>
         </div>
       </div>
@@ -2211,65 +2855,19 @@
     </div>
 
     <!-- Command palette -->
-    <div id="cmd-palette" onclick="toggleCommandPalette()" class="hidden z-100 fixed inset-0 justify-center items-start bg-slate-900/30 backdrop-blur-md p-4 pt-4 md:pt-[15vh] transition-all duration-300 opacity-0" style="transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);">
-      <div onclick="event.stopPropagation()" id="cmd-palette-content" class="flex flex-col bg-white/90 shadow-2xl backdrop-blur-xl rounded-xl ring-1 ring-white/50 w-full max-w-2xl overflow-hidden transition-all duration-300 scale-95" style="transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);">
+    <div id="cmd-palette" class="hidden z-100 fixed inset-0 justify-center items-start bg-slate-900/30 backdrop-blur-md p-4 pt-4 md:pt-[15vh] transition-all duration-300 opacity-0" style="transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);">
+      <div id="cmd-palette-content" class="flex flex-col bg-white/90 shadow-2xl backdrop-blur-xl rounded-xl ring-1 ring-white/50 w-full max-w-2xl overflow-hidden transition-all duration-300 scale-95" style="transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);">
         <div class="relative flex items-center gap-3 p-4 border-slate-200 border-b">
           <label for="cmd-input" class="sr-only">Search Command</label>
           <span class="text-slate-500">
             <svg class="w-5 h-5"><use href="icons-sprite.svg#outline-magnifying-glass"></use></svg>
           </span>
-          <input type="text" id="cmd-input" oninput="handleCommandInput(event)" placeholder="Execute command or search by name, tag, memo..." class="bg-transparent outline-none w-full font-sans font-medium text-slate-900 text-xl placeholder-slate-400">
+          <input type="text" id="cmd-input" placeholder="Execute command or search by name, tag, memo..." class="bg-transparent outline-none w-full font-sans font-medium text-slate-900 text-xl placeholder-slate-400">
           <span class="right-4 absolute bg-slate-100 px-2 py-1 rounded font-mono text-[10px] text-slate-400">ESC</span>
         </div>
         <div id="cmd-list" class="p-2 max-h-[50vh] overflow-y-auto scrollbar-hide"></div>
       </div>
     </div>
 
-    <!-- Register Service Worker (Required for full offline PWA) -->
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('sw.js').then(registration => {
-            console.log('ServiceWorker registration successful with scope: ', registration.scope);
-
-            // Detect updates
-            registration.addEventListener('updatefound', () => {
-              const newWorker = registration.installing;
-              newWorker.addEventListener('statechange', () => {
-                // Prompt reload when a new SW is installed and an old SW already exists (an update)
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // Safely wait for Alpine.js app to be mounted
-                  let attempts = 0;
-                  const tryNotify = setInterval(() => {
-                    attempts++;
-                    if (window.$app) {
-                      clearInterval(tryNotify);
-                      if (window.$app.hasUnsavedEdit) {
-                        // Tell user about update but don't force reload
-                        window.$app.showFlashNotification("✨ App update ready. Reload the page when you are done.");
-                      } else {
-                        // Show clickable toast to reload seamlessly
-                        window.$app.showFlashNotification("✨ App updated! Tap here to reload.");
-                        setTimeout(() => {
-                          const toastEl = document.querySelector('.fixed.bottom-24.md\\:bottom-6');
-                          if (toastEl) {
-                            toastEl.style.cursor = 'pointer';
-                            toastEl.addEventListener('click', () => window.location.reload(), { once: true });
-                          }
-                        }, 100);
-                      }
-                    } else if (attempts > 50) {
-                      clearInterval(tryNotify); // Give up after 5 seconds
-                    }
-                  }, 100);
-                }
-              });
-            });
-          }).catch(err => {
-            console.log('ServiceWorker registration failed: ', err);
-          });
-        });
-      }
-    </script>
   </body>
 </html>

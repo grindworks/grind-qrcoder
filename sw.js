@@ -1,10 +1,10 @@
-// Update this version to trigger a cache update
-const CACHE_NAME = "grindqrcoder-v142";
+// Update this version to trigger a cache update (Format: YYYYMMDD-Revision)
+const CACHE_NAME = "grindqrcoder-v20260616-15";
 const urlsToCache = [
   "./",
   "./index.html",
   "./styles.css",
-  "./main.js",
+  "./main.js?v=clear-cache-2",
   "./icon-192.png",
   "./icon-512.png",
   "./icons-sprite.svg",
@@ -24,7 +24,9 @@ const externalUrlsToCache = [
   "https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.13.5/dist/cdn.min.js",
   "https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.13.5/dist/cdn.min.js",
   "https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js",
-  "https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js"
+  "https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js",
+  "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js",
+  "https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"
 ];
 
 // Create cache on install
@@ -68,7 +70,7 @@ self.addEventListener("activate", (event) => {
       .then((cacheNames) => {
         return Promise.all(
           cacheNames.map((cacheName) => {
-            if (cacheName !== CACHE_NAME) {
+            if (cacheName.startsWith("grindqrcoder-") && cacheName !== CACHE_NAME) {
               console.log("Deleted old cache:", cacheName);
               return caches.delete(cacheName);
             }
