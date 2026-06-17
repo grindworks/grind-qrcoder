@@ -4703,6 +4703,15 @@ function qrCodeGenerator() {
       this.scannerResults = [];
       this.showFlashNotification('Scan results cleared.');
     },
+    removeScanResult(id) {
+      const index = this.scannerResults.findIndex(r => r.id === id);
+      if (index !== -1) {
+        const removed = this.scannerResults.splice(index, 1)[0];
+        if (removed && removed.filePreview && removed.filePreview.startsWith("blob:")) {
+          URL.revokeObjectURL(removed.filePreview);
+        }
+      }
+    },
     copyAllScanResults() {
       if (this.scannerResults.length === 0) return;
       const text = this.scannerResults.map(r => r.text).join('\n');
@@ -5253,7 +5262,6 @@ function qrCodeGenerator() {
               this.$nextTick(() => { this.updateQrCode(false); });
 
               this.showFlashNotification("Draft restored.");
-              this.hapticFeedback('success');
             } else {
               this.clearDraft();
             }

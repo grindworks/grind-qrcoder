@@ -2060,10 +2060,11 @@
                   Scan Results
                   <span x-show="scannerResults.length > 0" class="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-bold text-primary" x-text="scannerResults.length" x-cloak></span>
                 </h2>
-                <div class="flex items-center gap-2" x-show="scannerResults.length > 0">
-                  <button @click="copyAllScanResults()" class="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-200 active:scale-95">
-                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
-                    Copy All
+                <div class="flex items-center gap-2" x-show="scannerResults.length > 0" x-data="{ copiedAll: false }">
+                  <button @click="copyAllScanResults(); copiedAll = true; setTimeout(() => copiedAll = false, 2000);" class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-colors active:scale-95" :class="copiedAll ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'">
+                    <svg x-show="!copiedAll" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
+                    <svg x-show="copiedAll" x-cloak class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    <span x-text="copiedAll ? 'Copied!' : 'Copy All'"></span>
                   </button>
                   <button @click="clearScanResults()" class="flex items-center gap-1.5 rounded-lg bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-600 transition-colors hover:bg-rose-100 active:scale-95">
                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-trash"></use></svg>
@@ -2108,9 +2109,15 @@
                         </template>
                         <p class="mt-1 text-[10px] text-slate-400" x-text="result.timestamp"></p>
                       </div>
-                      <button @click="copyToTextClipboard(result.text); hapticFeedback('light'); showFlashNotification('Copied!')" class="shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 opacity-0 group-hover:opacity-100" title="Copy">
-                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
-                      </button>
+                      <div x-data="{ copied: false }" class="flex items-center gap-1 shrink-0 transition-opacity" :class="copied ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'">
+                        <button @click="copyToTextClipboard(result.text); hapticFeedback('light'); showFlashNotification('Copied!'); copied = true; setTimeout(() => copied = false, 2000);" class="rounded-lg p-1.5 transition-colors" :class="copied ? 'bg-green-50 text-green-500' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'" :title="copied ? 'Copied!' : 'Copy'">
+                          <svg x-show="!copied" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
+                          <svg x-show="copied" x-cloak class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        </button>
+                        <button @click="removeScanResult(result.id)" class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500" title="Delete">
+                          <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-trash"></use></svg>
+                        </button>
+                      </div>
                     </div>
 
                     <template x-if="result.analysis">
