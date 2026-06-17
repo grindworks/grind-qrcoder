@@ -1,5 +1,5 @@
 // Update this version to trigger a cache update (Format: YYYYMMDD-Revision)
-const CACHE_NAME = "grindqrcoder-v20260616-15";
+const CACHE_NAME = "grindqrcoder-v20260617-3";
 const urlsToCache = [
   "./",
   "./index.html",
@@ -26,7 +26,8 @@ const externalUrlsToCache = [
   "https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js",
   "https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js",
   "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js",
-  "https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"
+  "https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js",
+  "https://grindsite.com/tools/footer.js"
 ];
 
 // Create cache on install
