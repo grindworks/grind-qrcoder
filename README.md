@@ -74,6 +74,6 @@ Since automatic backups to external servers are not performed, there is a risk o
 
 We strongly recommend saving frequently (Cmd+S / Ctrl+S) when your daily entries are complete, and backing up the output `.qrcoder` file to external storage such as Google Drive or Dropbox.
 
-## License
+## ライセンス
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+MIT License
