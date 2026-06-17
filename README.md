@@ -70,7 +70,7 @@ When saving, strong encryption via `AES-256-GCM` using the Web Crypto API can be
 This software adopts a "local-first" architecture, and all data is stored within your PC (or your browser's IndexedDB).
 Since automatic backups to external servers are not performed, there is a risk of data loss due to PC failure, browser cache clearance, or unexpected errors.
 
-**The author (Grind Works Inc.) takes no responsibility for any data loss or damages caused by using this software.**
+**The author ([Grind Works Inc.](https://grindsite.com/)) takes no responsibility for any data loss or damages caused by using this software.**
 
 We strongly recommend saving frequently (Cmd+S / Ctrl+S) when your daily entries are complete, and backing up the output `.qrcoder` file to external storage such as Google Drive or Dropbox.
 
