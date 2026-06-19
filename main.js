@@ -816,7 +816,7 @@ document.addEventListener("keydown", (e) => {
         }
         return;
       }
-      if (key === "y" && !e.metaKey) { // Redo for Windows (Ctrl+Y)
+      if (key === "y" && e.ctrlKey && !e.metaKey) { // Redo for Windows (Ctrl+Y)
         e.preventDefault();
         const app = window.$app;
         if (app && app.currentView === 'generator') {
@@ -835,7 +835,7 @@ document.addEventListener("keydown", (e) => {
 
   if (e.key === "Escape") {
     const app = window.$app;
-    if (app && (app.showSaveModal || app.showShareModal || app.showDownloadModal || app.showUrlExportModal || app.showSceneModal || app.showPromptModal)) {
+    if (app && (app.showSaveModal || app.showShareModal || app.showDownloadModal || app.showUrlExportModal || app.showSceneModal || app.showPromptModal || app.showImportModal || app.showBulkMoveModal || app.showBulkTagModal || app.showQaModal || app.showUtmPresetManager)) {
       return;
     }
   }
@@ -1813,12 +1813,17 @@ function qrCodeGenerator() {
       // Prevent and control exit via browser back (swipe back) using History API.
       window.addEventListener('popstate', (e) => {
         // Prioritize closing modals if any are open.
-        if (this.showSaveModal || this.showShareModal || this.showDownloadModal || this.showUrlExportModal || this.showSceneModal || this.showPromptModal) {
+        if (this.showSaveModal || this.showShareModal || this.showDownloadModal || this.showUrlExportModal || this.showSceneModal || this.showPromptModal || this.showImportModal || this.showBulkMoveModal || this.showBulkTagModal || this.showQaModal || this.showUtmPresetManager) {
           this.showSaveModal = false;
           this.showShareModal = false;
           this.showDownloadModal = false;
           this.showUrlExportModal = false;
           this.showSceneModal = false;
+          this.showImportModal = false;
+          this.showBulkMoveModal = false;
+          this.showBulkTagModal = false;
+          this.showQaModal = false;
+          this.showUtmPresetManager = false;
           if (this.showPromptModal) {
             this.showPromptModal = false;
             if (this.resolvePrompt) {
@@ -2476,8 +2481,7 @@ function qrCodeGenerator() {
               "VERSION:3.0",
               `N;CHARSET=UTF-8:${escapeVCard(lastName)};${escapeVCard(firstName)};;;`,
             ];
-            let fn = `${escapeVCard(firstName ? firstName + " " : "")}${escapeVCard(lastName)}`.trim();
-            if (!fn) fn = escapeVCard(organization) || "Contact";
+            let fn = escapeVCard([firstName, lastName].filter(Boolean).join(" ")) || escapeVCard(organization) || "Contact";
             vcardLines.push(`FN;CHARSET=UTF-8:${fn}`);
 
             if (organization) vcardLines.push(`ORG;CHARSET=UTF-8:${escapeVCard(organization)}`);
@@ -2525,8 +2529,8 @@ function qrCodeGenerator() {
           const smsPhone = this.formData.sms.phone;
           const smsMessage = this.formData.sms.message;
           if (smsPhone) {
-            // iOS/Android共通で動く標準的なURIスキーム。記号や空白を正規表現で安全に除去
-            let smsData = `sms:${encodeURIComponent(smsPhone.replace(/[^0-9\+]/g, ''))}`;
+            // Standard URI scheme that works on both iOS and Android. Safely remove symbols and whitespaces via regex.
+            let smsData = `sms:${smsPhone.replace(/[^0-9\+]/g, '')}`;
             if (smsMessage) smsData += `?body=${encodeURIComponent(smsMessage)}`;
             data = smsData;
           }
@@ -5653,6 +5657,12 @@ function qrCodeGenerator() {
         if (loadedFormData.wifi && typeof loadedFormData.wifi.hidden === 'undefined') {
           loadedFormData.wifi.hidden = false;
         }
+        if (!loadedFormData.images) {
+          loadedFormData.images = { url: "" };
+        }
+        if (!loadedFormData.video) {
+          loadedFormData.video = { url: "" };
+        }
         this.formData = loadedFormData;
 
         const safeOptions = JSON.parse(JSON.stringify(defaultQrOptions));
@@ -5726,7 +5736,7 @@ function qrCodeGenerator() {
       const csvRows = [headers.map(h => this.escapeCSV(h)).join(",")];
 
       targets.forEach(qr => {
-        const dataStringContext = { selectedType: qr.type, formData: qr.formData };
+        const dataStringContext = { selectedType: qr.type, formData: qr.formData, applyUtmParams: this.applyUtmParams.bind(this) };
         const dataContent = this.getQrDataString.call(dataStringContext);
 
         csvRows.push([
@@ -5835,6 +5845,7 @@ function qrCodeGenerator() {
           selectedType: newQr.type,
           formData: newQr.formData,
           generateUniqueId: this.generateUniqueId,
+          applyUtmParams: this.applyUtmParams.bind(this),
         };
         const dataString = this.getQrDataString.call(dataStringContext);
         const builderContext = {
@@ -5842,6 +5853,7 @@ function qrCodeGenerator() {
           buildDotsOptions: this.buildDotsOptions,
           buildCornersSquareOptions: this.buildCornersSquareOptions,
           buildCornersDotOptions: this.buildCornersDotOptions,
+          normalizeHexColor: this.normalizeHexColor.bind(this),
         };
         const thumbnailOptions = {
           width: 80,
@@ -5896,15 +5908,21 @@ function qrCodeGenerator() {
       const dataStringContext = {
         selectedType: qr.type,
         formData: qr.formData,
+        applyUtmParams: this.applyUtmParams.bind(this),
       };
       return this.getQrDataString.call(dataStringContext);
     },
     backupDraftState() {
+      const rawOptions = window.Alpine.raw(this.qrOptions);
+      const { logo, ...restOptions } = rawOptions;
+      const copiedOptions = JSON.parse(JSON.stringify(restOptions));
+      copiedOptions.logo = logo;
+
       return {
         editingQRCodeId: this.editingQRCodeId,
         selectedType: this.selectedType,
         formData: JSON.parse(JSON.stringify(window.Alpine.raw(this.formData))),
-        qrOptions: JSON.parse(JSON.stringify(window.Alpine.raw(this.qrOptions))),
+        qrOptions: copiedOptions,
         frame: JSON.parse(JSON.stringify(window.Alpine.raw(this.frame))),
         activeStepTab: this.activeStepTab,
         hasUnsavedEdit: this.hasUnsavedEdit,
@@ -6419,7 +6437,7 @@ function qrCodeGenerator() {
           const specificOptions = JSON.parse(JSON.stringify(restOptions));
           specificOptions.logo = logo;
 
-          const dataStringContext = { selectedType: this.selectedType, formData: specificFormData };
+          const dataStringContext = { selectedType: this.selectedType, formData: specificFormData, applyUtmParams: this.applyUtmParams.bind(this) };
           const dataString = this.getQrDataString.call(dataStringContext);
 
           if (!dataString || dataString.trim() === "") continue;
@@ -6429,6 +6447,7 @@ function qrCodeGenerator() {
             buildDotsOptions: this.buildDotsOptions,
             buildCornersSquareOptions: this.buildCornersSquareOptions,
             buildCornersDotOptions: this.buildCornersDotOptions,
+            normalizeHexColor: this.normalizeHexColor.bind(this),
           };
 
           const previewOptions = {
@@ -6512,7 +6531,7 @@ function qrCodeGenerator() {
         return;
       }
       try {
-        const dataStringContext = { selectedType: qr.type, formData: qr.formData };
+        const dataStringContext = { selectedType: qr.type, formData: qr.formData, applyUtmParams: this.applyUtmParams.bind(this) };
         const dataString = this.getQrDataString.call(dataStringContext);
 
         const builderContext = {
@@ -6520,6 +6539,7 @@ function qrCodeGenerator() {
           buildDotsOptions: this.buildDotsOptions,
           buildCornersSquareOptions: this.buildCornersSquareOptions,
           buildCornersDotOptions: this.buildCornersDotOptions,
+          normalizeHexColor: this.normalizeHexColor.bind(this),
         };
 
         const highResOptions = {
@@ -6571,7 +6591,7 @@ function qrCodeGenerator() {
       this.brandKits.push(newKit);
       this.activeBrandKitId = newKit.id;
       this.saveBrandKits();
-      this.applyBrandKit(); // 新規作成時は自動適用
+      this.applyBrandKit(); // Auto-apply on new creation
       this.showFlashNotification(`Brand "${newKit.name}" created.`);
     },
     async renameBrandKit() {
@@ -6590,7 +6610,7 @@ function qrCodeGenerator() {
       this.brandKits = this.brandKits.filter(b => b.id !== this.activeBrandKitId);
       this.activeBrandKitId = this.brandKits.length > 0 ? this.brandKits[0].id : null;
       this.saveBrandKits();
-      if (this.activeBrandKitId) this.applyBrandKit(); // 削除後は次のものを自動適用
+      if (this.activeBrandKitId) this.applyBrandKit(); // Auto-apply the next one after deletion
       this.showFlashNotification("Brand kit deleted.");
     },
     async selectBrandLogo(logoUrl) {
@@ -6706,7 +6726,7 @@ function qrCodeGenerator() {
         this.qrOptions.logo = kit.logo;
         this.logoFileName = kit.name + " Logo";
       } else {
-        this.qrOptions.logo = null;
+        this.qrOptions.logo = "";
         this.logoFileName = "";
       }
       this.qrOptions.colorType = "single";

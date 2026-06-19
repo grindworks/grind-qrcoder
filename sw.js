@@ -1,10 +1,10 @@
 // Update this version to trigger a cache update (Format: YYYYMMDD-Revision)
-const CACHE_NAME = "grindqrcoder-v20260617-11";
+const CACHE_NAME = "grindqrcoder-v20260619-1";
 const urlsToCache = [
   "./",
   "./index.html",
-  "./styles.css",
-  "./main.js?v=clear-cache-2",
+  "./styles.css", // NOTE: I'm keeping this line as is, as it was not mentioned in the request.
+  "./main.js",
   "./icon-192.png",
   "./icon-512.png",
   "./icons-sprite.svg",

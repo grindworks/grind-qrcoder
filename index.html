@@ -46,7 +46,7 @@
     <link rel="stylesheet" href="styles.css">
 
     <!-- Load application logic (Must be loaded before Alpine.js) -->
-    <script defer src="main.js?v=clear-cache-2"></script>
+    <script defer src="main.js"></script>
 
     <!-- Global Footer Script -->
     <script src="https://grindsite.com/tools/footer.js" defer></script>
@@ -2213,18 +2213,18 @@
     <nav class="sm:hidden fixed bottom-0 left-0 z-40 w-full backdrop-blur-md bg-white/80 border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
       <div class="grid grid-cols-3 items-center px-2 py-1">
         <button @click="if(isExportingBulk || isImporting) { showFlashNotification('Please wait until the process completes.'); return; }; if(currentView === 'generator') { if(hasUnsavedEdit && !confirm('Discard changes and start new?')) return; resetGenerator(); currentStep='typeSelection'; } else { currentView = 'generator'; }" class="flex flex-col items-center justify-center py-2 rounded-2xl transition-all" :class="currentView === 'generator' ? 'text-primary scale-105' : 'text-slate-400 active:bg-slate-100'">
-          <svg class="h-6 w-6 mb-0.5" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-qr-code"></use></svg>
+          <svg class="h-6 w-6 mb-0.5" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-qr-code"></use></svg>
           <span class="text-[10px] font-black tracking-wide">Create</span>
         </button>
         <button @click="if(isExportingBulk || isImporting) { showFlashNotification('Please wait until the process completes.'); return; }; if(hasUnsavedEdit && !confirm('You have unsaved changes. Are you sure you want to leave?')) return; hasUnsavedEdit = false; currentView = 'dashboard'" class="flex flex-col items-center justify-center py-2 rounded-2xl transition-all" :class="currentView === 'dashboard' ? 'text-primary scale-105' : 'text-slate-400 active:bg-slate-100'">
           <div class="relative">
-            <svg class="h-6 w-6 mb-0.5" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-folder"></use></svg>
+            <svg class="h-6 w-6 mb-0.5" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-folder"></use></svg>
             <span x-show="savedQRCodes.length > 0" class="absolute -top-1 -right-2 flex h-4 min-w-4 px-1 items-center justify-center rounded-full border-2 border-white bg-rose-500 text-[8px] font-black text-white" x-text="savedQRCodes.length"></span>
           </div>
           <span class="text-[10px] font-black tracking-wide">Manage</span>
         </button>
         <button @click="if(isExportingBulk || isImporting) { showFlashNotification('Please wait until the process completes.'); return; }; if(hasUnsavedEdit && !confirm('You have unsaved changes. Are you sure you want to leave?')) return; hasUnsavedEdit = false; currentView = 'scanner'" class="flex flex-col items-center justify-center py-2 rounded-2xl transition-all" :class="currentView === 'scanner' ? 'text-primary scale-105' : 'text-slate-400 active:bg-slate-100'">
-          <svg class="h-6 w-6 mb-0.5" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-camera"></use></svg>
+          <svg class="h-6 w-6 mb-0.5" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-camera"></use></svg>
           <span class="text-[10px] font-black tracking-wide">Verify</span>
         </button>
       </div>
