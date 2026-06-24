@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
     <!-- Content Security Policy (Supply chain attack prevention, defense in depth) -->
@@ -9,16 +9,16 @@
     <title>QR Coder - Advanced QR Code Generator</title>
 
     <!-- SEO / OGP Settings -->
-    <meta name="description" content="A privacy-first, highly functional QR code generator. Serverless, fully offline PWA.">
+    <meta name="description" content="A privacy-first, serverless, fully offline QR code generator. Create secure QR codes for URLs, Wi-Fi, vCards, SNS, and Crypto. Features custom logos, colors, and CSV bulk generation.">
     <meta property="og:title" content="QR Coder - Advanced QR Code Generator">
-    <meta property="og:description" content="A privacy-first, highly functional QR code generator. Serverless, fully offline PWA.">
+    <meta property="og:description" content="A privacy-first, serverless, fully offline QR code generator. Create secure QR codes for URLs, Wi-Fi, vCards, SNS, and Crypto. Features custom logos, colors, and CSV bulk generation.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://grindsite.com/tools/qrcoder/">
     <meta property="og:image" content="https://grindsite.com/tools/qrcoder/grind-qrcoder.jpg">
     <meta property="og:site_name" content="Grind Tools">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="QR Coder - Advanced QR Code Generator">
-    <meta name="twitter:description" content="A privacy-first, highly functional QR code generator. Serverless, fully offline PWA.">
+    <meta name="twitter:description" content="A privacy-first, serverless, fully offline QR code generator. Create secure QR codes for URLs, Wi-Fi, vCards, SNS, and Crypto. Features custom logos, colors, and CSV bulk generation.">
     <meta name="twitter:image" content="https://grindsite.com/tools/qrcoder/grind-qrcoder.jpg">
 
     <!-- Sync OS status bar color with theme -->
@@ -26,15 +26,14 @@
     <meta name="color-scheme" content="light">
 
     <!-- JavaScript-based Frame Busting (Clickjacking defense) -->
-    <style id="antiClickjack">body{display:none !important;}</style>
+
     <!-- Frame busting script moved to main.js for CSP compliance -->
 
     <!-- Setup for PWA (Manifest and Icons) -->
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
+    <!-- Removed unnecessary legacy PWA tags (delegated to manifest.json) -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
     <!-- Load Google Fonts (Inter + Noto Sans JP) -->
@@ -55,10 +54,10 @@
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.13.5/dist/cdn.min.js" integrity="sha256-K9XZcZtTfN2DuA4XH9cl2pzdr5lD1RD8tKwBQNs5pHo=" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.13.5/dist/cdn.min.js" integrity="sha256-II/pD4ncnDJ5Gp5RoPCWgay844r/wjeJLUDpJWHO7Cg=" crossorigin="anonymous"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js" integrity="sha256-ygV4Me+b49juR+FAeAif0jgdx4ILS7f724WkkPW49ow=" crossorigin="anonymous"></script>
-    <script src="https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js" crossorigin="anonymous"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js" crossorigin="anonymous"></script>
-    <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" crossorigin="anonymous"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js" crossorigin="anonymous"></script>
+    <script src="https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js" integrity="sha384-P7sw4KeI1SDhOs6wYFsBysIIHFqMTgG4y9vunEfL8ZuV0WhnHsh9MRu9Rso17MtY" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js" integrity="sha384-DT0Ls0mO7JmjTnT+oBuMhEJzYJO1zUqzuuMXNdnOmOQRIpN2BgSjvBV/j50NngIT" crossorigin="anonymous"></script>
+    <script defer src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js" integrity="sha384-c9d8RFSL+u3exBOJ4Yp3HUJXS4znl9f+z66d1y54ig+ea249SpqR+w1wyvXz/lk+" crossorigin="anonymous"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js" integrity="sha384-3HPB1XT51W3gGRxAmZ+qbZwRpRlFQL632y8x+adAqCr4Wp3TaWwCLSTAJJKbyWEK" crossorigin="anonymous"></script>
 
     <!-- Define basic global styles -->
     <style>
@@ -104,17 +103,18 @@
 
       .tooltip .tooltiptext {
         visibility: hidden;
-        width: 240px;
-        background-color: #1f2937;
-        color: #fff;
-        text-align: center;
+        width: max-content;
+        max-width: 240px;
+        background-color: #1e293b;
+        color: #f8fafc;
+        text-align: left;
         border-radius: 6px;
         padding: 5px 8px;
         position: absolute;
-        z-index: 50;
+        z-index: 110;
         bottom: calc(100% + 6px);
         left: 50%;
-        margin-left: -120px;
+        transform: translateX(-50%);
         opacity: 0;
         transition: opacity 0.3s;
         font-size: 11px;
@@ -131,10 +131,10 @@
         position: absolute;
         top: 100%;
         left: 50%;
-        margin-left: -5px;
+        transform: translateX(-50%);
         border-width: 5px;
         border-style: solid;
-        border-color: #1f2937 transparent transparent transparent;
+        border-color: #1e293b transparent transparent transparent;
       }
 
       .tooltip:hover .tooltiptext,
@@ -199,10 +199,57 @@
       input[type="range"] {
         touch-action: pan-y;
       }
+      @media screen and (max-height: 400px) and (max-width: 640px) {
+        nav.sm\:hidden.fixed.bottom-0 {
+          display: none !important;
+        }
+      }
+      /* Prevent context menu on images (mobile app feel) */
+      img {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
     </style>
+    <link rel="canonical" href="https://grindsite.com/tools/qrcoder/">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "QR Coder",
+      "operatingSystem": "Web Browser",
+      "applicationCategory": "UtilitiesApplication",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Grind Works Inc.",
+        "url": "https://grindsite.com/"
+      },
+      "description": "A privacy-first, highly functional QR code generator that works completely offline. Convert URLs, Wi-Fi, vCards and more securely.",
+      "url": "https://grindsite.com/tools/qrcoder/",
+      "featureList": "Offline mode, No tracking, Custom colors, Logo upload, CSV bulk import, High-resolution SVG/PNG export"
+    }
+    </script>
   </head>
 
   <body x-data="qrCodeGenerator()" x-init="init()" class="min-h-screen bg-[#fafbfc] text-slate-800 font-sans antialiased selection:bg-primary/20 selection:text-primary transition-colors duration-300">
+    <noscript>
+      <div style="padding: 20px; text-align: center; background: #fff; color: #333;">
+        <h2>QR Coder - Advanced Offline QR Code Generator</h2>
+        <p>QR Coder is a privacy-first, highly functional QR code generator. It works completely offline in your browser, meaning no data is ever sent to external servers.</p>
+        <ul>
+          <li>Generate QR codes for URLs, Wi-Fi, vCard, SNS, Crypto, and more.</li>
+          <li>Customize with logos, colors, gradients, and frames.</li>
+          <li>Manage and edit QR codes in the built-in dashboard.</li>
+          <li>Bulk generate via CSV import and export as high-quality PNG/SVG.</li>
+        </ul>
+        <p><strong>Please enable JavaScript to use this application.</strong></p>
+      </div>
+    </noscript>
     <!-- Loading Screen (Visible only before Alpine.js initializes) -->
     <div id="initial-loader" class="fixed inset-0 z-200 flex flex-col items-center justify-center bg-[#fafbfc] transition-opacity duration-300" x-data x-init="$el.style.opacity = '0'; setTimeout(() => $el.remove(), 300)">
       <div class="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-primary/20 bg-linear-to-br from-primary/10 to-primary/5 shadow-inner-soft animate-pulse">
@@ -215,7 +262,7 @@
     </div>
 
     <!-- Global Dropzone for Drag & Drop -->
-    <div id="global-dropzone" class="pointer-events-none fixed inset-0 z-100 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-200">
+    <div id="global-dropzone" class="pointer-events-none fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-200">
       <div class="pointer-events-none flex flex-col items-center rounded-3xl border-4 border-dashed border-primary bg-white/10 p-12 text-white shadow-2xl backdrop-blur-md">
         <svg class="mb-4 h-16 w-16 animate-bounce text-primary-400" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>
         <h2 class="text-3xl font-black tracking-tight">Drop backup or theme file here</h2>
@@ -224,7 +271,7 @@
     </div>
 
     <!-- Main content area -->
-    <main class="min-h-screen px-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 lg:px-8 w-full transition-all duration-300" x-cloak>
+    <main class="min-h-screen px-4 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] sm:px-6 lg:px-8 w-full transition-all duration-300">
       <div class="mx-auto max-w-7xl w-full px-2 py-6 pb-24 md:p-6 md:pb-6">
         <!-- Header -->
         <header class="relative z-20 flex w-full lg:flex-row flex-col justify-between items-start lg:items-center gap-5 mb-10 bg-white/70 backdrop-blur-xl border border-slate-200/60 shadow-softer rounded-2xl p-4 transition-all duration-300 hover:shadow-soft hover:bg-white/90">
@@ -262,7 +309,7 @@
             <!-- Encryption password input -->
             <form @submit.prevent="document.getElementById('btn-save').click()" class="relative flex items-center">
               <!-- Hidden username field to satisfy browser password manager requirements -->
-              <input type="text" name="username" autocomplete="username" class="sr-only" aria-hidden="true" tabindex="-1" value="encryption-user">
+              <input type="text" name="file-encryption-username" autocomplete="username" class="sr-only" aria-hidden="true" tabindex="-1" value="encryption-user">
               <label for="file-password" class="sr-only">Encryption Password</label>
               <input type="password" id="file-password" placeholder="Encryption Password..." autocomplete="new-password"
                 data-lpignore="true" data-1p-ignore spellcheck="false" autocorrect="off" autocapitalize="off"
@@ -365,7 +412,7 @@
                   </div>
                 </div>
                 <div>
-                  <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl">Create QR Code</h1>
+                  <h2 class="text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl">Create QR Code</h2>
                   <p class="mt-3 max-w-2xl text-base leading-relaxed text-slate-600">Welcome to QR Coder. First, select the type of QR code you want to create. You can easily create a variety of QR codes, from website links to Wi-Fi connections and image galleries.</p>
                 </div>
               </div>
@@ -397,12 +444,12 @@
                 </svg>
               </button>
               <div>
-                <h1 class="text-2xl font-extrabold text-slate-900 md:text-3xl" x-text="getActiveType().title + ' QR Code'"></h1>
+                <h2 class="text-2xl font-extrabold text-slate-900 md:text-3xl" x-text="getActiveType().title + ' QR Code'"></h2>
                 <p class="mt-1 text-sm text-slate-500 md:text-base">Enter content and customize the design</p>
               </div>
             </div>
 
-            <div id="flash-toast" class="fixed top-6 md:top-auto md:bottom-6 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-[90%] md:w-auto max-w-sm z-120 transform rounded-xl bg-slate-900/95 px-5 py-4 text-white shadow-soft backdrop-blur-md transition-all" style="z-index: 120;" x-show="showNotification" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4" :class="{ 'cursor-pointer hover:bg-slate-800': isUpdateNotification }" @click="if(isUpdateNotification) window.location.reload()" x-text="notificationMessage"></div>
+            <div id="flash-toast" role="alert" aria-live="assertive" class="fixed top-6 md:top-auto md:bottom-6 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-[90%] md:w-auto max-w-sm z-120 transform rounded-xl bg-slate-900/95 px-5 py-4 text-white shadow-soft backdrop-blur-md transition-all" style="z-index: 120;" x-show="showNotification" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4" :class="{ 'cursor-pointer hover:bg-slate-800': isUpdateNotification }" @click="if(isUpdateNotification) window.location.reload()" x-text="notificationMessage"></div>
 
             <div class="flex flex-col gap-8 xl:flex-row">
               <!-- Left side: Configuration panel -->
@@ -503,6 +550,12 @@
                                     UTM Variants
                                     <span class="text-slate-400 font-normal">(Same design, different tracking)</span>
                                   </p>
+                                  <button type="button" 
+                                          x-show="(formData.url.variations?.length || 0) > 0" 
+                                          @click="if(confirm('Are you sure you want to clear all variants?')) { formData.url.variations = []; updateQrCode(); hasUnsavedEdit = true; }" 
+                                          class="text-xs font-semibold text-rose-500 hover:text-rose-600 transition-colors">
+                                    Clear All
+                                  </button>
                                 </div>
 
                                 <template x-for="(variation, vIndex) in formData.url.variations" :key="variation.id">
@@ -520,7 +573,7 @@
                                       </div>
                                     </div>
                                     <div class="mb-3">
-                                      <label class="mb-0.5 block text-[10px] font-semibold text-slate-500">Direct URL (Overrides base URL & UTMs)</label>
+                                      <label class="mb-0.5 block text-[10px] font-semibold text-slate-500">Direct URL (Overrides base URL)</label>
                                       <input type="text" x-model="variation.customUrl" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" @input.debounce.300ms="updateQrCode(false)" placeholder="Optional: https://..." class="block w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs transition focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/20" />
                                     </div>
                                     <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -600,9 +653,15 @@
                           <div x-show="formData.wifi.encryption !== 'None'" x-collapse>
                             <form @submit.prevent>
                             <!-- Hidden username field to satisfy browser password manager requirements -->
-                            <input type="text" name="username" autocomplete="username" class="sr-only" aria-hidden="true" tabindex="-1" value="wifi-user">
+                            <input type="text" name="wifi-network-ssid-dummy" autocomplete="username" class="sr-only" aria-hidden="true" tabindex="-1" value="wifi-user">
                             <label for="wifi-password" class="mb-2 block text-sm font-medium text-slate-700">Password</label>
-                            <input type="password" id="wifi-password" x-model="formData.wifi.password" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" autocomplete="new-password" data-lpignore="true" data-1p-ignore placeholder="********" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                            <div x-data="{ showWifiPw: false }" class="relative">
+                              <input :type="showWifiPw ? 'text' : 'password'" id="wifi-password" x-model="formData.wifi.password" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" autocomplete="new-password" data-lpignore="true" data-1p-ignore placeholder="********" class="block w-full rounded-lg border border-slate-300 bg-white p-3 pr-10 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                              <button type="button" @click="showWifiPw = !showWifiPw" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none" title="Show/Hide Password">
+                                <svg x-show="!showWifiPw" class="w-4 h-4"><use href="icons-sprite.svg#outline-eye"></use></svg>
+                                <svg x-show="showWifiPw" x-cloak class="w-4 h-4"><use href="icons-sprite.svg#outline-eye-slash"></use></svg>
+                              </button>
+                            </div>
                             </form>
                           </div>
                           <div>
@@ -875,7 +934,7 @@
                               <template x-for="tpl in myTemplates" :key="tpl.id">
                                 <div class="group relative space-y-2">
                                   <button @click="applyMyTemplate(tpl)" class="relative w-full aspect-square transform overflow-hidden rounded-lg border-2 bg-slate-50 p-2 shadow-sm transition group-hover:scale-105 group-hover:border-primary group-hover:shadow-md" :class="isCurrentMyTemplate(tpl) ? 'border-primary ring-2 ring-primary/30' : 'border-slate-200'">
-                                    <img :src="tpl.preview" class="h-full w-full object-contain drop-shadow-sm" alt="" />
+                                    <img :src="tpl.preview" class="h-full w-full object-contain drop-shadow-sm" :alt="tpl.name + ' Template Preview'" />
                                   </button>
                                   <p class="text-center text-xs font-semibold text-slate-700 truncate" x-text="tpl.name"></p>
                                   <button @click.stop="deleteMyTemplate(tpl.id)" class="absolute -top-3 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm border border-slate-200 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100" title="Delete template">
@@ -893,7 +952,7 @@
                                 <template x-for="template in group.templates" :key="template.name">
                                   <button @click="applyPreset(template)" class="group space-y-2">
                                     <div class="aspect-square w-full transform rounded-lg border-2 bg-slate-50 p-2 shadow-inner transition group-hover:scale-105 group-hover:border-primary/50" :class="isCurrentTemplate(template) ? 'border-primary ring-2 ring-primary/30' : 'border-slate-200'">
-                                      <div class="flex h-full w-full items-center justify-center rounded-md" x-html="template.preview"></div>
+                                      <div class="flex h-full w-full items-center justify-center rounded-md" x-html="typeof DOMPurify !== 'undefined' ? DOMPurify.sanitize(template.preview, { USE_PROFILES: { svg: true } }) : ''"></div>
                                     </div>
                                     <p class="text-center text-sm font-medium text-slate-600" x-text="template.name"></p>
                                   </button>
@@ -926,8 +985,8 @@
                             <div x-show="qrOptions.colorType === 'single'">
                               <label for="fg-color" class="mb-2 block text-sm font-medium text-slate-700">Dot Color (Foreground)</label>
                               <div class="flex items-center gap-3">
-                                <input type="color" id="fg-color" x-model="qrOptions.foregroundColor" @input="updateQrCode(false)" @change="updateQrCode(true)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" name="fg-color-hex" spellcheck="false" aria-label="Foreground Hex Color" x-model="qrOptions.foregroundColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                <input type="color" id="fg-color" x-model="qrOptions.foregroundColor" @input.debounce.50ms="updateQrCode(false)" @change="updateQrCode(true)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" name="fg-color-hex" spellcheck="false" aria-label="Foreground Hex Color" x-model="qrOptions.foregroundColor" @input.debounce.300ms="updateQrCode(false)" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               </div>
                             </div>
 
@@ -948,15 +1007,15 @@
                               <div>
                                 <label for="gradient-start" class="mb-2 block text-sm font-medium text-slate-700">Start Color</label>
                                 <div class="flex items-center gap-3">
-                                  <input type="color" id="gradient-start" x-model="qrOptions.gradient.color1" @input="updateQrCode(false)" @change="updateQrCode(true)" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" name="gradient-start-hex" spellcheck="false" aria-label="Gradient Start Hex Color" x-model="qrOptions.gradient.color1" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                  <input type="color" id="gradient-start" x-model="qrOptions.gradient.color1" @input.debounce.50ms="updateQrCode(false)" @change="updateQrCode(true)" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" name="gradient-start-hex" spellcheck="false" aria-label="Gradient Start Hex Color" x-model="qrOptions.gradient.color1" @input.debounce.300ms="updateQrCode(false)" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                                 </div>
                               </div>
                               <div>
                                 <label for="gradient-end" class="mb-2 block text-sm font-medium text-slate-700">End Color</label>
                                 <div class="flex items-center gap-3">
-                                  <input type="color" id="gradient-end" x-model="qrOptions.gradient.color2" @input="updateQrCode(false)" @change="updateQrCode(true)" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" name="gradient-end-hex" spellcheck="false" aria-label="Gradient End Hex Color" x-model="qrOptions.gradient.color2" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                  <input type="color" id="gradient-end" x-model="qrOptions.gradient.color2" @input.debounce.50ms="updateQrCode(false)" @change="updateQrCode(true)" class="rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" name="gradient-end-hex" spellcheck="false" aria-label="Gradient End Hex Color" x-model="qrOptions.gradient.color2" @input.debounce.300ms="updateQrCode(false)" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                                 </div>
                               </div>
                             </div>
@@ -966,22 +1025,22 @@
                             <div>
                               <label for="bg-color" class="mb-2 block text-sm font-medium text-slate-700">Background Color</label>
                               <div class="flex items-center gap-3">
-                                <input type="color" id="bg-color" x-model="qrOptions.backgroundColor" @input="updateQrCode(false)" @change="updateQrCode(true)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" name="bg-color-hex" spellcheck="false" aria-label="Background Hex Color" x-model="qrOptions.backgroundColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                <input type="color" id="bg-color" x-model="qrOptions.backgroundColor" @input.debounce.50ms="updateQrCode(false)" @change="updateQrCode(true)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" name="bg-color-hex" spellcheck="false" aria-label="Background Hex Color" x-model="qrOptions.backgroundColor" @input.debounce.300ms="updateQrCode(false)" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               </div>
                             </div>
                             <div>
                               <label for="corner-color" class="mb-2 block text-sm font-medium text-slate-700">Corner Border Color</label>
                               <div class="flex items-center gap-3">
-                                <input type="color" id="corner-color" x-model="qrOptions.cornerColor" @input="updateQrCode(false)" @change="updateQrCode(true)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" name="corner-color-hex" spellcheck="false" aria-label="Corner Border Hex Color" x-model="qrOptions.cornerColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                <input type="color" id="corner-color" x-model="qrOptions.cornerColor" @input.debounce.50ms="updateQrCode(false)" @change="updateQrCode(true)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" name="corner-color-hex" spellcheck="false" aria-label="Corner Border Hex Color" x-model="qrOptions.cornerColor" @input.debounce.300ms="updateQrCode(false)" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               </div>
                             </div>
                             <div>
                               <label for="corner-dot-color" class="mb-2 block text-sm font-medium text-slate-700">Corner Dot Color</label>
                               <div class="flex items-center gap-3">
-                                <input type="color" id="corner-dot-color" x-model="qrOptions.cornerDotColor" @input="updateQrCode(false)" @change="updateQrCode(true)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                <input type="text" name="corner-dot-color-hex" spellcheck="false" aria-label="Corner Dot Hex Color" x-model="qrOptions.cornerDotColor" @input.debounce.300ms="updateQrCode()" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                                <input type="color" id="corner-dot-color" x-model="qrOptions.cornerDotColor" @input.debounce.50ms="updateQrCode(false)" @change="updateQrCode(true)" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                <input type="text" name="corner-dot-color-hex" spellcheck="false" aria-label="Corner Dot Hex Color" x-model="qrOptions.cornerDotColor" @input.debounce.300ms="updateQrCode(false)" @change="normalizeColors(); updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 font-mono text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                               </div>
                             </div>
                           </div>
@@ -1357,7 +1416,7 @@
               </div>
 
               <!-- Right side: Preview and download -->
-              <div class="order-first xl:order-0 mb-8 xl:mb-0 xl:sticky z-40 xl:top-6 h-fit w-full xl:w-[420px] xl:shrink-0 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto scrollbar-hide xl:pb-4 transition-all">
+              <div class="order-first xl:order-0 mb-8 xl:mb-0 xl:sticky z-40 xl:top-6 h-fit w-full xl:w-[420px] xl:shrink-0 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto xl:pb-4 transition-all">
                 <div class="rounded-xl border border-slate-200 bg-white p-4 pt-5 shadow-lg md:p-6 md:pt-7 transition-all duration-300"
                      :class="{ 'ring-4 ring-primary/20 scale-[1.01] shadow-xl': isUpdatingPreview }">
                   <div class="mb-4 flex items-center justify-between">
@@ -1513,7 +1572,7 @@
                             <svg x-show="!copiedRaw" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
                             <svg x-show="copiedRaw" x-cloak class="h-3.5 w-3.5 text-green-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                           </button>
-                          <pre class="scrollbar-hide max-h-32 overflow-y-auto overflow-x-hidden break-all whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-slate-300" x-text="rawDataString.trim() || '(No data)'"></pre>
+                          <pre class="max-h-32 overflow-y-auto overflow-x-hidden break-all whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-slate-300" x-text="rawDataString.trim() || '(No data)'"></pre>
                         </div>
                       </template>
                     </div>
@@ -1564,7 +1623,7 @@
                   </div>
                 </div>
                 <div>
-                  <h1 class="text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl">Dashboard</h1>
+                  <h2 class="text-3xl font-extrabold tracking-tight text-slate-900 md:text-4xl">Dashboard</h2>
                   <p class="mt-2 max-w-2xl text-base leading-relaxed text-slate-600">Manage and organize your QR codes.</p>
                 </div>
               </div>
@@ -1589,7 +1648,7 @@
           <!-- 2-column layout from here -->
           <div class="flex flex-col lg:flex-row gap-8">
             <!-- Sidebar (Projects) -->
-            <div class="w-full lg:w-64 shrink-0 space-y-2 max-h-48 overflow-y-auto lg:max-h-none scrollbar-hide">
+            <div class="w-full lg:w-64 shrink-0 space-y-2 max-h-48 overflow-y-auto lg:max-h-none scrollbar-hide transition-opacity duration-300" :class="{ 'pointer-events-none opacity-60': isExportingBulk || isImporting }">
               <div class="flex items-center justify-between px-2 mb-4">
                 <h3 class="text-xs font-black tracking-wider text-slate-500 uppercase">PROJECTS</h3>
                 <button @click="createNewProject()" class="text-primary hover:bg-primary/10 p-1 rounded transition-colors" title="New Project">
@@ -1655,7 +1714,7 @@
             </div>
 
             <!-- Main Content (List Area) -->
-            <div class="flex-1 min-w-0 space-y-6">
+            <div class="flex-1 min-w-0 space-y-6 transition-opacity duration-300" :class="{ 'pointer-events-none opacity-60': isExportingBulk || isImporting }">
             <div x-show="savedQRCodes.length > 0">
               <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
                 <div class="flex items-center gap-x-2">
@@ -1713,10 +1772,10 @@
                     <div class="grid items-center gap-y-4 p-4 md:grid-cols-12 md:gap-x-4 md:p-6">
                       <div class="col-span-12 flex items-center gap-4 md:col-span-4">
                         <label class="p-2 -ml-2 cursor-pointer flex items-center justify-center">
-                          <input type="checkbox" :name="'select-qr-' + qr.id" aria-label="Select QR code" :value="qr.id" x-model="selectedIds" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
+                          <input type="checkbox" :name="'select-qr-' + qr.id" aria-label="Select QR code" :value="qr.id" x-model="selectedIds" @click="handleCheckboxClick($event, qr.id)" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
                         </label>
                         <button @click="editQRCode(qr.id)" class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white p-1 shadow-sm transition-all hover:scale-105 hover:border-primary/50 hover:shadow-md" title="Edit">
-                          <img :src="qr.previewSvgUrl" class="h-full w-full object-contain" alt="" />
+                          <img :src="qr.previewSvgUrl" class="h-full w-full object-contain" :alt="'QR Code: ' + (qr.name || 'Untitled')" />
                         </button>
                         <div class="min-w-0 flex-1">
                           <p class="font-semibold text-slate-800 truncate max-w-full" x-text="qr.name" :title="qr.name"></p>
@@ -1792,24 +1851,24 @@
                       </div>
 
                       <div x-show="dropdownOpen" @click.outside="dropdownOpen = false" x-cloak x-transition class="absolute right-4 top-16 z-50 mt-2 w-48 origin-top-right rounded-xl bg-white py-2 shadow-lg ring-1 ring-black/5">
-                        <a @click.prevent="editQRCode(qr.id); dropdownOpen = false" href="#" class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-100">
+                        <button type="button" @click.prevent="editQRCode(qr.id); dropdownOpen = false" class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-100">
                           <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.5">
                             <use href="icons-sprite.svg#outline-pencil-square"></use>
                           </svg>
                           <span>Edit</span>
-                        </a>
-                        <a @click.prevent="duplicateQRCode(qr.id); dropdownOpen = false" href="#" class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-100">
+                        </button>
+                        <button type="button" @click.prevent="duplicateQRCode(qr.id); dropdownOpen = false" class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-100">
                           <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.5">
                             <use href="icons-sprite.svg#outline-document-duplicate"></use>
                           </svg>
                           <span>Duplicate</span>
-                        </a>
-                        <a @click.prevent="deleteQRCode(qr.id); dropdownOpen = false" href="#" class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50">
+                        </button>
+                        <button type="button" @click.prevent="deleteQRCode(qr.id); dropdownOpen = false" class="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-rose-600 hover:bg-rose-50">
                           <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.5">
                             <use href="icons-sprite.svg#outline-trash"></use>
                           </svg>
                           <span>Delete</span>
-                        </a>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1839,12 +1898,12 @@
                         <tr class="hover:bg-slate-50/50 transition-colors">
                           <td class="px-4 py-3">
                             <label class="p-2 -ml-2 cursor-pointer flex items-center justify-center">
-                              <input type="checkbox" :name="'select-qr-table-' + qr.id" aria-label="Select QR code" :value="qr.id" x-model="selectedIds" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
+                              <input type="checkbox" :name="'select-qr-table-' + qr.id" aria-label="Select QR code" :value="qr.id" x-model="selectedIds" @click="handleCheckboxClick($event, qr.id)" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
                             </label>
                           </td>
                           <td class="px-4 py-3">
                             <button @click="editQRCode(qr.id)" class="w-12 h-12 border border-slate-200 rounded-lg p-1 bg-white hover:border-primary/50 shadow-sm transition-all hover:scale-105" title="Edit">
-                              <img :src="qr.previewSvgUrl" class="w-full h-full object-contain" alt="" />
+                              <img :src="qr.previewSvgUrl" class="w-full h-full object-contain" :alt="'QR Code: ' + (qr.name || 'Untitled')" />
                             </button>
                           </td>
                           <td class="px-4 py-3 max-w-[200px]">
@@ -1888,7 +1947,7 @@
               </div>
 
               <!-- Show when no search results found -->
-              <div x-show="displayedItems.length === 0 && (searchQuery || currentProjectId !== 'all' || activeTypeFilter !== 'all')" x-cloak class="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 py-12 text-center">
+              <div x-show="displayedItems.length === 0 && (searchQuery || currentProjectId !== 'all' || activeTypeFilter !== 'all')" x-cloak role="status" aria-live="polite" class="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 py-12 text-center">
                 <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.5">
                   <use href="icons-sprite.svg#outline-magnifying-glass"></use>
                 </svg>
@@ -2027,7 +2086,7 @@
                   </svg>
                 </div>
                 <div>
-                  <h1 class="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">Scan & Validate</h1>
+                  <h2 class="text-2xl font-extrabold tracking-tight text-slate-900 md:text-3xl">Scan & Validate</h2>
                   <p class="mt-1 text-sm leading-relaxed text-slate-500">Scan QR codes with your camera or upload images to verify the encoded data. All processing is done locally for maximum security.</p>
                 </div>
               </div>
@@ -2051,7 +2110,7 @@
               <div id="qr-scanner-viewport" class="w-full"></div>
             </div>
             <!-- Hidden container for image scanning -->
-            <div id="qr-scanner-temp" style="width: 0; height: 0; overflow: hidden; position: absolute; visibility: hidden;"></div>
+            <div id="qr-scanner-temp" style="width: 10px; height: 10px; opacity: 0; pointer-events: none; overflow: hidden; position: absolute; visibility: hidden;"></div>
 
             <!-- Results -->
             <div class="rounded-2xl border border-white bg-white p-5 shadow-softer sm:p-6">
@@ -2169,6 +2228,11 @@
 
         <!-- Global Footer Placeholder -->
         <div id="grind-global-footer" class="mt-16 w-full opacity-80 hover:opacity-100 transition-opacity"></div>
+        <noscript>
+          <div style="text-align: center; padding: 20px; font-size: 0.875rem; color: #64748b;">
+            <p><a href="https://grindsite.com/" style="color: #0ea5e9; text-decoration: underline;">Home</a> | <a href="https://grindsite.com/terms/" style="color: #0ea5e9; text-decoration: underline;">Terms of Service</a> | <a href="https://grindsite.com/privacy/" style="color: #0ea5e9; text-decoration: underline;">Privacy Policy</a></p>
+          </div>
+        </noscript>
       </div>
     </main>
 
@@ -2844,7 +2908,7 @@
     </div>
 
     <!-- Custom prompt modal -->
-    <div x-show="showPromptModal" @keydown.escape.window="if(showPromptModal) { resolvePrompt(null); showPromptModal = false; }" class="fixed inset-0 z-60 overflow-y-auto" aria-labelledby="prompt-modal-title" role="dialog" aria-modal="true" x-cloak x-trap.noscroll="showPromptModal">
+    <div x-show="showPromptModal" @keydown.escape.window="if(showPromptModal) { resolvePrompt(null); showPromptModal = false; }" class="fixed inset-0 z-[110] overflow-y-auto" aria-labelledby="prompt-modal-title" role="dialog" aria-modal="true" x-cloak x-trap.noscroll="showPromptModal">
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showPromptModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="resolvePrompt(null); showPromptModal = false;" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
@@ -2859,6 +2923,68 @@
           </form>
         </div>
       </div>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div x-show="showConfirmModal" @keydown.escape.window="if(showConfirmModal) { resolveConfirm(false); showConfirmModal = false; }" class="fixed inset-0 z-[110] overflow-y-auto" aria-labelledby="confirm-modal-title" role="dialog" aria-modal="true" x-cloak x-trap.noscroll="showConfirmModal">
+      <div class="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
+        <div x-show="showConfirmModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="resolveConfirm(false); showConfirmModal = false;" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+        <div x-show="showConfirmModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-sm transform-gpu rounded-3xl bg-white text-left align-middle shadow-2xl transition-all sm:my-8 p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100 shrink-0">
+              <svg class="h-6 w-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900" id="confirm-modal-title">Confirmation</h3>
+          </div>
+          <div class="mt-2 mb-6">
+            <p class="text-sm text-slate-500 whitespace-pre-wrap" x-text="confirmMessage"></p>
+          </div>
+          <div class="flex gap-3">
+            <button type="button" @click="resolveConfirm(false); showConfirmModal = false;" class="flex-1 py-3 rounded-xl bg-slate-100 font-bold text-slate-700 active:scale-95 transition-transform hover:bg-slate-200">Cancel</button>
+            <button type="button" @click="resolveConfirm(true); showConfirmModal = false;" class="flex-1 py-3 rounded-xl bg-amber-500 font-bold text-white shadow-md active:scale-95 transition-transform hover:bg-amber-600" x-ref="confirmOkBtn">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Alert Modal -->
+    <div x-show="showAlertModal" @keydown.escape.window="if(showAlertModal) { resolveAlert(); showAlertModal = false; }" class="fixed inset-0 z-[110] overflow-y-auto" aria-labelledby="alert-modal-title" role="dialog" aria-modal="true" x-cloak x-trap.noscroll="showAlertModal">
+      <div class="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
+        <div x-show="showAlertModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="resolveAlert(); showAlertModal = false;" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+        <div x-show="showAlertModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-sm transform-gpu rounded-3xl bg-white text-left align-middle shadow-2xl transition-all sm:my-8 p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 shrink-0">
+              <svg class="h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+              </svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900" id="alert-modal-title">Notice</h3>
+          </div>
+          <div class="mt-2 mb-6">
+            <p class="text-sm text-slate-500 whitespace-pre-wrap" x-text="alertMessage"></p>
+          </div>
+          <button type="button" @click="resolveAlert(); showAlertModal = false;" class="w-full py-3 rounded-xl bg-primary font-bold text-white shadow-md active:scale-95 transition-transform hover:bg-primary/90" x-ref="alertOkBtn">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile scroll-to-top FAB for preview -->
+    <div x-data="{ showFab: false }" 
+         @scroll.window="showFab = (window.pageYOffset > 300)" 
+         class="fixed bottom-6 right-6 z-50 xl:hidden"
+         x-show="showFab"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 translate-y-4"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-300"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 translate-y-4"
+         style="display: none;">
+      <button type="button" @click="window.scrollTo({top: 0, behavior: 'smooth'})" class="flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 text-white shadow-xl shadow-slate-400 hover:bg-slate-700 active:scale-95 transition-all" aria-label="Scroll to Preview">
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-up"></use></svg>
+      </button>
     </div>
 
     <!-- Command palette -->

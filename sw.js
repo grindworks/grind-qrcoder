@@ -1,8 +1,7 @@
 // Update this version to trigger a cache update (Format: YYYYMMDD-Revision)
-const CACHE_NAME = "grindqrcoder-v20260619-1";
+const CACHE_NAME = "grindqrcoder-v20260624-4";
 const urlsToCache = [
   "./",
-  "./index.html",
   "./styles.css", // NOTE: I'm keeping this line as is, as it was not mentioned in the request.
   "./main.js",
   "./icon-192.png",
@@ -95,7 +94,8 @@ self.addEventListener("fetch", (event) => {
         .then((networkResponse) => {
           if (networkResponse && networkResponse.ok && (networkResponse.type === "basic" || networkResponse.type === "cors")) {
             // Do not cache requests with query parameters (e.g., Share Target) to avoid bloat
-            if (!event.request.url.includes("?")) {
+            const isGoogleFonts = event.request.url.includes("fonts.googleapis.com");
+            if (!event.request.url.includes("?") || isGoogleFonts) {
               const responseToCache = networkResponse.clone();
               caches.open(CACHE_NAME).then((cache) => {
                 cache.put(event.request, responseToCache);

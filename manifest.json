@@ -1,7 +1,7 @@
 {
   "name": "QR Coder",
   "short_name": "QRCoder",
-  "start_url": "./index.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#fafafa",
   "theme_color": "#f8fafc",
@@ -19,7 +19,7 @@
   ],
   "file_handlers": [
     {
-      "action": "./index.html",
+      "action": "./",
       "accept": {
         "application/json": [".qrcoder", ".qrcoder-theme"],
         "application/octet-stream": [".qrcoder", ".qrcoder-theme"]
@@ -27,7 +27,7 @@
     }
   ],
   "share_target": {
-    "action": "./index.html",
+    "action": "./",
     "method": "GET",
     "enctype": "application/x-www-form-urlencoded",
     "params": {
