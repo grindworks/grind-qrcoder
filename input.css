@@ -32,6 +32,7 @@
 
 /* 1. Explicitly specify target files for class name extraction */
 @source "./index.html";
+@source "../footer.js";
 
 /* --- Custom Keyframe Definitions --- */
 

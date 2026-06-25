@@ -1,5 +1,5 @@
 // Update this version to trigger a cache update (Format: YYYYMMDD-Revision)
-const CACHE_NAME = "grindqrcoder-v20260624-4";
+const CACHE_NAME = "grindqrcoder-v20260625-1";
 const urlsToCache = [
   "./",
   "./styles.css", // NOTE: I'm keeping this line as is, as it was not mentioned in the request.
@@ -15,7 +15,8 @@ const urlsToCache = [
   "./ICON_ZOOM.png",
   "./poster.jpg",
   "./card.png",
-  "./manifest.json"
+  "./manifest.json",
+  "../footer.js"
 ];
 
 const externalUrlsToCache = [
@@ -25,8 +26,7 @@ const externalUrlsToCache = [
   "https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js",
   "https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js",
   "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js",
-  "https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js",
-  "https://grindsite.com/tools/footer.js"
+  "https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"
 ];
 
 // Create cache on install
@@ -83,8 +83,8 @@ self.addEventListener("activate", (event) => {
 
 // Return cache on fetch (Stale-while-revalidate strategy)
 self.addEventListener("fetch", (event) => {
-  // Bypass cache for non-GET requests
-  if (event.request.method !== "GET") return;
+  // Bypass cache for non-GET or non-HTTP requests
+  if (event.request.method !== "GET" || !event.request.url.startsWith("http")) return;
 
   event.respondWith(
     // Ignore query parameters to ensure cache hits
