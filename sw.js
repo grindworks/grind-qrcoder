@@ -15,8 +15,7 @@ const urlsToCache = [
   "./ICON_ZOOM.png",
   "./poster.jpg",
   "./card.png",
-  "./manifest.json",
-  "../footer.js"
+  "./manifest.json"
 ];
 
 const externalUrlsToCache = [
