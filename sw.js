@@ -15,8 +15,14 @@ const urlsToCache = [
   "./ICON_ZOOM.png",
   "./poster.jpg",
   "./card.png",
-  "./manifest.json"
-  "./assets/alpine.min.js",\n  "./assets/alpine-collapse.min.js",\n  "./assets/alpine-focus.min.js",\n  "./assets/qr-code-styling.js",\n  "./assets/fflate.min.js",\n  "./assets/html5-qrcode.min.js",\n  "./assets/purify.min.js",
+  "./manifest.json",
+  "./assets/alpine.min.js",
+  "./assets/alpine-collapse.min.js",
+  "./assets/alpine-focus.min.js",
+  "./assets/qr-code-styling.js",
+  "./assets/fflate.min.js",
+  "./assets/html5-qrcode.min.js",
+  "./assets/purify.min.js"
 ];
 
 
