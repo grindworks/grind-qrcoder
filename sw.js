@@ -16,17 +16,10 @@ const urlsToCache = [
   "./poster.jpg",
   "./card.png",
   "./manifest.json"
+  "./assets/alpine.min.js",\n  "./assets/alpine-collapse.min.js",\n  "./assets/alpine-focus.min.js",\n  "./assets/qr-code-styling.js",\n  "./assets/fflate.min.js",\n  "./assets/html5-qrcode.min.js",\n  "./assets/purify.min.js",
 ];
 
-const externalUrlsToCache = [
-  "https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js",
-  "https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.13.5/dist/cdn.min.js",
-  "https://cdn.jsdelivr.net/npm/@alpinejs/focus@3.13.5/dist/cdn.min.js",
-  "https://unpkg.com/qr-code-styling@1.9.2/lib/qr-code-styling.js",
-  "https://cdn.jsdelivr.net/npm/fflate@0.8.2/umd/index.js",
-  "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js",
-  "https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"
-];
+
 
 // Create cache on install
 self.addEventListener("install", (event) => {
