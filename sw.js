@@ -1,5 +1,5 @@
 // Update this version to trigger a cache update (Format: YYYYMMDD-Revision)
-const CACHE_NAME = "grindqrcoder-v20260625-1";
+const CACHE_NAME = "grindqrcoder-v20260625-2";
 const urlsToCache = [
   "./",
   "./styles.css", // NOTE: I'm keeping this line as is, as it was not mentioned in the request.
@@ -90,7 +90,7 @@ self.addEventListener("fetch", (event) => {
       // Fetch latest resources from network and update cache on success (background)
       const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
-          if (networkResponse && networkResponse.ok && (networkResponse.type === "basic" || networkResponse.type === "cors")) {
+          if (networkResponse && (networkResponse.ok || networkResponse.type === "opaque")) {
             // Do not cache requests with query parameters (e.g., Share Target) to avoid bloat
             const isGoogleFonts = event.request.url.includes("fonts.googleapis.com");
             if (!event.request.url.includes("?") || isGoogleFonts) {
