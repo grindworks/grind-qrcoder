@@ -1,5 +1,5 @@
 // Update this version to trigger a cache update (Format: YYYYMMDD-Revision)
-const CACHE_NAME = "grindqrcoder-v20260625-2";
+const CACHE_NAME = "grindqrcoder-v20260701-8";
 const urlsToCache = [
   "./",
   "./styles.css", // NOTE: I'm keeping this line as is, as it was not mentioned in the request.
@@ -25,7 +25,11 @@ const urlsToCache = [
   "./assets/purify.min.js"
 ];
 
-
+const externalUrlsToCache = [
+  "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+JP:wght@300;400;500;700;800;900&display=swap",
+  "https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2",
+  "https://fonts.gstatic.com/s/notosansjp/v52/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFBEj75vY0rw-oME.woff2"
+];
 
 // Create cache on install
 self.addEventListener("install", (event) => {
@@ -90,7 +94,7 @@ self.addEventListener("fetch", (event) => {
       // Fetch latest resources from network and update cache on success (background)
       const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
-          if (networkResponse && (networkResponse.ok || networkResponse.type === "opaque")) {
+          if (networkResponse && networkResponse.ok && (networkResponse.type === "basic" || networkResponse.type === "cors")) {
             // Do not cache requests with query parameters (e.g., Share Target) to avoid bloat
             const isGoogleFonts = event.request.url.includes("fonts.googleapis.com");
             if (!event.request.url.includes("?") || isGoogleFonts) {

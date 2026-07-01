@@ -35,5 +35,21 @@
       "text": "text",
       "url": "url"
     }
-  }
+  },
+  "shortcuts": [
+    {
+      "name": "Create Website QR",
+      "short_name": "Website",
+      "description": "Create a new URL QR code",
+      "url": "./?action=create-url",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Verify & Scan",
+      "short_name": "Scan QR",
+      "description": "Open QR Scanner",
+      "url": "./?action=scan",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192" }]
+    }
+  ]
 }

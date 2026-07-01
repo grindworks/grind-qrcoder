@@ -15,7 +15,7 @@ let sharedMeasureCtx = null;
 function getMeasureContext() {
   if (!sharedMeasureCanvas) {
     sharedMeasureCanvas = document.createElement("canvas");
-    sharedMeasureCtx = sharedMeasureCanvas.getContext("2d", { willReadFrequently: true });
+    sharedMeasureCtx = sharedMeasureCanvas.getContext("2d");
   }
   return sharedMeasureCtx;
 }
@@ -272,7 +272,7 @@ async function processQRCoderFile(file) {
           if (t.preview) {
             // 【究極のフェイルセーフ】サニタイザがロードできない環境では、危険とみなしてデータを破棄する
             if (typeof DOMPurify !== 'undefined') {
-              t.preview = DOMPurify.sanitize(t.preview, { USE_PROFILES: { svg: true } });
+              t.preview = DOMPurify.sanitize(t.preview, { USE_PROFILES: { svg: true }, ADD_DATA_URI_TAGS: ['image'], ADD_ATTR: ['href', 'xlink:href'] });
             } else {
               console.warn("DOMPurify is not loaded. Preview sanitized to empty.");
               t.preview = '';
@@ -305,7 +305,7 @@ async function processQRCoderFile(file) {
         importedTemplates.forEach(t => {
           if (t.preview) {
             if (typeof DOMPurify !== 'undefined') {
-              t.preview = DOMPurify.sanitize(t.preview, { USE_PROFILES: { svg: true } });
+              t.preview = DOMPurify.sanitize(t.preview, { USE_PROFILES: { svg: true }, ADD_DATA_URI_TAGS: ['image'], ADD_ATTR: ['href', 'xlink:href'] });
             } else {
               console.warn("DOMPurify is not loaded. Preview sanitized to empty.");
               t.preview = '';
@@ -490,7 +490,7 @@ async function saveQRCoderFile() {
       brandKits: window.Alpine.raw(component.brandKits),
       templates: window.Alpine.raw(component.myTemplates)
     };
-    const dataString = JSON.stringify(exportData, null, 2);
+    const dataString = JSON.stringify(exportData);
 
     const encoder = new TextEncoder();
     let fileData = encoder.encode(dataString);
@@ -598,7 +598,7 @@ async function saveDesignAssets() {
       return;
     }
 
-    const dataString = JSON.stringify(exportData, null, 2);
+    const dataString = JSON.stringify(exportData);
     const encoder = new TextEncoder();
     const fileData = encoder.encode(dataString);
 
@@ -1587,8 +1587,10 @@ function qrCodeGenerator() {
         let comparison = 0;
         if (this.sortKey === 'createdAt' || this.sortKey === 'updatedAt') {
           comparison = new Date(valA).getTime() - new Date(valB).getTime();
-        } else if (typeof valA === 'string' && typeof valB === 'string') {
-          comparison = valA.localeCompare(valB, undefined, { sensitivity: 'base', numeric: true });
+        } else if (typeof valA === 'string' || typeof valB === 'string') {
+          const strA = valA || "";
+          const strB = valB || "";
+          comparison = strA.localeCompare(strB, undefined, { sensitivity: 'base', numeric: true });
         } else {
           if (valA > valB) comparison = 1;
           else if (valA < valB) comparison = -1;
@@ -1729,7 +1731,7 @@ function qrCodeGenerator() {
       const textArea = document.createElement("textarea");
         textArea.value = text;
         textArea.style.position = "absolute";
-        const yPosition = window.pageYOffset || document.documentElement.scrollTop;
+        const yPosition = window.scrollY || document.documentElement.scrollTop;
         textArea.style.top = yPosition + "px";
         textArea.style.left = "-999999px";
         document.body.appendChild(textArea);
@@ -1887,6 +1889,16 @@ function qrCodeGenerator() {
 
       // Handle Web Share Target API or URL parameter inputs.
       const params = new URLSearchParams(window.location.search);
+      const action = params.get('action');
+      if (action === 'scan') {
+        this.currentView = 'scanner';
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (action === 'create-url') {
+        this.currentView = 'generator';
+        this.selectedType = 'url';
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
       let sharedContent = params.get('url') || params.get('text') || params.get('title') || "";
       if (sharedContent) {
         let finalTarget = sharedContent.trim();
@@ -1993,11 +2005,11 @@ function qrCodeGenerator() {
 
       this.$watch('currentStep', val => {
         if (this._isPopStateHandling) return;
-        if (val === 'contentEntry') history.pushState({ step: 'contentEntry' }, '', '');
+        if (val === 'contentEntry') history.pushState({ step: 'contentEntry' }, '', null);
       });
       this.$watch('currentView', val => {
-        if (val === 'dashboard') history.pushState({ view: 'dashboard' }, '', '');
-        if (val === 'scanner') history.pushState({ view: 'scanner' }, '', '');
+        if (val === 'dashboard') history.pushState({ view: 'dashboard' }, '', null);
+        if (val === 'scanner') history.pushState({ view: 'scanner' }, '', null);
         // Stop scanner when leaving scanner view.
         if (val !== 'scanner' && this.isScannerActive) {
           this.stopScanner();
@@ -2243,6 +2255,9 @@ function qrCodeGenerator() {
     async copyImageToClipboard(customSize = null) {
       this.updateQrCode(false); // Force update to flush debounced inputs
 
+      // Wait for async logo drawing and frame rendering to complete
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       if (!this.qrCodeInstance) return;
 
       if (!navigator.clipboard || !window.ClipboardItem) {
@@ -2352,6 +2367,9 @@ function qrCodeGenerator() {
     // Download QR code as PNG or SVG format.
     async downloadQrCode() {
       this.updateQrCode(false); // Force update to flush debounced inputs
+
+      // Wait for async logo drawing and frame rendering to complete
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       if (!this.qrCodeInstance) return;
 
@@ -2625,7 +2643,8 @@ function qrCodeGenerator() {
           if (ssid) {
             const encType = encryption === "WPA/WPA2" ? "WPA" : (encryption === "None" ? "nopass" : encryption);
             const hiddenFlag = hidden ? "H:true;" : "";
-            data = `WIFI:T:${encType};S:${escapeWifiStr(ssid)};P:${escapeWifiStr(password)};${hiddenFlag};`;
+            const passStr = encType === "nopass" ? "" : `P:${escapeWifiStr(password)};`;
+            data = `WIFI:T:${encType};S:${escapeWifiStr(ssid)};${passStr}${hiddenFlag};`;
           }
           break;
         }
@@ -2701,9 +2720,11 @@ function qrCodeGenerator() {
           const { currency, address } = this.formData.crypto;
           if (address) {
             let cleanAddress = address.trim();
-            // Automatically strip the scheme prefix (e.g., "bitcoin:") if the user accidentally pasted it
-            const schemeRegex = new RegExp(`^${currency}:`, "i");
-            cleanAddress = cleanAddress.replace(schemeRegex, "");
+            // Automatically strip the scheme prefix (e.g., "bitcoin:") if the user accidentally pasted it (securely without regex)
+            const prefix = `${currency}:`.toLowerCase();
+            if (cleanAddress.toLowerCase().startsWith(prefix)) {
+              cleanAddress = cleanAddress.substring(prefix.length);
+            }
             
             data = `${currency}:${cleanAddress}`;
           }
@@ -2776,7 +2797,7 @@ function qrCodeGenerator() {
                 break;
               case "discord":
                 // Use directly if URL is pasted, otherwise treat as invite link.
-                if (cleanId.includes("http")) {
+                if (/^https?:\/\//i.test(cleanId)) {
                   data = cleanId;
                 } else {
                   data = `https://discord.gg/${encodeURIComponent(cleanId)}`;
@@ -3235,7 +3256,7 @@ function qrCodeGenerator() {
       };
 
       // Define Facebook template.
-      const facebookSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
+      const facebookSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>`;
       const facebookLogoUrl = `data:image/svg+xml;base64,${btoa(facebookSvg)}`;
 
       const facebookTemplate = {
@@ -4988,7 +5009,7 @@ function qrCodeGenerator() {
           this.qrCodeInstance.update({ data: vUrl });
           this.applyFrame(); // Re-draw frame
 
-          await new Promise(resolve => setTimeout(resolve, 100)); // Wait for SVG & frame DOM reflection
+          await new Promise(resolve => setTimeout(resolve, 300)); // Wait for SVG & frame DOM reflection
 
           // 3. Clone the on-screen SVG element
           const visibleCanvas = this.showSceneModal ? this.$refs.modalQrCanvas : this.$refs.qrCodeCanvas;
@@ -6662,6 +6683,7 @@ function qrCodeGenerator() {
 
           const specificFormData = JSON.parse(JSON.stringify(baseFormData));
           let hasData = false;
+          let isRowValid = true;
 
           this.activeTypeFields.forEach(f => {
               const h = this.csvMapping.dynamic[f.key];
@@ -6669,6 +6691,10 @@ function qrCodeGenerator() {
               if (h) {
                 const idx = this.csvHeaders.indexOf(h);
                 const val = (idx !== -1 && row[idx]) ? row[idx].trim() : "";
+
+                if (f.required && !val) {
+                  isRowValid = false;
+                }
 
                 if (val) hasData = true;
 
@@ -6693,7 +6719,7 @@ function qrCodeGenerator() {
               }
           });
 
-          if (!hasData) continue; // Skip if data is empty
+          if (!hasData || !isRowValid) continue; // Skip if data is empty or invalid
 
           const nameStr = idxName !== -1 && row[idxName] ? row[idxName].trim() : `Bulk QR ${count}`;
           const memoStr = idxMemo !== -1 && row[idxMemo] ? row[idxMemo].trim() : "";
@@ -6792,6 +6818,37 @@ function qrCodeGenerator() {
         this.isImporting = false;
       }
     },
+    async shareViaOS(qr) {
+      if (!navigator.canShare || !navigator.share) {
+        this.showFlashNotification("Your browser does not support native sharing.");
+        return;
+      }
+      try {
+        const response = await fetch(qr.previewSvgUrl);
+        const blob = await response.blob();
+        
+        const file = new File([blob], `${qr.name || 'qr_code'}.svg`, { type: blob.type });
+
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: qr.name || 'QR Code',
+            text: 'Shared from QR Coder',
+            files: [file]
+          });
+        } else {
+          await navigator.share({
+            title: qr.name || 'QR Code',
+            text: this.getShareDataText(qr)
+          });
+        }
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error("Error sharing:", error);
+          this.showFlashNotification("Failed to share.");
+        }
+      }
+    },
+
     async copyShareImage(qr) {
       try {
         // Reuse existing copy logic with customSize=512
@@ -7146,3 +7203,30 @@ if ('serviceWorker' in navigator) {
   });
 }
 })();
+
+// iOS Safari PWA Install Guide
+const isIos = () => {
+  const userAgent = window.navigator.userAgent.toLowerCase();
+  return /iphone|ipad|ipod/.test(userAgent);
+};
+
+const isInStandaloneMode = () => ('standalone' in window.navigator) && (window.navigator.standalone);
+
+document.addEventListener("DOMContentLoaded", () => {
+  if (isIos() && !isInStandaloneMode()) {
+    const installBtn = document.getElementById("install-button");
+    if (installBtn) {
+      installBtn.classList.remove("hidden");
+      installBtn.textContent = "📥 Install App (iOS)";
+      installBtn.onclick = () => {
+        const app = window.$app;
+        if (app && typeof app.showAlertModal !== 'undefined') {
+          app.alertMessage = "To install this app on iOS:\n\n1. Tap the Share icon (square with arrow) at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.";
+          app.showAlertModal = true;
+        } else {
+          alert("To install on iOS:\n1. Tap the Share icon\n2. Select 'Add to Home Screen'");
+        }
+      };
+    }
+  }
+});
