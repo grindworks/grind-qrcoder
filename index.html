@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
     <!-- Content Security Policy (Supply chain attack prevention, defense in depth) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net/npm/ https://unpkg.com/qr-code-styling@1.9.2/ https://unpkg.com/html5-qrcode@2.3.8/ https://grindsite.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://unpkg.com https://grindsite.com https://cdn.jsdelivr.net ws://127.0.0.1:* ws://localhost:* data: blob:; object-src 'none'; base-uri 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://grindsite.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com data: blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
     <title>QR Coder - Advanced QR Code Generator</title>
 
     <!-- SEO / OGP Settings -->
@@ -25,9 +25,6 @@
     <meta id="meta-theme-color" name="theme-color" content="#f8fafc">
     <meta name="color-scheme" content="light">
 
-    <!-- JavaScript-based Frame Busting (Clickjacking defense) -->
-
-    <!-- Frame busting script moved to main.js for CSP compliance -->
 
     <!-- Setup for PWA (Manifest and Icons) -->
     <link rel="manifest" href="manifest.json">
@@ -226,7 +223,7 @@
       },
       "publisher": {
         "@type": "Organization",
-        "name": "Grind Works Inc.",
+        "name": "GRIND WORKS, Y.K.",
         "url": "https://grindsite.com/"
       },
       "description": "A privacy-first, highly functional QR code generator that works completely offline. Convert URLs, Wi-Fi, vCards and more securely.",
@@ -251,7 +248,7 @@
       </div>
     </noscript>
     <!-- Loading Screen (Visible only before Alpine.js initializes) -->
-    <div id="initial-loader" class="fixed inset-0 z-200 flex flex-col items-center justify-center bg-[#fafbfc] transition-opacity duration-300" x-data x-init="$el.style.opacity = '0'; setTimeout(() => $el.remove(), 300)">
+    <div id="initial-loader" class="fixed inset-0 z-200 flex flex-col items-center justify-center bg-[#fafbfc] transition-opacity duration-300" x-data x-init="$el.style.pointerEvents = 'none'; $el.style.opacity = '0'; setTimeout(() => $el.remove(), 300)">
       <div class="flex h-16 w-16 items-center justify-center rounded-2xl border-2 border-primary/20 bg-linear-to-br from-primary/10 to-primary/5 shadow-inner-soft animate-pulse">
         <svg class="h-9 w-9 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
@@ -262,11 +259,11 @@
     </div>
 
     <!-- Global Dropzone for Drag & Drop -->
-    <div id="global-dropzone" class="pointer-events-none fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-200">
+    <div id="global-dropzone" class="pointer-events-none fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-200" aria-hidden="true">
       <div class="pointer-events-none flex flex-col items-center rounded-3xl border-4 border-dashed border-primary bg-white/10 p-12 text-white shadow-2xl backdrop-blur-md">
-        <svg class="mb-4 h-16 w-16 animate-bounce text-primary-400" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>
+        <svg class="mb-4 h-16 w-16 animate-bounce text-blue-400" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>
         <h2 class="text-3xl font-black tracking-tight">Drop backup or theme file here</h2>
-        <p class="mt-2 text-sm font-medium text-slate-300">Restore data or import design assets instantly.</p>
+        <p class="mt-2 text-sm font-medium text-slate-300">Restore data, import themes, or drop images in Verify tab.</p>
       </div>
     </div>
 
@@ -418,7 +415,7 @@
               </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               <template x-for="type in qrTypes" :key="type.id">
                 <button @click="selectType(type.id)" class="group transform rounded-2xl border border-slate-200/80 bg-white p-6 text-left shadow-softer transition-all duration-300 hover:-translate-y-1.5 hover:border-primary/40 hover:shadow-soft hover:ring-4 hover:ring-primary/10">
                   <div class="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/5 transition-colors duration-300 group-hover:bg-primary/10 group-hover:scale-110">
@@ -449,7 +446,7 @@
               </div>
             </div>
 
-            <div id="flash-toast" role="alert" aria-live="assertive" class="fixed top-6 md:top-auto md:bottom-6 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-[90%] md:w-auto max-w-sm z-120 transform rounded-xl bg-slate-900/95 px-5 py-4 text-white shadow-soft backdrop-blur-md transition-all" style="z-index: 120;" x-show="showNotification" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4" :class="{ 'cursor-pointer hover:bg-slate-800': isUpdateNotification }" @click="if(isUpdateNotification) window.location.reload()" x-text="notificationMessage"></div>
+            <div id="flash-toast" role="alert" aria-live="assertive" class="fixed top-6 md:top-auto md:bottom-6 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-[90%] md:w-auto max-w-sm z-120 transform rounded-xl bg-slate-900/95 px-5 py-4 text-white shadow-soft backdrop-blur-md transition-all" style="z-index: 120;" x-show="showNotification" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4" :class="{ 'cursor-pointer hover:bg-slate-800': isUpdateNotification }" @click="if(isUpdateNotification) window.location.reload()" x-text="notificationMessage" x-cloak></div>
 
             <div class="flex flex-col gap-8 xl:flex-row">
               <!-- Left side: Configuration panel -->
@@ -490,7 +487,7 @@
                             </span>
                             <svg class="h-4 w-4 text-slate-400 transition-transform duration-300" :class="showUtm ? 'rotate-180' : ''"><use href="icons-sprite.svg#outline-chevron-down"></use></svg>
                           </button>
-                          <div x-show="showUtm" x-collapse>
+                          <div x-show="showUtm" x-collapse x-cloak>
                             <div class="space-y-4 border-t border-slate-200 p-4">
 
                               <!-- UTM Presets Bar -->
@@ -657,7 +654,7 @@
                             <label for="wifi-password" class="mb-2 block text-sm font-medium text-slate-700">Password</label>
                             <div x-data="{ showWifiPw: false }" class="relative">
                               <input :type="showWifiPw ? 'text' : 'password'" id="wifi-password" x-model="formData.wifi.password" @input.debounce.300ms="updateQrCode(false)" @blur="recordState()" autocomplete="off" data-lpignore="true" data-1p-ignore placeholder="********" class="block w-full rounded-lg border border-slate-300 bg-white p-3 pr-10 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
-                              <button type="button" @click="showWifiPw = !showWifiPw" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none" title="Show/Hide Password">
+                              <button type="button" @click="showWifiPw = !showWifiPw" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none" aria-label="Toggle password visibility" title="Show/Hide Password">
                                 <svg x-show="!showWifiPw" class="w-4 h-4"><use href="icons-sprite.svg#outline-eye"></use></svg>
                                 <svg x-show="showWifiPw" x-cloak class="w-4 h-4"><use href="icons-sprite.svg#outline-eye-slash"></use></svg>
                               </button>
@@ -937,7 +934,7 @@
                                     <img :src="tpl.preview" class="h-full w-full object-contain drop-shadow-sm" :alt="tpl.name + ' Template Preview'" />
                                   </button>
                                   <p class="text-center text-xs font-semibold text-slate-700 truncate" x-text="tpl.name"></p>
-                                  <button @click.stop="deleteMyTemplate(tpl.id)" class="absolute -top-3 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm border border-slate-200 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100" title="Delete template">
+                                  <button @click.stop="deleteMyTemplate(tpl.id)" class="absolute -top-3 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm border border-slate-200 opacity-100 sm:opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 sm:group-hover:opacity-100" aria-label="Delete template" title="Delete template">
                                     <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-x-mark"></use></svg>
                                   </button>
                                 </div>
@@ -1320,7 +1317,7 @@
                             <!-- Selector & Action buttons -->
                             <div class="flex gap-2">
                               <!-- Added: applyBrandKit() is called on change to instantly reflect on the preview -->
-                              <select x-model="activeBrandKitId" @change="applyBrandKit()" class="block w-full flex-1 rounded-lg border border-slate-300 bg-white p-2.5 text-sm font-semibold text-slate-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                              <select x-model="activeBrandKitId" @change="applyBrandKit()" class="block w-full flex-1 rounded-lg border border-slate-300 bg-white p-2.5 text-base md:text-sm font-semibold text-slate-700 shadow-sm transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
                                 <template x-for="kit in brandKits" :key="kit.id">
                                   <option :value="kit.id" x-text="kit.name"></option>
                                 </template>
@@ -1552,7 +1549,7 @@
                             <div class="group relative rounded-lg bg-slate-900 px-3 py-2.5 shadow-inner">
                               <div class="flex items-center justify-between mb-1">
                                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500" x-text="item.label"></span>
-                                <button @click="if(item.url) { copyToTextClipboard(item.url); hapticFeedback('light'); showFlashNotification('Copied!'); }" class="rounded bg-slate-700 p-1 text-slate-400 transition-colors hover:bg-slate-600 hover:text-white opacity-0 group-hover:opacity-100" title="Copy">
+                                <button @click="if(item.url) { copyToTextClipboard(item.url); hapticFeedback('light'); showFlashNotification('Copied!'); }" class="rounded bg-slate-700 p-1 text-slate-400 transition-colors hover:bg-slate-600 hover:text-white opacity-100 sm:opacity-0 sm:group-hover:opacity-100" aria-label="Copy URL" title="Copy">
                                   <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
                                 </button>
                               </div>
@@ -1568,7 +1565,7 @@
                       <!-- Simple single view (default / non-URL types) -->
                       <template x-if="selectedType !== 'url' || !formData.url.variations || formData.url.variations.length === 0">
                         <div class="relative mt-3 group rounded-lg bg-slate-900 p-4 shadow-inner">
-                          <button @click="if(rawDataString.trim()) { copyToTextClipboard(rawDataString.trim()); copiedRaw = true; hapticFeedback('light'); setTimeout(() => copiedRaw = false, 2000); }" class="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-slate-700 p-1.5 text-slate-400 transition-colors hover:bg-slate-600 hover:text-white opacity-0 group-hover:opacity-100" title="Copy Raw Data">
+                          <button @click="if(rawDataString.trim()) { copyToTextClipboard(rawDataString.trim()); copiedRaw = true; hapticFeedback('light'); setTimeout(() => copiedRaw = false, 2000); }" class="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-slate-700 p-1.5 text-slate-400 transition-colors hover:bg-slate-600 hover:text-white opacity-100 sm:opacity-0 sm:group-hover:opacity-100" aria-label="Copy Raw Data" title="Copy Raw Data">
                             <svg x-show="!copiedRaw" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
                             <svg x-show="copiedRaw" x-cloak class="h-3.5 w-3.5 text-green-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                           </button>
@@ -1634,10 +1631,10 @@
                 </button>
                 <!-- View Mode Toggle -->
                 <div class="hidden sm:flex bg-slate-200/60 p-1 rounded-lg backdrop-blur-sm">
-                  <button @click="viewMode = 'grid'" :class="viewMode === 'grid' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-800'" class="p-2 rounded-md transition-all">
+                  <button @click="viewMode = 'grid'" :class="viewMode === 'grid' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-800'" class="p-2 rounded-md transition-all" aria-label="Grid view" title="Grid view">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-squares-2x2"></use></svg>
                   </button>
-                  <button @click="viewMode = 'table'" :class="viewMode === 'table' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-800'" class="p-2 rounded-md transition-all">
+                  <button @click="viewMode = 'table'" :class="viewMode === 'table' ? 'bg-white shadow-sm text-primary' : 'text-slate-500 hover:text-slate-800'" class="p-2 rounded-md transition-all" aria-label="Table view" title="Table view">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-bars-3"></use></svg>
                   </button>
                 </div>
@@ -1668,11 +1665,11 @@
                       <svg class="w-4 h-4 shrink-0"><use href="icons-sprite.svg#outline-folder"></use></svg>
                       <span x-text="project.name" class="truncate"></span>
                     </span>
-                    <span class="bg-black/10 text-xs px-2 py-0.5 rounded-full" :class="project.id !== 'default' ? 'group-hover:hidden' : ''" x-text="savedQRCodes.filter(q => (q.projectId || 'default') === project.id).length"></span>
+                    <span class="bg-black/10 text-xs px-2 py-0.5 rounded-full" :class="project.id !== 'default' ? 'hidden sm:inline-block group-hover:hidden' : ''" x-text="savedQRCodes.filter(q => (q.projectId || 'default') === project.id).length"></span>
                     <template x-if="project.id !== 'default'">
-                      <div class="hidden group-hover:flex items-center gap-1 shrink-0">
-                        <div @click.stop="renameProject(project.id)" class="p-1 rounded hover:bg-black/10 transition-colors" title="Rename"><svg class="w-3.5 h-3.5"><use href="icons-sprite.svg#outline-pencil-square"></use></svg></div>
-                        <div @click.stop="deleteProject(project.id)" class="p-1 rounded hover:bg-rose-500 text-rose-500 hover:text-white transition-colors" title="Delete"><svg class="w-3.5 h-3.5"><use href="icons-sprite.svg#outline-trash"></use></svg></div>
+                      <div class="flex sm:hidden group-hover:flex items-center gap-1 shrink-0">
+                        <div role="button" tabindex="0" @keydown.enter.stop="renameProject(project.id)" @click.stop="renameProject(project.id)" aria-label="Rename project" class="p-1 rounded hover:bg-black/10 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50" title="Rename"><svg class="w-3.5 h-3.5"><use href="icons-sprite.svg#outline-pencil-square"></use></svg></div>
+                        <div role="button" tabindex="0" @keydown.enter.stop="deleteProject(project.id)" @click.stop="deleteProject(project.id)" aria-label="Delete project" class="p-1 rounded hover:bg-rose-500 text-rose-500 hover:text-white transition-colors focus:outline-none focus:ring-1 focus:ring-white/50" title="Delete"><svg class="w-3.5 h-3.5"><use href="icons-sprite.svg#outline-trash"></use></svg></div>
                       </div>
                     </template>
                   </button>
@@ -1734,7 +1731,7 @@
                     </svg>
                   </div>
                   <label for="search-qr" class="sr-only">Search QR Codes</label>
-                  <input type="text" id="search-qr" name="search-qr" x-ref="searchInput" x-model.debounce.300ms="searchQuery" @input.debounce.300ms="currentPage = 1" placeholder="Search by name, memo, tag..." class="block w-full rounded-lg border border-slate-300 bg-white p-2 pl-9 pr-8 text-base md:text-sm text-slate-900 shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+                  <input type="text" id="search-qr" name="search-qr" x-ref="searchInput" x-model="searchQuery" @input.debounce.300ms="currentPage = 1" placeholder="Search by name, memo, tag..." class="block w-full rounded-lg border border-slate-300 bg-white p-2 pl-9 pr-8 text-base md:text-sm text-slate-900 shadow-sm transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
                   <button type="button" x-show="searchQuery" @click="searchQuery = ''; currentPage = 1; $nextTick(() => $refs.searchInput.focus())" x-cloak class="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600">
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2">
                       <use href="icons-sprite.svg#outline-x-mark"></use>
@@ -1832,17 +1829,17 @@
                               <use :href="qr.isFavorite ? 'icons-sprite.svg#solid-star' : 'icons-sprite.svg#outline-star'"></use>
                             </svg>
                           </button>
-                          <button @click="prepareDownloadFromDashboard(qr)" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" title="Download">
+                          <button @click="prepareDownloadFromDashboard(qr)" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" aria-label="Download QR code" title="Download">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                               <use href="icons-sprite.svg#outline-arrow-down-tray"></use>
                             </svg>
                           </button>
-                          <button @click="openShareModal(qr)" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" title="Share">
+                          <button @click="openShareModal(qr)" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" aria-label="Share QR code" title="Share">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                               <use href="icons-sprite.svg#outline-share"></use>
                             </svg>
                           </button>
-                          <button @click.stop="dropdownOpen = !dropdownOpen" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" title="More">
+                          <button @click.stop="dropdownOpen = !dropdownOpen" class="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800" aria-label="More actions" title="More">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                               <use href="icons-sprite.svg#outline-ellipsis-vertical"></use>
                             </svg>
@@ -1932,11 +1929,11 @@
                           <td class="px-4 py-3 text-xs text-slate-500 whitespace-nowrap" x-text="new Date(qr.createdAt).toLocaleDateString()"></td>
                           <td class="px-4 py-3">
                             <div class="flex items-center justify-end gap-1">
-                              <button @click="prepareDownloadFromDashboard(qr)" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded transition-colors" title="Download"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg></button>
-                              <button @click="openShareModal(qr)" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded transition-colors" title="Share"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-share"></use></svg></button>
-                              <button @click="editQRCode(qr.id)" class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded transition-colors" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-pencil-square"></use></svg></button>
-                              <button @click="duplicateQRCode(qr.id)" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded transition-colors" title="Duplicate"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-document-duplicate"></use></svg></button>
-                              <button @click="deleteQRCode(qr.id)" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors" title="Delete"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-trash"></use></svg></button>
+                              <button @click="prepareDownloadFromDashboard(qr)" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded transition-colors" aria-label="Download QR code" title="Download"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg></button>
+                              <button @click="openShareModal(qr)" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded transition-colors" aria-label="Share QR code" title="Share"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-share"></use></svg></button>
+                              <button @click="editQRCode(qr.id)" class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded transition-colors" aria-label="Edit QR code" title="Edit"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-pencil-square"></use></svg></button>
+                              <button @click="duplicateQRCode(qr.id)" class="p-1.5 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded transition-colors" aria-label="Duplicate QR code" title="Duplicate"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-document-duplicate"></use></svg></button>
+                              <button @click="deleteQRCode(qr.id)" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors" aria-label="Delete QR code" title="Delete"><svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-trash"></use></svg></button>
                             </div>
                           </td>
                         </tr>
@@ -1978,7 +1975,7 @@
                   <div>
                     <ul class="isolate inline-flex -space-x-px rounded-md shadow-sm">
                       <li>
-                        <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50">
+                        <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1" aria-label="Previous page" class="relative inline-flex items-center rounded-l-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50">
                           <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" />
                           </svg>
@@ -1995,7 +1992,7 @@
                         </li>
                       </template>
                       <li>
-                        <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50">
+                        <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages" aria-label="Next page" class="relative inline-flex items-center rounded-r-md px-2 py-2 text-slate-400 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50">
                           <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
                           </svg>
@@ -2010,7 +2007,7 @@
             <!-- Floating Action Bar (FAB) for Bulk Download -->
             <div x-show="selectedIds.length > 0 && currentView === 'dashboard'" x-transition:enter="transition ease-out duration-300 transform" x-transition:enter-start="translate-y-full opacity-0" x-transition:enter-end="translate-y-0 opacity-100" x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="translate-y-0 opacity-100" x-transition:leave-end="translate-y-full opacity-0" class="fixed bottom-24 md:bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 rounded-full bg-slate-900 px-6 py-3 shadow-2xl ring-1 ring-white/10 whitespace-nowrap">
               <span class="font-bold text-white text-sm">
-                <span x-text="selectedIds.length" class="text-primary-400 mr-1"></span> Selected
+                <span x-text="selectedIds.length" class="text-blue-400 mr-1"></span> Selected
               </span>
               <div class="h-5 w-px bg-slate-700"></div>
 
@@ -2106,7 +2103,7 @@
             </div>
 
             <!-- Camera Viewport -->
-            <div x-show="isScannerActive" x-transition class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-black shadow-soft">
+            <div x-show="isScannerActive" x-transition class="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-black shadow-soft" x-cloak>
               <div id="qr-scanner-viewport" class="w-full"></div>
             </div>
             <!-- Hidden container for image scanning -->
@@ -2168,12 +2165,12 @@
                         </template>
                         <p class="mt-1 text-[10px] text-slate-400" x-text="result.timestamp"></p>
                       </div>
-                      <div x-data="{ copied: false }" class="flex items-center gap-1 shrink-0 transition-opacity" :class="copied ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'">
-                        <button @click="copyToTextClipboard(result.text); hapticFeedback('light'); showFlashNotification('Copied!'); copied = true; setTimeout(() => copied = false, 2000);" class="rounded-lg p-1.5 transition-colors" :class="copied ? 'bg-green-50 text-green-500' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'" :title="copied ? 'Copied!' : 'Copy'">
+                      <div x-data="{ copied: false }" class="flex items-center gap-1 shrink-0 transition-opacity" :class="copied ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'">
+                        <button @click="copyToTextClipboard(result.text); hapticFeedback('light'); showFlashNotification('Copied!'); copied = true; setTimeout(() => copied = false, 2000);" class="rounded-lg p-1.5 transition-colors" :class="copied ? 'bg-green-50 text-green-500' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'" aria-label="Copy result" :title="copied ? 'Copied!' : 'Copy'">
                           <svg x-show="!copied" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
                           <svg x-show="copied" x-cloak class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         </button>
-                        <button @click="removeScanResult(result.id)" class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500" title="Delete">
+                        <button @click="removeScanResult(result.id)" class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500" aria-label="Delete result" title="Delete">
                           <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-trash"></use></svg>
                         </button>
                       </div>
@@ -2237,12 +2234,12 @@
     </main>
 
     <!-- UTM Preset Manager Modal -->
-    <div x-show="showUtmPresetManager" @keydown.escape.window="showUtmPresetManager = false" class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" x-trap.noscroll="showUtmPresetManager">
+    <div x-show="showUtmPresetManager" @keydown.escape.window="showUtmPresetManager = false" class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="utm-preset-modal-title" x-trap.noscroll="showUtmPresetManager" x-cloak>
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showUtmPresetManager" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showUtmPresetManager = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
         <div x-show="showUtmPresetManager" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-md transform-gpu rounded-t-3xl sm:rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-          <h3 class="text-xl font-black text-slate-900 mb-1">Manage UTM Presets</h3>
+          <h3 id="utm-preset-modal-title" class="text-xl font-black text-slate-900 mb-1">Manage UTM Presets</h3>
           <p class="text-sm text-slate-500 mb-5">Edit or delete your saved UTM parameter presets.</p>
 
           <div x-show="utmPresets.length === 0" class="py-8 text-center text-sm text-slate-400">
@@ -2297,7 +2294,7 @@
     <!-- Modal windows for various actions -->
 
     <!-- Save Modal -->
-    <div x-show="showSaveModal" @keydown.escape.window="showSaveModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="save-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showSaveModal">
+    <div x-show="showSaveModal" @keydown.escape.window="showSaveModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="save-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showSaveModal" x-cloak>
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showSaveModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showSaveModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
@@ -2320,11 +2317,11 @@
               </select>
             </div>
             <label for="save-name" class="sr-only">QR Code Name</label>
-            <input type="text" id="save-name" name="save-name" x-model="saveName" x-ref="saveNameInput" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="QR Code Name" required class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+            <input type="text" id="save-name" name="save-name" x-model="saveName" x-ref="saveNameInput" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="QR Code Name" required class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
             <label for="save-memo" class="sr-only">Memo</label>
-            <textarea id="save-memo" name="save-memo" x-model="saveMemo" placeholder="Memo (Optional)" rows="2" class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20"></textarea>
+            <textarea id="save-memo" name="save-memo" x-model="saveMemo" placeholder="Memo (Optional)" rows="2" class="resize-y block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"></textarea>
             <label for="save-tags" class="sr-only">Tags</label>
-            <input type="text" id="save-tags" name="save-tags" x-model="saveTags" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="Tags (Comma separated, Optional)" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" />
+            <input type="text" id="save-tags" name="save-tags" x-model="saveTags" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="Tags (Comma separated, Optional)" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
           </div>
           <div class="flex gap-3">
             <button type="button" @click="showSaveModal = false" class="flex-1 py-3.5 rounded-2xl bg-slate-100 font-bold text-slate-700 active:scale-95 transition-transform">Cancel</button>
@@ -2336,7 +2333,7 @@
     </div>
 
     <!-- Share Modal -->
-    <div x-show="showShareModal" @keydown.escape.window="showShareModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="share-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showShareModal">
+    <div x-show="showShareModal" @keydown.escape.window="showShareModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="share-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showShareModal" x-cloak>
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showShareModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showShareModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
@@ -2434,7 +2431,7 @@
     </div>
 
     <!-- QA Preview Modal (For Variations) -->
-    <div x-show="showQaModal" @keydown.escape.window="showQaModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="qa-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showQaModal">
+    <div x-show="showQaModal" @keydown.escape.window="showQaModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="qa-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showQaModal" x-cloak>
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showQaModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showQaModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
@@ -2501,7 +2498,7 @@
     </div>
 
     <!-- Download confirmation Modal -->
-    <div x-show="showDownloadModal" @keydown.escape.window="showDownloadModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="download-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showDownloadModal">
+    <div x-show="showDownloadModal" @keydown.escape.window="showDownloadModal = false" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="download-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showDownloadModal" x-cloak>
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showDownloadModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showDownloadModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
@@ -2581,7 +2578,7 @@
     </div>
 
     <!-- Use case preview Modal -->
-    <div x-show="showSceneModal" @keydown.escape.window="closeSceneModal()" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="scene-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showSceneModal">
+    <div x-show="showSceneModal" @keydown.escape.window="closeSceneModal()" class="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="scene-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showSceneModal" x-cloak>
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
         <div x-show="showSceneModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="closeSceneModal()" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
@@ -2660,16 +2657,16 @@
     </div>
 
     <!-- Bulk Import CSV Modal -->
-    <div x-show="showImportModal" @keydown.escape.window="if(!isImporting) showImportModal = false" class="fixed inset-0 z-105 overflow-y-auto" role="dialog" aria-modal="true" x-trap.noscroll="showImportModal" x-cloak>
+    <div x-show="showImportModal" @keydown.escape.window="if(!isImporting) showImportModal = false" class="fixed inset-0 z-105 overflow-y-auto" aria-labelledby="import-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showImportModal" x-cloak>
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
-        <div x-show="showImportModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="if(!isImporting) showImportModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity"></div>
-        <span class="hidden sm:inline-block sm:h-screen sm:align-middle">&#8203;</span>
+        <div x-show="showImportModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="if(!isImporting) showImportModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
 
         <div x-show="showImportModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-2xl transform-gpu rounded-t-3xl sm:rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
 
           <div class="flex items-center justify-between mb-6">
             <div>
-              <h3 class="text-xl font-black text-slate-900">Bulk Import via CSV</h3>
+              <h3 id="import-modal-title" class="text-xl font-black text-slate-900">Bulk Import via CSV</h3>
               <p class="text-sm text-slate-500 mt-1">Generate multiple QR codes instantly using the current design.</p>
             </div>
             <button @click="showImportModal = false" :disabled="isImporting" class="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors disabled:opacity-50">
@@ -2859,15 +2856,15 @@
     </div>
 
     <!-- Bulk Move Modal -->
-    <div x-show="showBulkMoveModal" @keydown.escape.window="showBulkMoveModal = false" class="fixed inset-0 z-105 overflow-y-auto" role="dialog" aria-modal="true" x-trap.noscroll="showBulkMoveModal" x-cloak>
+    <div x-show="showBulkMoveModal" @keydown.escape.window="showBulkMoveModal = false" class="fixed inset-0 z-105 overflow-y-auto" aria-labelledby="bulk-move-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showBulkMoveModal" x-cloak>
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
-        <div x-show="showBulkMoveModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showBulkMoveModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity"></div>
-        <span class="hidden sm:inline-block sm:h-screen sm:align-middle">&#8203;</span>
+        <div x-show="showBulkMoveModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showBulkMoveModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
         <div x-show="showBulkMoveModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-sm transform-gpu rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 sm:mx-0 sm:h-10 sm:w-10 mb-4">
             <svg class="h-6 w-6 text-primary" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-folder-arrow-down"></use></svg>
           </div>
-          <h3 class="text-lg font-bold text-slate-900 mb-1">Move to Project</h3>
+          <h3 id="bulk-move-modal-title" class="text-lg font-bold text-slate-900 mb-1">Move to Project</h3>
           <p class="text-sm text-slate-500 mb-4">Move <span x-text="selectedIds.length" class="font-bold"></span> selected items to:</p>
 
           <div class="mb-6">
@@ -2887,15 +2884,15 @@
     </div>
 
     <!-- Bulk Tag Modal -->
-    <div x-show="showBulkTagModal" @keydown.escape.window="showBulkTagModal = false" class="fixed inset-0 z-105 overflow-y-auto" role="dialog" aria-modal="true" x-trap.noscroll="showBulkTagModal" x-cloak>
+    <div x-show="showBulkTagModal" @keydown.escape.window="showBulkTagModal = false" class="fixed inset-0 z-105 overflow-y-auto" aria-labelledby="bulk-tag-modal-title" role="dialog" aria-modal="true" x-trap.noscroll="showBulkTagModal" x-cloak>
       <div class="flex min-h-screen items-end justify-center px-4 pb-20 pt-4 text-center sm:block sm:p-0">
-        <div x-show="showBulkTagModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showBulkTagModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity"></div>
-        <span class="hidden sm:inline-block sm:h-screen sm:align-middle">&#8203;</span>
+        <div x-show="showBulkTagModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="showBulkTagModal = false" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+        <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
         <div x-show="showBulkTagModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-sm transform-gpu rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <div class="mx-auto flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-indigo-50 sm:mx-0 sm:h-10 sm:w-10 mb-4">
             <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-tag"></use></svg>
           </div>
-          <h3 class="text-lg font-bold text-slate-900 mb-1">Edit Tags</h3>
+          <h3 id="bulk-tag-modal-title" class="text-lg font-bold text-slate-900 mb-1">Edit Tags</h3>
           <p class="text-sm text-slate-500 mb-4">Update tags for <span x-text="selectedIds.length" class="font-bold"></span> selected items.</p>
 
           <div class="mb-4">
@@ -2983,7 +2980,8 @@
     <div x-data="{ showFab: false }"
          @scroll.window="showFab = (window.scrollY > 300)"
          class="fixed bottom-6 right-6 z-50 xl:hidden"
-         x-show="showFab"
+         x-show="showFab && currentView === 'generator'"
+         x-cloak
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="opacity-0 translate-y-4"
          x-transition:enter-end="opacity-100 translate-y-0"
@@ -2997,7 +2995,7 @@
     </div>
 
     <!-- Command palette -->
-    <div id="cmd-palette" class="hidden z-100 fixed inset-0 justify-center items-start bg-slate-900/30 backdrop-blur-md p-4 pt-4 md:pt-[15vh] transition-all duration-300 opacity-0" style="transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);">
+    <div id="cmd-palette" role="dialog" aria-modal="true" aria-label="Command Palette" class="hidden z-100 fixed inset-0 justify-center items-start bg-slate-900/30 backdrop-blur-md p-4 pt-4 md:pt-[15vh] transition-all duration-300 opacity-0" style="transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);">
       <div id="cmd-palette-content" class="flex flex-col bg-white/90 shadow-2xl backdrop-blur-xl rounded-xl ring-1 ring-white/50 w-full max-w-2xl overflow-hidden transition-all duration-300 scale-95" style="transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);">
         <div class="relative flex items-center gap-3 p-4 border-slate-200 border-b">
           <label for="cmd-input" class="sr-only">Search Command</label>

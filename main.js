@@ -1,8 +1,13 @@
 
 (function() {
-// --- Frame Busting (Clickjacking & iframe spam defense) ---
+// --- Anti-Clickjacking & Frame Busting Defense ---
 if (window.top !== window.self) {
-  window.top.location.replace(window.self.location.href);
+  try {
+    window.top.location.replace(window.self.location.href);
+  } catch (e) {
+    // Top navigation blocked by sandbox attribute
+  }
+  document.documentElement.style.display = 'none';
 }
 // --- Global functions and variables (File save/load, Command palette) ---
 let isDirty = false;
@@ -267,10 +272,10 @@ async function processQRCoderFile(file) {
         component.saveBrandKits(false);
       }
       if (importedTemplates.length > 0) {
-        // 【防御】インポートされたテンプレートのプレビュー用SVGから、悪意のあるスクリプトをサニタイズ
+        // [Defense] Sanitize malicious scripts from preview SVG of imported templates
         importedTemplates.forEach(t => {
           if (t.preview) {
-            // 【究極のフェイルセーフ】サニタイザがロードできない環境では、危険とみなしてデータを破棄する
+            // [Fail-safe] If sanitizer cannot be loaded, treat as dangerous and discard preview
             if (typeof DOMPurify !== 'undefined') {
               t.preview = DOMPurify.sanitize(t.preview, { USE_PROFILES: { svg: true }, ADD_DATA_URI_TAGS: ['image'], ADD_ATTR: ['href', 'xlink:href'] });
             } else {
@@ -300,7 +305,7 @@ async function processQRCoderFile(file) {
       importedBrands = parsedData.brandKits || [];
       importedTemplates = parsedData.templates || [];
       
-      // 【防御】一般ファイルインポート時も同様にサニタイズ
+      // [Defense] Sanitize during standard file import as well
       if (importedTemplates.length > 0) {
         importedTemplates.forEach(t => {
           if (t.preview) {
@@ -791,7 +796,7 @@ function renderCommandList(query = "") {
 
 document.addEventListener("keydown", (e) => {
   const app = window.$app;
-  // システムダイアログ表示中は、Escapeキー以外のショートカットを完全にブロック
+  // Block all shortcuts except Escape key while system modal is displayed
   if (app && (app.showPromptModal || app.showConfirmModal || app.showAlertModal)) {
     if (e.key !== "Escape") return;
   }
@@ -854,7 +859,7 @@ document.addEventListener("keydown", (e) => {
     if (key === "k") {
       e.preventDefault();
       const app = window.$app;
-      if (app && (app.showSaveModal || app.showShareModal || app.showDownloadModal || app.showUrlExportModal || app.showSceneModal || app.showPromptModal || app.showImportModal || app.showBulkMoveModal || app.showBulkTagModal || app.showQaModal || app.showUtmPresetManager)) {
+      if (app && (app.showSaveModal || app.showShareModal || app.showDownloadModal || app.showUrlExportModal || app.showSceneModal || app.showPromptModal || app.showConfirmModal || app.showAlertModal || app.showImportModal || app.showBulkMoveModal || app.showBulkTagModal || app.showQaModal || app.showUtmPresetManager)) {
         return;
       }
       toggleCommandPalette();
@@ -894,7 +899,7 @@ document.addEventListener("keydown", (e) => {
 
   if (e.key === "Escape") {
     const app = window.$app;
-    if (app && (app.showSaveModal || app.showShareModal || app.showDownloadModal || app.showUrlExportModal || app.showSceneModal || app.showPromptModal || app.showImportModal || app.showBulkMoveModal || app.showBulkTagModal || app.showQaModal || app.showUtmPresetManager)) {
+    if (app && (app.showSaveModal || app.showShareModal || app.showDownloadModal || app.showUrlExportModal || app.showSceneModal || app.showPromptModal || app.showConfirmModal || app.showAlertModal || app.showImportModal || app.showBulkMoveModal || app.showBulkTagModal || app.showQaModal || app.showUtmPresetManager)) {
       return;
     }
   }
@@ -1163,10 +1168,6 @@ function qrCodeGenerator() {
     resolveConfirm: null,
     alertMessage: "",
     resolveAlert: null,
-    promptMessage: "",
-    promptInput: "",
-    promptInputType: "password",
-    resolvePrompt: null,
     copied: false, // Track copy button state.
     showRawData: false, // Toggle raw data inspector.
     copiedRaw: false, // Track raw data copy state.
@@ -1788,12 +1789,25 @@ function qrCodeGenerator() {
                   }
                 }
 
-                // Remove excessive sanitization with DOMPurify and parse directly
+                // Sanitize SVG vector to prevent Stored/Exported XSS and malicious script execution
+                if (typeof DOMPurify !== 'undefined') {
+                  svgString = DOMPurify.sanitize(svgString, {
+                    USE_PROFILES: { svg: true, svgFilters: true },
+                    ADD_DATA_URI_TAGS: ['image'],
+                    ADD_ATTR: ['href', 'xlink:href']
+                  });
+                }
+                if (!svgString || !svgString.trim()) {
+                  img.remove();
+                  hasInvalidImage = true;
+                  continue;
+                }
+
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(svgString, "image/svg+xml");
                 const innerSvg = doc.documentElement;
 
-                if (innerSvg && innerSvg.tagName.toLowerCase() === "svg") {
+                if (innerSvg && innerSvg.tagName.toLowerCase() === "svg" && !doc.querySelector("parsererror")) {
                   ['x', 'y', 'width', 'height'].forEach(attr => {
                     const val = img.getAttribute(attr);
                     if (val) innerSvg.setAttribute(attr, val);
@@ -1842,16 +1856,19 @@ function qrCodeGenerator() {
       let urlStr = String(baseUrlStr || "").trim();
       if (!urlStr) return '';
       
-      // Prevent dangerous schemes (XSS)
-      if (/^(javascript|vbscript|data):/i.test(urlStr)) {
-        return "about:blank";
+      // If no protocol scheme is specified, default to https://
+      if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/i.test(urlStr)) {
+        urlStr = 'https://' + urlStr;
       }
 
-      if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/i.test(urlStr)) urlStr = 'https://' + urlStr;
-      if (!utmObj) return urlStr;
-
+      // Enforce strict protocol whitelist: Only permit http: and https: protocols (Blocks javascript:, data:, blob:, file:, etc.)
       try {
         const urlObj = new URL(urlStr);
+        if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+          return "about:blank";
+        }
+        if (!utmObj) return urlObj.toString();
+
         const cleanParam = (val) => String(val || "").trim().replace(/^[?&]+/, '');
         ['source', 'medium', 'campaign', 'term', 'content'].forEach(key => {
           if (utmObj[key] && String(utmObj[key]).trim()) {
@@ -1860,7 +1877,7 @@ function qrCodeGenerator() {
         });
         return urlObj.toString();
       } catch (e) {
-        return urlStr;
+        return "about:blank";
       }
     },
 
@@ -1936,20 +1953,41 @@ function qrCodeGenerator() {
 
       // Dynamically darken status bar when modal opens (UX Polish).
       const metaTheme = document.getElementById("meta-theme-color");
-      const updateThemeColor = (isOpen) => {
-        if (metaTheme) metaTheme.setAttribute("content", isOpen ? "#111827" : "#f8fafc");
+      const isAnyModalOpen = () => Boolean(
+        this.showSaveModal ||
+        this.showShareModal ||
+        this.showDownloadModal ||
+        this.showUrlExportModal ||
+        this.showSceneModal ||
+        this.showPromptModal ||
+        this.showConfirmModal ||
+        this.showAlertModal ||
+        this.showImportModal ||
+        this.showBulkMoveModal ||
+        this.showBulkTagModal ||
+        this.showQaModal ||
+        this.showUtmPresetManager
+      );
+      const updateThemeColor = () => {
+        if (metaTheme) metaTheme.setAttribute("content", isAnyModalOpen() ? "#111827" : "#f8fafc");
       };
-      this.$watch('showSaveModal', updateThemeColor);
-      this.$watch('showShareModal', updateThemeColor);
-      this.$watch('showDownloadModal', updateThemeColor);
-      this.$watch('showUrlExportModal', updateThemeColor);
-      this.$watch('showSceneModal', updateThemeColor);
-      this.$watch('showPromptModal', updateThemeColor);
+      [
+        'showSaveModal', 'showShareModal', 'showDownloadModal', 'showUrlExportModal',
+        'showSceneModal', 'showPromptModal', 'showConfirmModal', 'showAlertModal',
+        'showImportModal', 'showBulkMoveModal', 'showBulkTagModal', 'showQaModal',
+        'showUtmPresetManager'
+      ].forEach(prop => this.$watch(prop, updateThemeColor));
 
       // Prevent and control exit via browser back (swipe back) using History API.
       window.addEventListener('popstate', async (e) => {
+        if (typeof isCommandPaletteOpen !== 'undefined' && isCommandPaletteOpen) {
+          toggleCommandPalette();
+          history.forward();
+          return;
+        }
+
         // Prioritize closing modals if any are open.
-        if (this.showSaveModal || this.showShareModal || this.showDownloadModal || this.showUrlExportModal || this.showSceneModal || this.showPromptModal || this.showImportModal || this.showBulkMoveModal || this.showBulkTagModal || this.showQaModal || this.showUtmPresetManager) {
+        if (isAnyModalOpen()) {
           this.showSaveModal = false;
           this.showShareModal = false;
           this.showDownloadModal = false;
@@ -1964,6 +2002,18 @@ function qrCodeGenerator() {
             this.showPromptModal = false;
             if (this.resolvePrompt) {
               this.resolvePrompt(null);
+            }
+          }
+          if (this.showConfirmModal) {
+            this.showConfirmModal = false;
+            if (this.resolveConfirm) {
+              this.resolveConfirm(false);
+            }
+          }
+          if (this.showAlertModal) {
+            this.showAlertModal = false;
+            if (this.resolveAlert) {
+              this.resolveAlert();
             }
           }
           history.forward(); // Offset back action to stay on current view
@@ -2615,16 +2665,10 @@ function qrCodeGenerator() {
       let data = " ";
       switch (this.selectedType) {
         case "url": {
-          let urlStr = this.formData.url.address.trim();
+          const urlStr = this.formData.url.address.trim();
           if (urlStr) {
-            if (/^(javascript|vbscript|data):/i.test(urlStr)) {
-              urlStr = ""; // Disable dangerous schemes
-            } else if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/i.test(urlStr)) {
-              urlStr = "https://" + urlStr; // Add https protocol if missing
-            }
-          }
-          if (urlStr) {
-            data = this.applyUtmParams(urlStr, this.formData.url.utm);
+            const sanitized = this.applyUtmParams(urlStr, this.formData.url.utm);
+            data = sanitized === "about:blank" ? " " : sanitized;
           } else {
             data = " ";
           }
@@ -4305,8 +4349,9 @@ function qrCodeGenerator() {
           if (!/^https?:\/\//i.test(fullUrl)) {
             fullUrl = "https://" + fullUrl;
           }
-          new URL(fullUrl);
-          if (!fullUrl.includes('.') || fullUrl.split('.').pop().length < 2) {
+          const parsed = new URL(fullUrl);
+          const hostname = parsed.hostname;
+          if (hostname !== 'localhost' && (!hostname.includes('.') || hostname.split('.').pop().length < 2)) {
              throw new Error("Invalid domain");
           }
           this.urlError = "";
@@ -4610,7 +4655,7 @@ function qrCodeGenerator() {
     async removeVariation(variationId) {
       const variation = this.formData.url.variations.find(v => v.id === variationId);
       if (variation) {
-        // データが1つでも入力されている場合は確認を求める
+        // Prompt confirmation if any data has been entered
         const hasData = variation.customUrl || variation.utm.source || variation.utm.medium || variation.utm.campaign || variation.utm.term || variation.utm.content;
         if (hasData) {
           if (!await appConfirm("Are you sure you want to remove this variant?")) return;
@@ -4625,22 +4670,12 @@ function qrCodeGenerator() {
     },
     generateVariantUrl(baseAddress, variation) {
       let urlStr = '';
-      if (variation.customUrl && variation.customUrl.trim() !== '') {
-        let customUrlStr = variation.customUrl.trim();
-
-        // Prevent dangerous schemes (XSS)
-        if (/^(javascript|vbscript|data):/i.test(customUrlStr)) {
-          return "about:blank";
-        }
-
-        if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/i.test(customUrlStr)) {
-          customUrlStr = 'https://' + customUrlStr;
-        }
-        urlStr = customUrlStr;
+      if (variation && variation.customUrl && variation.customUrl.trim() !== '') {
+        urlStr = variation.customUrl.trim();
       } else {
         urlStr = String(baseAddress || "").trim();
       }
-      return this.applyUtmParams(urlStr, variation.utm);
+      return this.applyUtmParams(urlStr, variation ? variation.utm : null);
     },
 
     // --- Enhanced Raw Data Inspector ---
@@ -5069,7 +5104,7 @@ function qrCodeGenerator() {
             fileBytes = new Uint8Array(arrayBuffer);
           } catch (itemErr) {
             console.warn(`[Skip] Failed to process variation: ${variation.name}`, itemErr);
-            continue; // エラーになったバリアントはスキップして次へ
+            continue; // Skip failed variant and proceed to next
           } finally {
             URL.revokeObjectURL(safeSvgUrl);
           }
@@ -6309,7 +6344,7 @@ function qrCodeGenerator() {
             }
           } catch (itemErr) {
             console.warn(`[Skip] Failed to process item: ${qr.name || 'Unknown'}`, itemErr);
-            continue; // エラーになったアイテムはスキップして次の処理へ進む
+            continue; // Skip failed item and proceed to next
           } finally {
             URL.revokeObjectURL(safeSvgUrl);
           }
@@ -6386,7 +6421,7 @@ function qrCodeGenerator() {
       }
     },
     async svgDataUrlToPngBlob(svgDataUrl, width = 512, height = null) {
-      // Promiseコンストラクタから不要な async を削除
+      // Avoid redundant async in Promise constructor
       return new Promise((resolve, reject) => {
         const h = height || width; // Fallback to square if height is unspecified
         let imageElement = null;
@@ -6863,6 +6898,9 @@ function qrCodeGenerator() {
       this.qrOptions.margin = this.includeQuietZone ? 20 : 0;
       this.updateQrCode();
     },
+    get activeBrandKit() {
+      return this.getActiveBrandKit();
+    },
     getActiveBrandKit() {
       return this.brandKits.find(b => b.id === this.activeBrandKitId) || null;
     },
@@ -7051,6 +7089,7 @@ function qrCodeGenerator() {
       this.hapticFeedback('light');
     },
     hexToRgb(hex) {
+      if (!hex || typeof hex !== 'string') return null;
       let shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
       hex = hex.replace(shorthandRegex, function(m, r, g, b) {
         return r + r + g + g + b + b;
@@ -7072,6 +7111,7 @@ function qrCodeGenerator() {
       return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
     },
     getContrast(rgb1, rgb2) {
+      if (!rgb1 || !rgb2) return 1;
       const lum1 = this.getLuminance(rgb1.r, rgb1.g, rgb1.b);
       const lum2 = this.getLuminance(rgb2.r, rgb2.g, rgb2.b);
       return (Math.max(lum1, lum2) + 0.05) / (Math.min(lum1, lum2) + 0.05);
