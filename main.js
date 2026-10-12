@@ -166,6 +166,57 @@ async function verifyFilePermission(handle, readWrite) {
   return false;
 }
 
+// --- Calendar event identity (UID / DTSTAMP) ---
+// Identity is assigned once when a QR record is created or saved, and only read when generating data.
+const EVENT_UID_PATTERN = /^[^\r\n;,\\]+$/;
+const EVENT_DTSTAMP_PATTERN = /^\d{8}T\d{6}Z$/;
+
+function toICalUtc(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
+}
+
+// Deterministic identity for a record: legacy records without a stored UID always resolve to the same value.
+// Records always carry a createdAt (see ensureRecordCreatedAt), so the DTSTAMP is stable across reads.
+function deriveEventIdentity(id, createdAt) {
+  return {
+    uid: id ? `${id}@qrcoder` : "",
+    dtstamp: createdAt ? toICalUtc(createdAt) : "",
+  };
+}
+
+// Fill missing or invalid UID / DTSTAMP on a record's form data (mutates; call only on creation or save paths).
+function assignEventIdentity(formData, identity) {
+  if (!formData || !formData.event || !identity) return;
+  const isValid = (value, pattern) => typeof value === "string" && pattern.test(value);
+  if (!isValid(formData.event.uid, EVENT_UID_PATTERN)) formData.event.uid = identity.uid;
+  if (!isValid(formData.event.dtstamp, EVENT_DTSTAMP_PATTERN)) formData.event.dtstamp = identity.dtstamp;
+}
+
+// Give a record a valid createdAt once (legacy or imported data), so derived values never depend on the read time.
+function ensureRecordCreatedAt(qr) {
+  if (!qr || typeof qr !== "object") return false;
+  if (qr.createdAt && !Number.isNaN(new Date(qr.createdAt).getTime())) return false;
+  qr.createdAt = new Date().toISOString();
+  return true;
+}
+
+// Read-only resolution with validation: values from imported files must not inject extra iCal lines.
+function resolveEventIdentity(event, fallback) {
+  const safe = (value, pattern) => (typeof value === "string" && pattern.test(value) ? value : "");
+  const fb = fallback || {};
+  return {
+    uid: safe(event && event.uid, EVENT_UID_PATTERN) || safe(fb.uid, EVENT_UID_PATTERN),
+    dtstamp: safe(event && event.dtstamp, EVENT_DTSTAMP_PATTERN) || safe(fb.dtstamp, EVENT_DTSTAMP_PATTERN),
+  };
+}
+
+// Identify a visible screen for history entries: the step only matters inside the generator.
+function screenKey(view, step) {
+  return view === 'generator' ? `generator:${step}` : view;
+}
+
 function setDirty(state) {
   isDirty = state;
   const badge = document.getElementById("dirty-badge");
@@ -186,10 +237,10 @@ function setDirty(state) {
   }
 }
 
-async function processQRCoderFile(file) {
+async function processQRCoderFile(file, handle = null, { skipEditorConfirm = false } = {}) {
   // Warn and confirm before overwriting unsaved changes in the editor.
   const component = window.$app;
-  if (component && component.hasUnsavedEdit) {
+  if (!skipEditorConfirm && component && component.hasUnsavedEdit) {
     if (!await appConfirm("You have unsaved changes in the editor. Discard them and load the file?")) {
       return;
     }
@@ -299,7 +350,7 @@ async function processQRCoderFile(file) {
 
     if (Array.isArray(parsedData)) {
       newQRCodes = parsedData;
-    } else if (parsedData.version >= 3) {
+    } else if (parsedData && typeof parsedData === "object" && parsedData.version >= 3) {
       newQRCodes = parsedData.qrcodes || [];
       importedProjects = parsedData.projects || [];
       importedBrands = parsedData.brandKits || [];
@@ -318,7 +369,12 @@ async function processQRCoderFile(file) {
           }
         });
       }
+    } else {
+      await appAlert("Failed to load the file. It may be corrupted or in an invalid format.");
+      return;
     }
+
+    newQRCodes.forEach(ensureRecordCreatedAt);
 
     // Add fail-safe to prevent data loss.
     if (component.savedQRCodes && component.savedQRCodes.length > 0) {
@@ -415,6 +471,8 @@ async function processQRCoderFile(file) {
     if (importedBrands.length > 0) component.saveBrandKits(false);
     if (importedTemplates.length > 0) await component.persistMyTemplates();
 
+    // Switch the save target only after the backup has been applied to the dashboard.
+    if (handle) fileHandle = handle;
     setDirty(false);
     component.showFlashNotification(`Loaded file "${file.name}"`);
     component.currentView = 'dashboard';
@@ -434,11 +492,11 @@ async function loadQRCoderFile() {
   }
   try {
     let file;
+    let handle;
     if ("showOpenFilePicker" in window) {
-      const [handle] = await window.showOpenFilePicker({
+      [handle] = await window.showOpenFilePicker({
         types: [{ description: "QR Coder Database", accept: { "application/json": [".qrcoder"] } }]
       });
-      fileHandle = handle;
       file = await handle.getFile();
     } else {
       const input = document.createElement("input");
@@ -449,10 +507,10 @@ async function loadQRCoderFile() {
         input.click();
       });
       if (!file) return;
-      fileHandle = { name: file.name };
+      handle = { name: file.name };
     }
 
-    await processQRCoderFile(file);
+    await processQRCoderFile(file, handle, { skipEditorConfirm: true });
   } catch (err) {
     if (err.name === 'AbortError') return; // Do nothing on cancel.
     console.error(err);
@@ -962,9 +1020,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const file = e.dataTransfer.files[0];
       if (file.name.endsWith('.qrcoder') || file.name.endsWith('.qrcoder-theme')) {
-        if (file.name.endsWith('.qrcoder')) fileHandle = { name: file.name };
         if (window.$app && typeof processQRCoderFile === 'function') {
-          processQRCoderFile(file);
+          processQRCoderFile(file, file.name.endsWith('.qrcoder') ? { name: file.name } : null);
         }
       } else {
         if (window.$app) {
@@ -1011,7 +1068,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         const file = await fileHandleParams.getFile();
-        fileHandle = fileHandleParams; // Set globally to enable overwrite save.
 
         let attempts = 0;
         const maxAttempts = 50; // Max wait 5 seconds.
@@ -1023,7 +1079,8 @@ document.addEventListener("DOMContentLoaded", () => {
           if (window.$app && window.$app._isInitialized) {
             clearInterval(checkAppReady);
             if (typeof processQRCoderFile === 'function') {
-              processQRCoderFile(file);
+              // The handle becomes the overwrite-save target only after a successful load.
+              processQRCoderFile(file, fileHandleParams);
             }
           } else if (attempts > maxAttempts) {
             clearInterval(checkAppReady);
@@ -1107,6 +1164,8 @@ function qrCodeGenerator() {
       start: "",
       end: "",
       description: "",
+      uid: "",
+      dtstamp: "",
     },
     email: {
       to: "",
@@ -1145,7 +1204,8 @@ function qrCodeGenerator() {
     isSaveSuccess: false,
     currentView: "generator", // 'generator' (create) or 'dashboard' (manage).
     hasUnsavedEdit: false,
-    _isPopStateHandling: false, // Track unsaved form edits.
+    _isPopStateHandling: false, // Suppress history pushes while restoring a state from popstate.
+    _ignoreNextPopState: false, // Skip the popstate caused by an internal history rewrite.
     currentStep: "typeSelection", // Track current step in generator.
     selectedType: "url", // Track selected QR code type.
     activeStepTab: "content", // Track active tab in generator ('content', 'design', 'logo').
@@ -1913,6 +1973,7 @@ function qrCodeGenerator() {
       } else if (action === 'create-url') {
         this.currentView = 'generator';
         this.selectedType = 'url';
+        this.currentStep = 'contentEntry';
         window.history.replaceState({}, document.title, window.location.pathname);
       }
 
@@ -1938,8 +1999,15 @@ function qrCodeGenerator() {
       this.mainSceneBackgroundUrl = this.scenePresets.custom.backgroundUrl;
       await this.loadProjects();
       await this.loadSavedQRCodes();
+      // Default start view applies only when no launch action (shortcut / share target) chose one.
+      const hasLaunchView = action === 'scan' || action === 'create-url' || Boolean(sharedContent);
+      if (!hasLaunchView) {
+        this.currentView = this.savedQRCodes.length > 0 ? "dashboard" : "generator";
+      }
       await this.loadMyTemplates();
       await this.checkAndRestoreDraft();
+      const restoredDraft = this.hasUnsavedEdit; // Set only when the user restored a draft.
+      this.ensureEditorEventIdentity();
 
       // Force open generator if started with shared data.
       if (sharedContent) {
@@ -1980,6 +2048,11 @@ function qrCodeGenerator() {
 
       // Prevent and control exit via browser back (swipe back) using History API.
       window.addEventListener('popstate', async (e) => {
+        // History rewrites by discardEditorHistoryEntry must not change the view.
+        if (this._ignoreNextPopState) {
+          this._ignoreNextPopState = false;
+          return;
+        }
         if (typeof isCommandPaletteOpen !== 'undefined' && isCommandPaletteOpen) {
           toggleCommandPalette();
           history.forward();
@@ -2020,6 +2093,13 @@ function qrCodeGenerator() {
           return;
         }
 
+        // Restore exactly the screen recorded in the history entry.
+        const state = e.state || {};
+        const targetView = state.view || 'generator';
+        // The step only defines the screen inside the generator; other views keep the current step.
+        const targetStep = targetView === 'generator' ? (state.step || 'typeSelection') : this.currentStep;
+        if (screenKey(targetView, targetStep) === screenKey(this.currentView, this.currentStep)) return;
+
         // Warn if there are unsaved edits; restore history if cancelled.
         if (this.hasUnsavedEdit) {
           if (!await appConfirm('You have unsaved changes. Are you sure you want to leave?')) {
@@ -2029,15 +2109,12 @@ function qrCodeGenerator() {
           this.hasUnsavedEdit = false;
         }
 
-        // Handle screen transition for back action.
-        if (this.currentView === 'scanner') {
-          this.currentView = 'dashboard';
-        } else if (this.currentView === 'generator' && this.currentStep === 'contentEntry') {
-          this.currentStep = 'typeSelection';
-        } else if (this.currentView === 'dashboard') {
-          this.currentView = 'generator';
-          this.currentStep = 'typeSelection';
-        }
+        this._isPopStateHandling = true;
+        this.currentView = targetView;
+        this.currentStep = targetStep;
+        // Watcher callbacks run as microtasks, so a macrotask releases the flag right after them.
+        // (Alpine's $nextTick is not used: it is held while x-transition waits for an animation frame.)
+        setTimeout(() => { this._isPopStateHandling = false; }, 0);
       });
 
       document.addEventListener('visibilitychange', () => {
@@ -2053,13 +2130,19 @@ function qrCodeGenerator() {
         }
       });
 
-      this.$watch('currentStep', val => {
+      // Push the full screen state; skip when restoring from popstate or when the entry already matches.
+      const pushScreenState = () => {
         if (this._isPopStateHandling) return;
-        if (val === 'contentEntry') history.pushState({ step: 'contentEntry' }, '', null);
-      });
+        const current = history.state || {};
+        const currentKey = screenKey(current.view, current.step);
+        if (currentKey === screenKey(this.currentView, this.currentStep)) return;
+        // `prev` records the screen below this entry (used when the editor entry is discarded on reset).
+        history.pushState({ view: this.currentView, step: this.currentStep, prev: currentKey }, '', null);
+      };
+      // Record every screen change (Create tab, New button, etc.); matching entries are skipped above.
+      this.$watch('currentStep', () => pushScreenState());
       this.$watch('currentView', val => {
-        if (val === 'dashboard') history.pushState({ view: 'dashboard' }, '', null);
-        if (val === 'scanner') history.pushState({ view: 'scanner' }, '', null);
+        pushScreenState();
         // Stop scanner when leaving scanner view.
         if (val !== 'scanner' && this.isScannerActive) {
           this.stopScanner();
@@ -2067,15 +2150,19 @@ function qrCodeGenerator() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       });
 
-      // Reset unsaved flag after initial generation completes.
-      this.$nextTick(() => {
-        setTimeout(() => {
-          if (typeof setDirty === 'function') setDirty(false);
-          this.hasUnsavedEdit = false;
-          this._isInitialized = true; // Set initialization flag.
-          history.replaceState({ view: 'generator', step: 'typeSelection' }, '', location.href);
-        }, 100);
-      });
+      // Seed history once: the type selection screen as the base, plus the start screen if it differs.
+      history.replaceState({ view: 'generator', step: 'typeSelection' }, '', location.href);
+      if (this.currentView !== 'generator' || this.currentStep !== 'typeSelection') {
+        history.pushState({ view: this.currentView, step: this.currentStep, prev: 'generator:typeSelection' }, '', location.href);
+      }
+
+      // Reset unsaved flags dirtied by the initial preview render (keep them for a restored draft).
+      // A plain timer is used because Alpine's $nextTick stays held in background tabs (no animation frames).
+      setTimeout(() => {
+        if (typeof setDirty === 'function') setDirty(false);
+        if (!restoredDraft) this.hasUnsavedEdit = false;
+        this._isInitialized = true; // Set initialization flag.
+      }, 100);
     },
 
     // Create QR code instance and render preview.
@@ -2375,10 +2462,10 @@ function qrCodeGenerator() {
             image.onload = () => {
               setTimeout(() => {
                 const renderCanvas = document.createElement("canvas");
-                renderCanvas.width = canvasWidth;
-                renderCanvas.height = canvasHeight;
+                renderCanvas.width = finalWidth;
+                renderCanvas.height = finalHeight;
                 const renderCtx = renderCanvas.getContext("2d");
-                renderCtx.drawImage(image, 0, 0, canvasWidth, canvasHeight);
+                renderCtx.drawImage(image, 0, 0, finalWidth, finalHeight);
                 renderCanvas.toBlob((pngBlob) => {
                   renderCanvas.width = 0;
                   renderCanvas.height = 0;
@@ -2491,10 +2578,10 @@ function qrCodeGenerator() {
             image.onload = () => {
               setTimeout(() => {
                 const exportCanvas = document.createElement("canvas");
-                exportCanvas.width = canvasWidth;
-                exportCanvas.height = canvasHeight;
+                exportCanvas.width = finalWidth;
+                exportCanvas.height = finalHeight;
                 const context2d = exportCanvas.getContext("2d");
-                context2d.drawImage(image, 0, 0, canvasWidth, canvasHeight);
+                context2d.drawImage(image, 0, 0, finalWidth, finalHeight);
                 exportCanvas.toBlob((blobData) => {
                   if (blobData) resolve(blobData);
                   else reject(new Error("Failed to create PNG blob."));
@@ -2627,6 +2714,7 @@ function qrCodeGenerator() {
         updatedAt: new Date().toISOString(),
         previewSvgUrl: await this.getPreviewSvgUrl(previewOptions),
       };
+      assignEventIdentity(newQr.formData, deriveEventIdentity(newQr.id, newQr.createdAt));
 
       if (!isNew) {
         const index = this.savedQRCodes.findIndex((qr) => qr.id === this.editingQRCodeId);
@@ -2718,7 +2806,8 @@ function qrCodeGenerator() {
           break;
         }
         case "event": {
-          const { summary, location, start, end, description } = this.formData.event;
+          const event = this.formData.event || {};
+          const { summary, location, start, end, description } = event;
           const formatDT = (dt) => {
             if (!dt) return "";
             try {
@@ -2733,9 +2822,10 @@ function qrCodeGenerator() {
             return String(str).replace(/[\\;,]/g, "\\$&").replace(/\r?\n/g, "\\n");
           };
           if (summary && start && end) {
-            const dtstamp = new Date().toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-            const uid = `${Date.now()}-${this.generateUniqueId()}@qrcoder`;
-            data = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//GrindTools//QRCoder//EN\r\nBEGIN:VEVENT\r\nUID:${uid}\r\nDTSTAMP:${dtstamp}\r\nSUMMARY:${escapeICal(summary)}\r\nLOCATION:${escapeICal(location)}\r\nDTSTART:${formatDT(start)}\r\nDTEND:${formatDT(end)}\r\nDESCRIPTION:${escapeICal(description)}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
+            const fallback = this.eventIdentity || (typeof this.getEditorEventIdentity === "function" ? this.getEditorEventIdentity() : null);
+            const { uid, dtstamp } = resolveEventIdentity(event, fallback);
+            const identityLines = (uid ? `UID:${uid}\r\n` : "") + (dtstamp ? `DTSTAMP:${dtstamp}\r\n` : "");
+            data = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//GrindTools//QRCoder//EN\r\nBEGIN:VEVENT\r\n${identityLines}SUMMARY:${escapeICal(summary)}\r\nLOCATION:${escapeICal(location)}\r\nDTSTART:${formatDT(start)}\r\nDTEND:${formatDT(end)}\r\nDESCRIPTION:${escapeICal(description)}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
           }
           break;
         }
@@ -5098,8 +5188,7 @@ function qrCodeGenerator() {
           // 5. Convert SVG to PNG Blob
           let fileBytes;
           try {
-            // Pass canvasHeight
-            const pngBlob = await this.svgDataUrlToPngBlob(safeSvgUrl, canvasWidth, canvasHeight);
+            const pngBlob = await this.svgDataUrlToPngBlob(safeSvgUrl, finalWidth, finalHeight);
             const arrayBuffer = await pngBlob.arrayBuffer();
             fileBytes = new Uint8Array(arrayBuffer);
           } catch (itemErr) {
@@ -5424,8 +5513,22 @@ function qrCodeGenerator() {
       this.updateQrCode(recordHistory);
     },
     async getPreviewSvgUrl(options) {
-      const previewInstance = new QRCodeStyling(options);
-      const blob = await previewInstance.getRawData("svg");
+      // The SVG is scaled by CSS when displayed, so a larger render size does not change how it looks.
+      // Dense data (e.g. calendar events at level H) needs at least 1px per module, so retry at larger sizes.
+      const baseSize = options.width || 80;
+      const sizes = [baseSize, baseSize * 2, baseSize * 4, baseSize * 8];
+      let blob = null;
+      let lastError = null;
+      for (const size of sizes) {
+        try {
+          const previewInstance = new QRCodeStyling({ ...options, width: size, height: size });
+          blob = await previewInstance.getRawData("svg");
+          if (blob) break;
+        } catch (err) {
+          lastError = err; // Data that exceeds QR capacity fails at every size and is rethrown below.
+        }
+      }
+      if (!blob) throw lastError || new Error("Failed to generate preview SVG");
 
       return new Promise((resolve, reject) => {
         const textReader = new FileReader();
@@ -5446,7 +5549,53 @@ function qrCodeGenerator() {
         textReader.readAsText(blob);
       });
     },
+    // The cleared editor must not stay reachable via Back: turn its history entry into the type selection.
+    // Runs synchronously, before the screen watchers, so they see a matching entry and do not push.
+    discardEditorHistoryEntry() {
+      const entry = history.state || {};
+      if (screenKey(entry.view, entry.step) !== 'generator:contentEntry') return;
+      const token = this.generateUniqueId();
+      history.replaceState({ view: 'generator', step: 'typeSelection', prev: entry.prev, resetToken: token }, '', null);
+      // Once the caller has settled the screen (watchers run before this timer), remove history entries
+      // that would only repeat a screen: the user should step straight back to where the editor was opened.
+      setTimeout(() => {
+        const current = history.state || {};
+        const key = screenKey(this.currentView, this.currentStep);
+        if (current.resetToken === token) {
+          // Stayed on the type selection (New). If the entry below is the same screen, step back onto it;
+          // popstate sees no change and leaves the view as is.
+          if (key === 'generator:typeSelection' && entry.prev === 'generator:typeSelection') history.back();
+          return;
+        }
+        // Reset then left (save / cancel to the dashboard): the new screen sits on top of the replaced entry.
+        if (current.resetToken || current.prev !== 'generator:typeSelection' || current.view !== this.currentView) return;
+        if (key === entry.prev) {
+          // Back to the screen the editor was opened from: return to that original entry instead.
+          this._ignoreNextPopState = true;
+          history.go(-2);
+        } else if (entry.prev === 'generator:typeSelection') {
+          // The replaced entry duplicates the type selection below: rewind past both, then record the new screen again.
+          const top = { view: current.view, step: current.step, prev: 'generator:typeSelection' };
+          this._ignoreNextPopState = true;
+          window.addEventListener('popstate', () => history.pushState(top, '', null), { once: true });
+          history.go(-2);
+        }
+      }, 0);
+    },
+    // Identity derived from the record being edited (null for a new, unsaved QR).
+    getEditorEventIdentity() {
+      const record = this.editingQRCodeId ? this.savedQRCodes.find((qr) => qr.id === this.editingQRCodeId) : null;
+      return record ? deriveEventIdentity(record.id, record.createdAt) : null;
+    },
+    // Give the editor's form data a valid calendar identity if it has none (new QR, legacy or tampered draft).
+    ensureEditorEventIdentity() {
+      if (!this.formData.event) this.formData.event = JSON.parse(JSON.stringify(defaultFormData.event));
+      const identity = this.getEditorEventIdentity()
+        || deriveEventIdentity(this.generateUniqueId(), new Date().toISOString());
+      assignEventIdentity(this.formData, identity);
+    },
     resetGenerator() {
+      this.discardEditorHistoryEntry();
       this.editingQRCodeId = null;
       this.saveProjectId = this.currentProjectId !== 'all' ? this.currentProjectId : 'default';
       this.saveName = "";
@@ -5455,6 +5604,7 @@ function qrCodeGenerator() {
       this.saveTags = "";
       this.selectedType = "url";
       this.formData = JSON.parse(JSON.stringify(defaultFormData));
+      this.ensureEditorEventIdentity();
       this.resetQrOptions(false);
       this.history = [];
       this.historyIndex = -1;
@@ -5653,6 +5803,7 @@ function qrCodeGenerator() {
       // --- Automatic repair migration for old thumbnails (with crossorigin attribute) ---
       let needsSave = false;
       this.savedQRCodes.forEach(qr => {
+        if (ensureRecordCreatedAt(qr)) needsSave = true;
         if (typeof qr.tags === 'string') {
           qr.tags = qr.tags.split(',').map(t => t.trim()).filter(t => t);
           needsSave = true;
@@ -5687,8 +5838,6 @@ function qrCodeGenerator() {
       if (needsSave) {
         this.persistSavedQRCodes();
       }
-
-      this.currentView = this.savedQRCodes.length > 0 ? "dashboard" : "generator";
     },
     async persistMyTemplates() {
       try {
@@ -5960,6 +6109,10 @@ function qrCodeGenerator() {
         if (!loadedFormData.video) {
           loadedFormData.video = { url: "" };
         }
+        if (!loadedFormData.event) {
+          loadedFormData.event = JSON.parse(JSON.stringify(defaultFormData.event));
+        }
+        assignEventIdentity(loadedFormData, deriveEventIdentity(qrToEdit.id, qrToEdit.createdAt));
         this.formData = loadedFormData;
 
         const safeOptions = JSON.parse(JSON.stringify(defaultQrOptions));
@@ -6033,7 +6186,7 @@ function qrCodeGenerator() {
       const csvRows = [headers.map(h => this.escapeCSV(h)).join(",")];
 
       targets.forEach(qr => {
-        const dataStringContext = { selectedType: qr.type, formData: qr.formData, applyUtmParams: this.applyUtmParams.bind(this) };
+        const dataStringContext = { selectedType: qr.type, formData: qr.formData, eventIdentity: deriveEventIdentity(qr.id, qr.createdAt), applyUtmParams: this.applyUtmParams.bind(this) };
         const dataContent = this.getQrDataString.call(dataStringContext);
 
         csvRows.push([
@@ -6138,10 +6291,14 @@ function qrCodeGenerator() {
         newQr.tags = originalQr.tags ? [...originalQr.tags] : [];
         newQr.isFavorite = false; // Unpin duplicated copies
         newQr.createdAt = new Date().toISOString();
+        if (newQr.formData && newQr.formData.event) {
+          newQr.formData.event.uid = "";
+          newQr.formData.event.dtstamp = "";
+          assignEventIdentity(newQr.formData, deriveEventIdentity(newQr.id, newQr.createdAt));
+        }
         const dataStringContext = {
           selectedType: newQr.type,
           formData: newQr.formData,
-          generateUniqueId: this.generateUniqueId,
           applyUtmParams: this.applyUtmParams.bind(this),
         };
         const dataString = this.getQrDataString.call(dataStringContext);
@@ -6207,6 +6364,7 @@ function qrCodeGenerator() {
       const dataStringContext = {
         selectedType: qr.type,
         formData: qr.formData,
+        eventIdentity: deriveEventIdentity(qr.id, qr.createdAt),
         applyUtmParams: this.applyUtmParams.bind(this),
       };
       return this.getQrDataString.call(dataStringContext);
@@ -6337,8 +6495,7 @@ function qrCodeGenerator() {
               const arrayBuffer = await svgBlob.arrayBuffer();
               fileBytes = new Uint8Array(arrayBuffer);
             } else {
-              // Pass canvasHeight
-              const pngBlob = await this.svgDataUrlToPngBlob(safeSvgUrl, canvasWidth, canvasHeight);
+              const pngBlob = await this.svgDataUrlToPngBlob(safeSvgUrl, finalWidth, finalHeight);
               const arrayBuffer = await pngBlob.arrayBuffer();
               fileBytes = new Uint8Array(arrayBuffer);
             }
@@ -6765,6 +6922,13 @@ function qrCodeGenerator() {
           const specificOptions = JSON.parse(JSON.stringify(restOptions));
           specificOptions.logo = logo;
 
+          const newId = this.generateUniqueId();
+          const createdAt = new Date().toISOString();
+          if (specificFormData.event) {
+            specificFormData.event.uid = "";
+            specificFormData.event.dtstamp = "";
+            assignEventIdentity(specificFormData, deriveEventIdentity(newId, createdAt));
+          }
           const dataStringContext = { selectedType: this.selectedType, formData: specificFormData, applyUtmParams: this.applyUtmParams.bind(this) };
           const dataString = this.getQrDataString.call(dataStringContext);
 
@@ -6803,7 +6967,7 @@ function qrCodeGenerator() {
           }
 
           newQRCodes.push({
-            id: this.generateUniqueId(),
+            id: newId,
             projectId: this.importTargetProject,
             name: nameStr,
             memo: memoStr,
@@ -6814,8 +6978,8 @@ function qrCodeGenerator() {
             qrOptions: specificOptions,
             logoFileName: this.logoFileName,
             frame: JSON.parse(JSON.stringify(baseFrame)),
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
+            createdAt: createdAt,
+            updatedAt: createdAt,
             previewSvgUrl: previewSvgUrl,
           });
         }
@@ -7228,7 +7392,7 @@ if ('serviceWorker' in navigator) {
                   window.$app.showFlashNotification("✨ App update ready. Reload the page when you are done.");
                 } else {
                   // Trigger reactive Alpine click handler inside the component
-                  window.$app.showFlashNotification("✨ App updated! Tap here to reload.", true);
+                  window.$app.showFlashNotification("✨ App updated! Reload to apply.", true);
                 }
               } else if (attempts > 50) {
                 clearInterval(tryNotify); // Give up after 5 seconds

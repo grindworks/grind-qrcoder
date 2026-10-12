@@ -233,7 +233,7 @@
     </script>
   </head>
 
-  <body x-data="qrCodeGenerator()" x-init="init()" class="min-h-screen bg-[#fafbfc] text-slate-800 font-sans antialiased selection:bg-primary/20 selection:text-primary transition-colors duration-300">
+  <body x-data="qrCodeGenerator()" class="min-h-screen bg-[#fafbfc] text-slate-800 font-sans antialiased selection:bg-primary/20 selection:text-primary transition-colors duration-300">
     <noscript>
       <div style="padding: 20px; text-align: center; background: #fff; color: #333;">
         <h2>QR Coder - Advanced Offline QR Code Generator</h2>
@@ -265,6 +265,11 @@
         <h2 class="text-3xl font-black tracking-tight">Drop backup or theme file here</h2>
         <p class="mt-2 text-sm font-medium text-slate-300">Restore data, import themes, or drop images in Verify tab.</p>
       </div>
+    </div>
+
+    <div id="flash-toast" role="alert" aria-live="assertive" class="fixed top-6 md:top-auto md:bottom-24 xl:bottom-6 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-[90%] md:w-auto max-w-sm transform rounded-xl bg-slate-900/95 px-5 py-4 text-white shadow-soft backdrop-blur-md transition-all flex items-center justify-between gap-4" style="z-index: 45;" x-show="showNotification" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4" x-cloak>
+      <span x-text="notificationMessage"></span>
+      <button x-show="isUpdateNotification" type="button" @click="window.location.reload()" class="shrink-0 rounded-lg bg-white px-3 py-1.5 text-sm font-semibold text-slate-900 hover:bg-slate-200">Reload</button>
     </div>
 
     <!-- Main content area -->
@@ -445,8 +450,6 @@
                 <p class="mt-1 text-sm text-slate-500 md:text-base">Enter content and customize the design</p>
               </div>
             </div>
-
-            <div id="flash-toast" role="alert" aria-live="assertive" class="fixed top-6 md:top-auto md:bottom-6 left-1/2 md:left-auto md:right-6 -translate-x-1/2 md:translate-x-0 w-[90%] md:w-auto max-w-sm z-120 transform rounded-xl bg-slate-900/95 px-5 py-4 text-white shadow-soft backdrop-blur-md transition-all" style="z-index: 120;" x-show="showNotification" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 translate-y-4" :class="{ 'cursor-pointer hover:bg-slate-800': isUpdateNotification }" @click="if(isUpdateNotification) window.location.reload()" x-text="notificationMessage" x-cloak></div>
 
             <div class="flex flex-col gap-8 xl:flex-row">
               <!-- Left side: Configuration panel -->
