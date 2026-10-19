@@ -1,5 +1,5 @@
 // Update this version to trigger a cache update (Format: YYYYMMDD-Revision)
-const CACHE_NAME = "grindqrcoder-v20261019-1";
+const CACHE_NAME = "grindqrcoder-v20261020-1";
 const urlsToCache = [
   "./",
   "./styles.css",
@@ -27,16 +27,18 @@ const urlsToCache = [
 ];
 
 // Create cache on install
+// The new worker waits until the page asks for it (SKIP_WAITING) so a running page never mixes versions
 self.addEventListener("install", (event) => {
-  // Activate new Service Worker immediately
-  self.skipWaiting();
-
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
       console.log("Opened cache");
       await cache.addAll(urlsToCache.map((url) => new Request(url, { cache: "reload" })));
     }),
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data === "SKIP_WAITING") self.skipWaiting();
 });
 
 // Delete old caches
@@ -58,46 +60,55 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Return cache on fetch (Stale-while-revalidate strategy)
+const offlineFallbackHtml = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>QR Coder - Notification</title><style>body { font-family: sans-serif; background-color: #fafafa; color: #333; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; padding: 20px; } h1 { font-size: 20px; color: #111827; margin-bottom: 16px; font-weight: bold; } p { font-size: 15px; color: #4b5563; line-height: 1.6; margin-bottom: 24px; } .icon { font-size: 48px; margin-bottom: 16px; }</style></head><body><div class="icon">💡</div><h1>Browser cache seems to have been cleared.</h1><p>Your data is safely stored on your PC.<br><br>To use the app offline again, please connect to the internet and access it once.</p></body></html>`;
+
+const precachedPaths = new Set(urlsToCache.map((url) => new URL(url, self.location).pathname));
+
+function isHtmlRequest(request) {
+  return request.mode === "navigate" || (request.headers.get("accept") || "").includes("text/html");
+}
+
+function offlineResponse(request) {
+  if (isHtmlRequest(request)) {
+    return new Response(offlineFallbackHtml, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+  }
+  return Response.error();
+}
+
 self.addEventListener("fetch", (event) => {
   // Bypass cache for non-GET or non-HTTP requests
   if (event.request.method !== "GET" || !event.request.url.startsWith("http")) return;
 
+  const url = new URL(event.request.url);
+  const isPrecached = url.origin === self.location.origin && precachedPaths.has(url.pathname);
+
+  if (isPrecached) {
+    // App shell: served only from this version's cache (updated as a whole via CACHE_NAME)
+    event.respondWith(
+      caches.open(CACHE_NAME)
+        .then((cache) => cache.match(event.request, { ignoreSearch: true }))
+        .then((response) => response || fetch(event.request))
+        .catch(() => offlineResponse(event.request)),
+    );
+    return;
+  }
+
+  // Everything else: stale-while-revalidate
   event.respondWith(
-    // Ignore query parameters to ensure cache hits
     caches.match(event.request, { ignoreSearch: true }).then((response) => {
-      // Fetch latest resources from network and update cache on success (background)
       const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
-          if (networkResponse && networkResponse.ok && networkResponse.type === "basic") {
-            // Do not cache requests with query parameters (e.g., Share Target) to avoid bloat
-            if (!event.request.url.includes("?")) {
-              const responseToCache = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
-            }
+          // Do not cache requests with query parameters (e.g., Share Target) to avoid bloat
+          if (networkResponse && networkResponse.ok && networkResponse.type === "basic" && !url.search) {
+            const responseToCache = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
           }
           return networkResponse;
         })
-        .catch(() => {
-          // Fallback when offline and not in cache (only for HTML requests)
-          if (
-            event.request.mode === "navigate" ||
-            (event.request.headers.get("accept") && event.request.headers.get("accept").includes("text/html"))
-          ) {
-            const fallbackHtml = `\n            <!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>QR Coder - Notification</title><style>body { font-family: sans-serif; background-color: #fafafa; color: #333; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; padding: 20px; } h1 { font-size: 20px; color: #111827; margin-bottom: 16px; font-weight: bold; } p { font-size: 15px; color: #4b5563; line-height: 1.6; margin-bottom: 24px; } .icon { font-size: 48px; margin-bottom: 16px; }</style></head><body><div class="icon">💡</div><h1>Browser cache seems to have been cleared.</h1><p>Your data is safely stored on your PC.<br><br>To use the app offline again, please connect to the internet and access it once.</p></body></html>\n          `;
-            return new Response(fallbackHtml, {
-              headers: { "Content-Type": "text/html; charset=utf-8" },
-            });
-          }
-          return Response.error();
-        });
+        .catch(() => offlineResponse(event.request));
 
       // Silently absorb errors from asynchronous fetchPromise
       fetchPromise.catch(() => {});
-
-      // Return cache immediately if available, otherwise wait for fetchPromise
       return response || fetchPromise;
     }),
   );

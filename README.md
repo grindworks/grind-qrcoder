@@ -9,7 +9,7 @@
 <img src="./grind-qrcoder.jpg" width="800" alt="QR Coder Hero Image" />
 
 **QR Coder** is a PWA (Progressive Web App) that instantly converts any shared link—such as URLs, Wi-Fi settings, and SNS profiles—into high-quality QR codes.
-All entered data and configuration history are saved locally in the browser's IndexedDB. The app does not phone home: UI assets are self-contained, and once cached by the Service Worker it runs fully offline. Note that dashboard data and auto-drafts (including Wi-Fi passwords) are stored in IndexedDB in plaintext on your device; optional AES-256-GCM encryption applies only when you export a `.qrcoder` backup with a password.
+All entered data and configuration history are saved locally in the browser's IndexedDB. The app does not phone home: UI assets are self-contained, and once cached by the Service Worker it runs fully offline. Note that saved dashboard data (including Wi-Fi passwords of saved QR codes) is stored in IndexedDB in plaintext on your device; auto-drafts never keep Wi-Fi passwords. Optional AES-256-GCM encryption applies only when you export a `.qrcoder` backup with a password. To erase everything from this browser, run **Delete All Local Data** from the command palette (Ctrl/⌘+K).
 
 ## Philosophy & Features
 
@@ -66,7 +66,13 @@ When saving, strong encryption via `AES-256-GCM` using the Web Crypto API can be
 - `sw.js`: Service Worker for the PWA (full offline capability, cache control).
 - `manifest.json`: PWA Manifest.
 - `assets/`: Vendored libraries (Alpine, qr-code-styling, html5-qrcode, fflate, DOMPurify).
-- `icons-sprite.svg`: Icon sprite.
+- `icons-sprite.svg`: Icon sprite (only the icons referenced by `index.html` / `main.js`).
+
+## Development
+
+- **Build CSS:** run `./build.sh` after changing classes in `index.html` / `main.js` or editing `input.css`. It downloads the Tailwind CSS v4.2.4 standalone binary for your OS on first run (verified by SHA-256) and writes `styles.css`. Commit the rebuilt `styles.css`.
+- **Release:** bump `CACHE_NAME` in `sw.js` whenever any cached file changes. Cached app files are served only from the current version's cache, so installed apps pick up changes only after the bump; users then see an "update ready" prompt and the new version activates on **Reload**.
+- **Run locally:** serve the folder over HTTP (e.g. `python3 -m http.server`) and open it in the browser; the Service Worker requires `http://localhost` or HTTPS.
 
 ## Disclaimer
 

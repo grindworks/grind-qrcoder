@@ -22,4 +22,5 @@ Thumbs.db
 *.qrcoder
 icons-preview.html
 tool_optimize_sprite.php
-tailwindcss-macos-arm64
+# Tailwind CSS standalone binaries downloaded by build.sh
+tailwindcss-*
