@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 
     <!-- Content Security Policy (Supply chain attack prevention, defense in depth) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval' https://grindsite.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com data: blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' data: blob:; object-src 'none'; base-uri 'self'; form-action 'self';">
     <title>QR Coder - Advanced QR Code Generator</title>
 
     <!-- SEO / OGP Settings -->
@@ -33,19 +33,11 @@
     <!-- Removed unnecessary legacy PWA tags (delegated to manifest.json) -->
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-    <!-- Load Google Fonts (Inter + Noto Sans JP) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+JP:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
-
     <!-- Load pre-built Tailwind CSS (Project standard) -->
     <link rel="stylesheet" href="styles.css">
 
     <!-- Load application logic (Must be loaded before Alpine.js) -->
     <script defer src="main.js"></script>
-
-    <!-- Global Footer Script -->
-    <script src="../footer.js" defer></script>
 
     <!-- Load required libraries for QR code generation -->
     <script src="./assets/alpine-collapse.min.js" defer></script>
@@ -336,7 +328,7 @@
               </svg>
             </button>
             <button id="btn-save" @click="isSavingBackup = true; saveQRCoderFile().finally(() => isSavingBackup = false)"
-              :disabled="isSavingBackup || isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')"
+              :disabled="isSavingBackup"
               :class="{ 'ring-2 ring-green-500/40 bg-green-50 shadow-[0_0_15px_rgba(34,197,94,0.3)]': isSaveSuccess }"
               class="relative bg-white hover:bg-slate-100 shadow-sm px-3 py-2 border border-slate-200 rounded-md font-medium text-slate-900 text-sm transition-all duration-300 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Save Backup"
               title="Backup to file">
@@ -1580,13 +1572,13 @@
 
                   <div class="mt-6 space-y-2 border-t border-slate-200 pt-6">
                       <div class="flex gap-2">
-                        <button type="button" @click="isBulkDownload = false; showDownloadModal = true" :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex flex-1 items-center justify-center gap-x-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-hover hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
+                        <button type="button" @click="isBulkDownload = false; showDownloadModal = true" :disabled="!canExportQr" class="relative z-30 flex flex-1 items-center justify-center gap-x-2 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white shadow-sm transition-all hover:bg-primary-hover hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
                           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                             <use href="icons-sprite.svg#outline-arrow-down-tray"></use>
                           </svg>
                           <span>Download Image</span>
                         </button>
-                        <button type="button" @click="copyImageToClipboard()" :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex items-center justify-center gap-x-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-200 hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50" title="Copy image to clipboard">
+                        <button type="button" @click="copyImageToClipboard()" :disabled="!canExportQr" class="relative z-30 flex items-center justify-center gap-x-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-200 hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50" title="Copy image to clipboard">
                           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                             <use href="icons-sprite.svg#outline-clipboard-document"></use>
                           </svg>
@@ -1596,7 +1588,7 @@
                         <button x-show="editingQRCodeId" type="button" @click="if(hasUnsavedEdit && !confirm('You have unsaved changes. Are you sure you want to cancel?')) return; currentView = 'dashboard'; resetGenerator()" class="relative z-30 flex items-center justify-center gap-x-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 focus:outline-none">
                           Cancel
                         </button>
-                        <button type="button" @click="showSaveModal = true; setTimeout(() => $refs.saveNameInput.focus(), 310)" :disabled="isUpdatingPreview || qrQuality.issues.some(i => i.id === 'capacity_error')" class="relative z-30 flex flex-1 items-center justify-center gap-x-2 rounded-lg border border-slate-300 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-100 hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
+                        <button type="button" @click="showSaveModal = true; setTimeout(() => $refs.saveNameInput.focus(), 310)" :disabled="!canExportQr" class="relative z-30 flex flex-1 items-center justify-center gap-x-2 rounded-lg border border-slate-300 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-100 hover:scale-[1.01] active:scale-95 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50">
                           <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2">
                             <use href="icons-sprite.svg#outline-folder"></use>
                           </svg>
@@ -1768,9 +1760,9 @@
               <!-- Grid View -->
               <div x-show="viewMode === 'grid'" class="space-y-4" :class="{ 'pointer-events-none opacity-60 transition-opacity': isExportingBulk }">
                 <template x-for="qr in displayedItems" :key="qr.id">
-                  <div x-data="{ dropdownOpen: false }" class="relative rounded-xl bg-white shadow-md ring-1 ring-slate-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" :class="dropdownOpen ? 'z-10' : 'z-0'">
-                    <div class="grid items-center gap-y-4 p-4 md:grid-cols-12 md:gap-x-4 md:p-6">
-                      <div class="col-span-12 flex items-center gap-4 md:col-span-4">
+                  <div x-data="{ dropdownOpen: false }" class="relative min-w-0 rounded-xl bg-white shadow-md ring-1 ring-slate-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" :class="dropdownOpen ? 'z-10' : 'z-0'">
+                    <div class="grid min-w-0 items-center gap-y-4 p-4 md:grid-cols-12 md:gap-x-4 md:p-6">
+                      <div class="col-span-12 flex min-w-0 items-center gap-4 md:col-span-4">
                         <label class="p-2 -ml-2 cursor-pointer flex items-center justify-center">
                           <input type="checkbox" :name="'select-qr-' + qr.id" aria-label="Select QR code" :value="qr.id" x-model="selectedIds" @click="handleCheckboxClick($event, qr.id)" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
                         </label>
@@ -2959,9 +2951,9 @@
     </div>
 
     <!-- Custom Alert Modal -->
-    <div x-show="showAlertModal" @keydown.escape.window="if(showAlertModal) { resolveAlert(); showAlertModal = false; }" class="fixed inset-0 z-[110] overflow-y-auto" aria-labelledby="alert-modal-title" role="dialog" aria-modal="true" x-cloak x-trap.noscroll="showAlertModal">
+    <div x-show="showAlertModal" @keydown.escape.window="if(showAlertModal) { resolveAlert?.(); showAlertModal = false; }" class="fixed inset-0 z-[110] overflow-y-auto" aria-labelledby="alert-modal-title" role="dialog" aria-modal="true" x-cloak x-trap.noscroll="showAlertModal">
       <div class="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
-        <div x-show="showAlertModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="resolveAlert(); showAlertModal = false;" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
+        <div x-show="showAlertModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="resolveAlert?.(); showAlertModal = false;" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <div x-show="showAlertModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-sm transform-gpu rounded-3xl bg-white text-left align-middle shadow-2xl transition-all sm:my-8 p-6">
           <div class="flex items-center gap-3 mb-4">
             <div class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 shrink-0">
@@ -2974,7 +2966,7 @@
           <div class="mt-2 mb-6">
             <p class="text-sm text-slate-500 whitespace-pre-wrap" x-text="alertMessage"></p>
           </div>
-          <button type="button" @click="resolveAlert(); showAlertModal = false;" class="w-full py-3 rounded-xl bg-primary font-bold text-white shadow-md active:scale-95 transition-transform hover:bg-primary/90" x-ref="alertOkBtn">OK</button>
+          <button type="button" @click="resolveAlert?.(); showAlertModal = false;" class="w-full py-3 rounded-xl bg-primary font-bold text-white shadow-md active:scale-95 transition-transform hover:bg-primary/90" x-ref="alertOkBtn">OK</button>
         </div>
       </div>
     </div>

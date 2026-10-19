@@ -33,6 +33,57 @@ async function sha256(message) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Only allow embedded image data URLs (blocks tracker https: URLs in imports)
+const SAFE_IMAGE_DATA_URL = /^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml)(;|,)/i;
+function sanitizeImageDataUrl(value) {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  return SAFE_IMAGE_DATA_URL.test(trimmed) ? trimmed : '';
+}
+
+function sanitizePreviewValue(value) {
+  if (typeof value !== 'string') return '';
+  const trimmed = value.trim();
+  const asDataUrl = sanitizeImageDataUrl(trimmed);
+  if (asDataUrl) return asDataUrl;
+  // Legacy theme exports may store raw SVG markup; keep only after sanitize + re-embed
+  if (/^<svg[\s>]/i.test(trimmed) && typeof DOMPurify !== 'undefined') {
+    const clean = DOMPurify.sanitize(trimmed, {
+      USE_PROFILES: { svg: true },
+      ADD_DATA_URI_TAGS: ['image'],
+      ADD_ATTR: ['href', 'xlink:href']
+    });
+    if (clean && clean.trim()) {
+      return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(clean)));
+    }
+  }
+  return '';
+}
+
+function sanitizeImportedQrRecord(qr) {
+  if (!qr || typeof qr !== 'object') return qr;
+  if (qr.previewSvgUrl) qr.previewSvgUrl = sanitizeImageDataUrl(qr.previewSvgUrl);
+  if (qr.qrOptions && typeof qr.qrOptions === 'object') {
+    if (qr.qrOptions.logo) qr.qrOptions.logo = sanitizeImageDataUrl(qr.qrOptions.logo);
+  }
+  return qr;
+}
+
+function sanitizeImportedTemplate(template) {
+  if (!template || typeof template !== 'object') return template;
+  if (template.preview) template.preview = sanitizePreviewValue(template.preview);
+  if (template.options && typeof template.options === 'object' && template.options.logo) {
+    template.options.logo = sanitizeImageDataUrl(template.options.logo);
+  }
+  return template;
+}
+
+function sanitizeImportedBrandKit(kit) {
+  if (!kit || typeof kit !== 'object') return kit;
+  if (kit.logo) kit.logo = sanitizeImageDataUrl(kit.logo);
+  return kit;
+}
+
 // --- Encryption/Decryption logic ---
 const MAGIC_BYTES = new TextEncoder().encode("GRINDEN2");
 const MAGIC_BYTES_LEGACY = new TextEncoder().encode("GRINDENC");
@@ -319,22 +370,12 @@ async function processQRCoderFile(file, handle = null, { skipEditorConfirm = fal
       };
 
       if (importedBrands.length > 0) {
+        importedBrands.forEach(sanitizeImportedBrandKit);
         component.brandKits = mergeItems(component.brandKits, importedBrands);
         component.saveBrandKits(false);
       }
       if (importedTemplates.length > 0) {
-        // [Defense] Sanitize malicious scripts from preview SVG of imported templates
-        importedTemplates.forEach(t => {
-          if (t.preview) {
-            // [Fail-safe] If sanitizer cannot be loaded, treat as dangerous and discard preview
-            if (typeof DOMPurify !== 'undefined') {
-              t.preview = DOMPurify.sanitize(t.preview, { USE_PROFILES: { svg: true }, ADD_DATA_URI_TAGS: ['image'], ADD_ATTR: ['href', 'xlink:href'] });
-            } else {
-              console.warn("DOMPurify is not loaded. Preview sanitized to empty.");
-              t.preview = '';
-            }
-          }
-        });
+        importedTemplates.forEach(sanitizeImportedTemplate);
         component.myTemplates = mergeItems(component.myTemplates, importedTemplates);
         await component.persistMyTemplates();
       }
@@ -356,25 +397,17 @@ async function processQRCoderFile(file, handle = null, { skipEditorConfirm = fal
       importedBrands = parsedData.brandKits || [];
       importedTemplates = parsedData.templates || [];
       
-      // [Defense] Sanitize during standard file import as well
-      if (importedTemplates.length > 0) {
-        importedTemplates.forEach(t => {
-          if (t.preview) {
-            if (typeof DOMPurify !== 'undefined') {
-              t.preview = DOMPurify.sanitize(t.preview, { USE_PROFILES: { svg: true }, ADD_DATA_URI_TAGS: ['image'], ADD_ATTR: ['href', 'xlink:href'] });
-            } else {
-              console.warn("DOMPurify is not loaded. Preview sanitized to empty.");
-              t.preview = '';
-            }
-          }
-        });
-      }
+      importedTemplates.forEach(sanitizeImportedTemplate);
+      importedBrands.forEach(sanitizeImportedBrandKit);
     } else {
       await appAlert("Failed to load the file. It may be corrupted or in an invalid format.");
       return;
     }
 
-    newQRCodes.forEach(ensureRecordCreatedAt);
+    newQRCodes.forEach((qr) => {
+      ensureRecordCreatedAt(qr);
+      sanitizeImportedQrRecord(qr);
+    });
 
     // Add fail-safe to prevent data loss.
     if (component.savedQRCodes && component.savedQRCodes.length > 0) {
@@ -1601,6 +1634,14 @@ function qrCodeGenerator() {
         default: return [];
       }
     },
+    get canExportQr() {
+      if (this.isUpdatingPreview) return false;
+      if (this.qrQuality.issues.some(i => i.id === 'capacity_error')) return false;
+      if (this.selectedType === 'url' && this.urlError) return false;
+      const payload = (this.rawDataString || this.getQrDataString() || '').trim();
+      return payload.length > 0;
+    },
+
     get isUrlLong() {
       const dataLength = this.getQrDataString().trim().length;
       const isUrlBasedType = ['url', 'images', 'video', 'sns', 'geo'].includes(this.selectedType);
@@ -1850,13 +1891,16 @@ function qrCodeGenerator() {
                 }
 
                 // Sanitize SVG vector to prevent Stored/Exported XSS and malicious script execution
-                if (typeof DOMPurify !== 'undefined') {
-                  svgString = DOMPurify.sanitize(svgString, {
-                    USE_PROFILES: { svg: true, svgFilters: true },
-                    ADD_DATA_URI_TAGS: ['image'],
-                    ADD_ATTR: ['href', 'xlink:href']
-                  });
+                if (typeof DOMPurify === 'undefined') {
+                  img.remove();
+                  hasInvalidImage = true;
+                  continue;
                 }
+                svgString = DOMPurify.sanitize(svgString, {
+                  USE_PROFILES: { svg: true, svgFilters: true },
+                  ADD_DATA_URI_TAGS: ['image'],
+                  ADD_ATTR: ['href', 'xlink:href']
+                });
                 if (!svgString || !svgString.trim()) {
                   img.remove();
                   hasInvalidImage = true;
@@ -1915,9 +1959,9 @@ function qrCodeGenerator() {
     applyUtmParams(baseUrlStr, utmObj) {
       let urlStr = String(baseUrlStr || "").trim();
       if (!urlStr) return '';
-      
-      // If no protocol scheme is specified, default to https://
-      if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:/i.test(urlStr)) {
+
+      // Require "://" so hostnames like localhost:3000 are not treated as schemes
+      if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(urlStr)) {
         urlStr = 'https://' + urlStr;
       }
 
@@ -2359,6 +2403,12 @@ function qrCodeGenerator() {
     handleLogoUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
+      const allowedTypes = ["image/png", "image/jpeg", "image/svg+xml", "image/webp", "image/gif"];
+      if (file.type && !allowedTypes.includes(file.type)) {
+        this.showFlashNotification("Please select a valid image file (PNG, JPEG, SVG, WebP, or GIF).");
+        event.target.value = "";
+        return;
+      }
       if (file.type === "image/svg+xml" && file.size > 500 * 1024) {
         this.showFlashNotification("SVG logos can be heavy to process if too complex. Please select a file smaller than 500KB.");
         event.target.value = "";
@@ -2369,10 +2419,23 @@ function qrCodeGenerator() {
         event.target.value = "";
         return;
       }
-      this.logoFileName = file.name;
+      const fileName = file.name;
       const reader = new FileReader();
       reader.onload = async (e) => {
-        this.qrOptions.logo = e.target.result;
+        const dataUrl = e.target.result;
+        const decoded = await new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(true);
+          img.onerror = () => resolve(false);
+          img.src = dataUrl;
+        });
+        if (!decoded) {
+          this.showFlashNotification("Could not decode the logo image. Please try another file.");
+          this.hapticFeedback('error');
+          return;
+        }
+        this.logoFileName = fileName;
+        this.qrOptions.logo = dataUrl;
         if (["L", "M"].includes(this.qrOptions.errorCorrectionLevel)) {
           this.qrOptions.errorCorrectionLevel = "H";
           this.showFlashNotification("Set Error Correction Level to 'High' to maintain logo readability.");
@@ -2465,6 +2528,10 @@ function qrCodeGenerator() {
                 renderCanvas.width = finalWidth;
                 renderCanvas.height = finalHeight;
                 const renderCtx = renderCanvas.getContext("2d");
+                if (!this.download.transparentBg) {
+                  renderCtx.fillStyle = this.qrOptions.backgroundColor || "#ffffff";
+                  renderCtx.fillRect(0, 0, finalWidth, finalHeight);
+                }
                 renderCtx.drawImage(image, 0, 0, finalWidth, finalHeight);
                 renderCanvas.toBlob((pngBlob) => {
                   renderCanvas.width = 0;
@@ -2581,6 +2648,10 @@ function qrCodeGenerator() {
                 exportCanvas.width = finalWidth;
                 exportCanvas.height = finalHeight;
                 const context2d = exportCanvas.getContext("2d");
+                if (!this.download.transparentBg) {
+                  context2d.fillStyle = this.qrOptions.backgroundColor || "#ffffff";
+                  context2d.fillRect(0, 0, finalWidth, finalHeight);
+                }
                 context2d.drawImage(image, 0, 0, finalWidth, finalHeight);
                 exportCanvas.toBlob((blobData) => {
                   if (blobData) resolve(blobData);
@@ -2770,13 +2841,15 @@ function qrCodeGenerator() {
           const { ssid, password, encryption, hidden } = this.formData.wifi;
           const escapeWifiStr = (str) => {
             if (!str) return "";
-            return String(str).replace(/([\\;:,])/g, "\\$1");
+            return String(str).replace(/([\\"|;,:])/g, "\\$1");
           };
           if (ssid) {
             const encType = encryption === "WPA/WPA2" ? "WPA" : (encryption === "None" ? "nopass" : encryption);
             const hiddenFlag = hidden ? "H:true;" : "";
-            const passStr = encType === "nopass" ? "" : `P:${escapeWifiStr(password)};`;
-            data = `WIFI:T:${encType};S:${escapeWifiStr(ssid)};${passStr}${hiddenFlag};`;
+            // Quote values so numeric-only SSIDs/passwords are not read as hex
+            const quoted = (str) => `"${escapeWifiStr(str)}"`;
+            const passStr = encType === "nopass" ? "" : `P:${quoted(password)};`;
+            data = `WIFI:T:${encType};S:${quoted(ssid)};${passStr}${hiddenFlag};`;
           }
           break;
         }
@@ -4435,14 +4508,21 @@ function qrCodeGenerator() {
         this.urlError = "URL is required.";
       } else {
         try {
-          let fullUrl = url;
-          if (!/^https?:\/\//i.test(fullUrl)) {
+          let fullUrl = url.trim();
+          if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(fullUrl)) {
             fullUrl = "https://" + fullUrl;
           }
           const parsed = new URL(fullUrl);
-          const hostname = parsed.hostname;
-          if (hostname !== 'localhost' && (!hostname.includes('.') || hostname.split('.').pop().length < 2)) {
-             throw new Error("Invalid domain");
+          if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            throw new Error("Invalid protocol");
+          }
+          const hostname = parsed.hostname.replace(/^\[|\]$/g, '');
+          const isIpv4 = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+          const isIpv6 = hostname.includes(':');
+          const isLocalhost = hostname === 'localhost';
+          const isDomain = hostname.includes('.') && hostname.split('.').pop().length >= 2;
+          if (!isLocalhost && !isIpv4 && !isIpv6 && !isDomain) {
+            throw new Error("Invalid domain");
           }
           this.urlError = "";
         } catch (_) {
@@ -5661,6 +5741,10 @@ function qrCodeGenerator() {
         selectedType: this.selectedType,
         editingQRCodeId: this.editingQRCodeId,
         logoFileName: this.logoFileName,
+        saveName: this.saveName,
+        saveMemo: this.saveMemo,
+        saveTags: this.saveTags,
+        saveProjectId: this.saveProjectId,
         timestamp: new Date().getTime()
       };
 
@@ -5704,6 +5788,10 @@ function qrCodeGenerator() {
               this.frame = draft.frame;
               this.editingQRCodeId = draft.editingQRCodeId;
               this.logoFileName = draft.logoFileName || "";
+              this.saveName = draft.saveName || "";
+              this.saveMemo = draft.saveMemo || "";
+              this.saveTags = draft.saveTags || "";
+              this.saveProjectId = draft.saveProjectId || 'default';
               this.hasUnsavedEdit = true;
 
               this.currentView = 'generator';
@@ -7338,34 +7426,51 @@ window.addEventListener("appinstalled", () => {
 });
 
 // --- Prevent multiple tabs (Data conflict prevention) ---
-let hasAlertedMultiTab = false;
+async function lockAppForOtherTab() {
+  await appAlert("QR Coder is already open in another tab or window.\n\nTo prevent data conflicts and overwriting, please close this tab and use the originally opened one.");
+  document.body.style.opacity = "0.5";
+  document.body.style.pointerEvents = "none";
+}
 
-if (typeof BroadcastChannel !== "undefined") {
+if (navigator.locks && typeof navigator.locks.request === "function") {
+  navigator.locks.request("grindqrcoder-singleton", { ifAvailable: true }, async (lock) => {
+    if (!lock) {
+      await lockAppForOtherTab();
+      return;
+    }
+    // Hold the lock for the lifetime of this tab
+    await new Promise(() => {});
+  });
+} else if (typeof BroadcastChannel !== "undefined") {
+  // Fallback for browsers without Web Locks: first tab only responds to ping
+  let isPrimaryTab = false;
+  let hasAlertedMultiTab = false;
   const bc = new BroadcastChannel("grindqrcoder_app_channel");
 
   bc.onmessage = async (e) => {
-    if (e.data === "ping") {
-      bc.postMessage("pong"); // Tab already open responds
-    } else if (e.data === "pong") {
-      // If this tab was opened later
-      if (!hasAlertedMultiTab) {
-        hasAlertedMultiTab = true;
-        await appAlert("QR Coder is already open in another tab or window.\n\nTo prevent data conflicts and overwriting, please close this tab and use the originally opened one.");
-        document.body.style.opacity = "0.5";
-        document.body.style.pointerEvents = "none";
-      }
-    } else if (e.data === "closed") {
-      // Original tab was closed, unlock this tab
-      if (hasAlertedMultiTab) {
-        hasAlertedMultiTab = false;
-        document.body.style.opacity = "";
-        document.body.style.pointerEvents = "";
-        if (window.$app) window.$app.showFlashNotification("The other tab was closed. You can now use the app here.");
-      }
+    if (e.data === "ping" && isPrimaryTab) {
+      bc.postMessage("pong");
+    } else if (e.data === "pong" && !isPrimaryTab && !hasAlertedMultiTab) {
+      hasAlertedMultiTab = true;
+      await lockAppForOtherTab();
+    } else if (e.data === "closed" && hasAlertedMultiTab) {
+      hasAlertedMultiTab = false;
+      document.body.style.opacity = "";
+      document.body.style.pointerEvents = "";
+      if (window.$app) window.$app.showFlashNotification("The other tab was closed. You can now use the app here.");
     }
   };
-  bc.postMessage("ping");
 
+  // Elect primary: if no pong within 150ms, this tab is primary
+  const electTimer = setTimeout(() => { isPrimaryTab = true; }, 150);
+  const electHandler = (e) => {
+    if (e.data === "pong") {
+      clearTimeout(electTimer);
+      bc.removeEventListener("message", electHandler);
+    }
+  };
+  bc.addEventListener("message", electHandler);
+  bc.postMessage("ping");
   window.addEventListener("beforeunload", () => bc.postMessage("closed"));
 }
 
@@ -7424,9 +7529,15 @@ document.addEventListener("DOMContentLoaded", () => {
       installBtn.textContent = "📥 Install App (iOS)";
       installBtn.onclick = () => {
         const app = window.$app;
-        if (app && typeof app.showAlertModal !== 'undefined') {
-          app.alertMessage = "To install this app on iOS:\n\n1. Tap the Share icon (square with arrow) at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.";
+        const message = "To install this app on iOS:\n\n1. Tap the Share icon (square with arrow) at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.";
+        if (app) {
+          // Outside the main IIFE — set modal state directly (same as appAlert)
+          app.alertMessage = message;
+          app.resolveAlert = () => { app.resolveAlert = null; };
           app.showAlertModal = true;
+          setTimeout(() => {
+            if (app.$refs?.alertOkBtn) app.$refs.alertOkBtn.focus();
+          }, 100);
         } else {
           alert("To install on iOS:\n1. Tap the Share icon\n2. Select 'Add to Home Screen'");
         }

@@ -1,5 +1,5 @@
 // Update this version to trigger a cache update (Format: YYYYMMDD-Revision)
-const CACHE_NAME = "grindqrcoder-v20261012-1";
+const CACHE_NAME = "grindqrcoder-v20261019-1";
 const urlsToCache = [
   "./",
   "./styles.css",
@@ -26,12 +26,6 @@ const urlsToCache = [
   "./assets/purify.min.js"
 ];
 
-const externalUrlsToCache = [
-  "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+JP:wght@300;400;500;700;800;900&display=swap",
-  "https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMa1ZL7W0Q5nw.woff2",
-  "https://fonts.gstatic.com/s/notosansjp/v52/-F6jfjtqLzI2JPCgQBnw7HFyzSD-AsregP8VFBEj75vY0rw-oME.woff2"
-];
-
 // Create cache on install
 self.addEventListener("install", (event) => {
   // Activate new Service Worker immediately
@@ -40,27 +34,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
       console.log("Opened cache");
-      // Add local files to cache
-      await cache.addAll(urlsToCache);
-      // Add external CDN files individually with CORS
-      for (const url of externalUrlsToCache) {
-        try {
-          const request = new Request(url, { mode: "cors" });
-          const response = await fetch(request);
-          // Prevent caching broken responses like 404 errors
-          if (response.ok) {
-            await cache.put(request, response);
-          } else {
-            console.error(
-              "Skipped caching because external resource fetch failed:",
-              response.status,
-              url,
-            );
-          }
-        } catch (error) {
-          console.error("Failed to cache external resource:", url, error);
-        }
-      }
+      await cache.addAll(urlsToCache.map((url) => new Request(url, { cache: "reload" })));
     }),
   );
 });
@@ -95,10 +69,9 @@ self.addEventListener("fetch", (event) => {
       // Fetch latest resources from network and update cache on success (background)
       const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
-          if (networkResponse && networkResponse.ok && (networkResponse.type === "basic" || networkResponse.type === "cors")) {
+          if (networkResponse && networkResponse.ok && networkResponse.type === "basic") {
             // Do not cache requests with query parameters (e.g., Share Target) to avoid bloat
-            const isGoogleFonts = event.request.url.includes("fonts.googleapis.com");
-            if (!event.request.url.includes("?") || isGoogleFonts) {
+            if (!event.request.url.includes("?")) {
               const responseToCache = networkResponse.clone();
               caches.open(CACHE_NAME).then((cache) => {
                 cache.put(event.request, responseToCache);
@@ -118,6 +91,7 @@ self.addEventListener("fetch", (event) => {
               headers: { "Content-Type": "text/html; charset=utf-8" },
             });
           }
+          return Response.error();
         });
 
       // Silently absorb errors from asynchronous fetchPromise
