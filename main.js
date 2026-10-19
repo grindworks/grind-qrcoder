@@ -60,17 +60,67 @@ function sanitizePreviewValue(value) {
   return '';
 }
 
+const DEFAULT_IMPORT_FRAME = { style: "none", text: "SCAN ME", textColor: "#000000", backgroundColor: "#ffffff" };
+const ALLOWED_CRYPTO_CURRENCIES = new Set(["bitcoin", "ethereum", "litecoin", "dogecoin", "bitcoincash", "dash", "monero", "ripple", "solana"]);
+const EMAIL_LOCAL_RE = /^[^\s@?&]+@[^\s@?&]+\.[^\s@?&]+$/;
+
+function isValidEmailAddress(value) {
+  const trimmed = String(value || "").trim();
+  return EMAIL_LOCAL_RE.test(trimmed) ? trimmed : "";
+}
+
+function normalizeWifiEncryption(value) {
+  const key = String(value || "").trim().toLowerCase();
+  if (!key || key === "none" || key === "nopass" || key === "open") return "None";
+  if (key === "wep") return "WEP";
+  if (key === "wpa" || key === "wpa2" || key === "wpa/wpa2" || key === "wpa2/wpa3" || key === "wpa3") return "WPA/WPA2";
+  return "";
+}
+
+function isValidGeoCoord(lat, lng) {
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+  return { latitude, longitude };
+}
+
+function isValidEventRange(start, end) {
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) return null;
+  if (endDate.getTime() < startDate.getTime()) return null;
+  return { startDate, endDate };
+}
+
 function sanitizeImportedQrRecord(qr) {
-  if (!qr || typeof qr !== 'object') return qr;
+  if (!qr || typeof qr !== 'object') return null;
+  if (typeof qr.id !== 'string' || !qr.id) qr.id = `import_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  qr.name = (typeof qr.name === 'string' && qr.name.trim()) ? qr.name.trim() : `Untitled QR (${new Date().toLocaleDateString()})`;
+  qr.memo = typeof qr.memo === 'string' ? qr.memo : "";
+  qr.tags = Array.isArray(qr.tags) ? qr.tags.filter(t => typeof t === 'string') : [];
+  qr.type = typeof qr.type === 'string' ? qr.type : 'url';
+  qr.projectId = typeof qr.projectId === 'string' && qr.projectId ? qr.projectId : 'default';
+  qr.formData = (qr.formData && typeof qr.formData === 'object') ? qr.formData : {};
+  qr.qrOptions = (qr.qrOptions && typeof qr.qrOptions === 'object') ? qr.qrOptions : {};
   if (qr.previewSvgUrl) qr.previewSvgUrl = sanitizeImageDataUrl(qr.previewSvgUrl);
-  if (qr.qrOptions && typeof qr.qrOptions === 'object') {
-    if (qr.qrOptions.logo) qr.qrOptions.logo = sanitizeImageDataUrl(qr.qrOptions.logo);
+  if (qr.qrOptions.logo) qr.qrOptions.logo = sanitizeImageDataUrl(qr.qrOptions.logo);
+  if (!qr.frame || typeof qr.frame !== 'object') {
+    qr.frame = JSON.parse(JSON.stringify(DEFAULT_IMPORT_FRAME));
+  } else {
+    qr.frame = {
+      style: typeof qr.frame.style === 'string' ? qr.frame.style : 'none',
+      text: typeof qr.frame.text === 'string' ? qr.frame.text : 'SCAN ME',
+      textColor: typeof qr.frame.textColor === 'string' ? qr.frame.textColor : '#000000',
+      backgroundColor: typeof qr.frame.backgroundColor === 'string' ? qr.frame.backgroundColor : '#ffffff',
+    };
   }
   return qr;
 }
 
 function sanitizeImportedTemplate(template) {
-  if (!template || typeof template !== 'object') return template;
+  if (!template || typeof template !== 'object') return null;
+  if (typeof template.name !== 'string' || !template.name.trim()) return null;
   if (template.preview) template.preview = sanitizePreviewValue(template.preview);
   if (template.options && typeof template.options === 'object' && template.options.logo) {
     template.options.logo = sanitizeImageDataUrl(template.options.logo);
@@ -79,15 +129,74 @@ function sanitizeImportedTemplate(template) {
 }
 
 function sanitizeImportedBrandKit(kit) {
-  if (!kit || typeof kit !== 'object') return kit;
+  if (!kit || typeof kit !== 'object') return null;
+  if (typeof kit.name !== 'string' || !kit.name.trim()) return null;
+  if (!Array.isArray(kit.colors) || kit.colors.length < 2) {
+    kit.colors = ['#000000', '#ffffff'];
+  }
   if (kit.logo) kit.logo = sanitizeImageDataUrl(kit.logo);
   return kit;
+}
+
+function fileNameEndsWith(name, ext) {
+  return String(name || '').toLowerCase().endsWith(String(ext).toLowerCase());
+}
+
+// Shared IndexedDB connection (one per page lifetime)
+let sharedIdbPromise = null;
+function openSharedIdb() {
+  if (sharedIdbPromise) return sharedIdbPromise;
+  sharedIdbPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open('GrindQRCoderDB_Standalone', 6);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('qrcodes')) db.createObjectStore('qrcodes');
+      if (!db.objectStoreNames.contains('qrcodes_v2')) db.createObjectStore('qrcodes_v2', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('templates')) db.createObjectStore('templates', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('projects')) db.createObjectStore('projects', { keyPath: 'id' });
+      if (!db.objectStoreNames.contains('drafts')) db.createObjectStore('drafts');
+      if (!db.objectStoreNames.contains('brandKits')) db.createObjectStore('brandKits', { keyPath: 'id' });
+    };
+    request.onsuccess = (e) => {
+      const db = e.target.result;
+      db.onversionchange = () => {
+        db.close();
+        sharedIdbPromise = null;
+      };
+      db.onclose = () => { sharedIdbPromise = null; };
+      resolve(db);
+    };
+    request.onerror = (e) => {
+      sharedIdbPromise = null;
+      reject(e.target.error);
+    };
+    request.onblocked = () => {
+      console.warn('IndexedDB upgrade blocked by another connection.');
+    };
+  });
+  return sharedIdbPromise;
+}
+
+function idbRequest(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function idbTransactionDone(tx) {
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+  });
 }
 
 // --- Encryption/Decryption logic ---
 const MAGIC_BYTES = new TextEncoder().encode("GRINDEN2");
 const MAGIC_BYTES_LEGACY = new TextEncoder().encode("GRINDENC");
 
+// Byte-mode capacities per ISO/IEC 18004 (versions 1–40)
 const QR_CAPACITY_TABLE = [
   { v: 1, L: 17, M: 14, Q: 11, H: 7 },
   { v: 2, L: 32, M: 26, Q: 20, H: 14 },
@@ -99,11 +208,35 @@ const QR_CAPACITY_TABLE = [
   { v: 8, L: 192, M: 152, Q: 108, H: 84 },
   { v: 9, L: 230, M: 180, Q: 130, H: 98 },
   { v: 10, L: 271, M: 213, Q: 151, H: 119 },
+  { v: 11, L: 331, M: 251, Q: 177, H: 137 },
+  { v: 12, L: 383, M: 295, Q: 209, H: 155 },
+  { v: 13, L: 432, M: 331, Q: 236, H: 177 },
+  { v: 14, L: 491, M: 362, Q: 258, H: 194 },
   { v: 15, L: 520, M: 412, Q: 292, H: 220 },
+  { v: 16, L: 586, M: 442, Q: 322, H: 245 },
+  { v: 17, L: 644, M: 482, Q: 354, H: 254 },
+  { v: 18, L: 718, M: 538, Q: 386, H: 298 },
+  { v: 19, L: 792, M: 596, Q: 442, H: 330 },
   { v: 20, L: 858, M: 666, Q: 482, H: 382 },
+  { v: 21, L: 929, M: 711, Q: 509, H: 403 },
+  { v: 22, L: 1003, M: 779, Q: 565, H: 439 },
+  { v: 23, L: 1091, M: 857, Q: 611, H: 461 },
+  { v: 24, L: 1171, M: 911, Q: 661, H: 511 },
   { v: 25, L: 1273, M: 991, Q: 715, H: 535 },
+  { v: 26, L: 1367, M: 1059, Q: 751, H: 593 },
+  { v: 27, L: 1465, M: 1125, Q: 805, H: 625 },
+  { v: 28, L: 1528, M: 1190, Q: 868, H: 658 },
+  { v: 29, L: 1628, M: 1264, Q: 908, H: 698 },
   { v: 30, L: 1732, M: 1370, Q: 982, H: 742 },
+  { v: 31, L: 1840, M: 1452, Q: 1030, H: 790 },
+  { v: 32, L: 1952, M: 1538, Q: 1112, H: 842 },
+  { v: 33, L: 2068, M: 1628, Q: 1168, H: 898 },
+  { v: 34, L: 2188, M: 1722, Q: 1228, H: 958 },
   { v: 35, L: 2303, M: 1809, Q: 1283, H: 983 },
+  { v: 36, L: 2431, M: 1911, Q: 1351, H: 1051 },
+  { v: 37, L: 2563, M: 1989, Q: 1423, H: 1093 },
+  { v: 38, L: 2699, M: 2107, Q: 1499, H: 1139 },
+  { v: 39, L: 2809, M: 2215, Q: 1579, H: 1219 },
   { v: 40, L: 2953, M: 2331, Q: 1663, H: 1273 }
 ];
 
@@ -342,7 +475,7 @@ async function processQRCoderFile(file, handle = null, { skipEditorConfirm = fal
     const parsedData = JSON.parse(text);
 
     // [New] Check if it's a theme (Design Assets) file
-    const isThemeFile = file.name.endsWith('.qrcoder-theme') || parsedData.type === 'theme';
+    const isThemeFile = fileNameEndsWith(file.name, '.qrcoder-theme') || parsedData.type === 'theme';
 
     if (isThemeFile) {
       const importedBrands = parsedData.brandKits || [];
@@ -370,14 +503,18 @@ async function processQRCoderFile(file, handle = null, { skipEditorConfirm = fal
       };
 
       if (importedBrands.length > 0) {
-        importedBrands.forEach(sanitizeImportedBrandKit);
-        component.brandKits = mergeItems(component.brandKits, importedBrands);
-        component.saveBrandKits(false);
+        const brands = importedBrands.map(sanitizeImportedBrandKit).filter(Boolean);
+        if (brands.length > 0) {
+          component.brandKits = mergeItems(component.brandKits, brands);
+          component.saveBrandKits(false);
+        }
       }
       if (importedTemplates.length > 0) {
-        importedTemplates.forEach(sanitizeImportedTemplate);
-        component.myTemplates = mergeItems(component.myTemplates, importedTemplates);
-        await component.persistMyTemplates();
+        const templates = importedTemplates.map(sanitizeImportedTemplate).filter(Boolean);
+        if (templates.length > 0) {
+          component.myTemplates = mergeItems(component.myTemplates, templates);
+          await component.persistMyTemplates();
+        }
       }
       component.showFlashNotification(`Imported design assets from "${file.name}"`);
       if (component.hapticFeedback) component.hapticFeedback('success');
@@ -397,17 +534,20 @@ async function processQRCoderFile(file, handle = null, { skipEditorConfirm = fal
       importedBrands = parsedData.brandKits || [];
       importedTemplates = parsedData.templates || [];
       
-      importedTemplates.forEach(sanitizeImportedTemplate);
-      importedBrands.forEach(sanitizeImportedBrandKit);
+      importedTemplates = importedTemplates.map(sanitizeImportedTemplate).filter(Boolean);
+      importedBrands = importedBrands.map(sanitizeImportedBrandKit).filter(Boolean);
     } else {
       await appAlert("Failed to load the file. It may be corrupted or in an invalid format.");
       return;
     }
 
-    newQRCodes.forEach((qr) => {
-      ensureRecordCreatedAt(qr);
-      sanitizeImportedQrRecord(qr);
-    });
+    newQRCodes = newQRCodes
+      .map((qr) => {
+        const normalized = sanitizeImportedQrRecord(qr);
+        if (normalized) ensureRecordCreatedAt(normalized);
+        return normalized;
+      })
+      .filter(Boolean);
 
     // Add fail-safe to prevent data loss.
     if (component.savedQRCodes && component.savedQRCodes.length > 0) {
@@ -1052,9 +1192,9 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const file = e.dataTransfer.files[0];
-      if (file.name.endsWith('.qrcoder') || file.name.endsWith('.qrcoder-theme')) {
+      if (fileNameEndsWith(file.name, '.qrcoder') || fileNameEndsWith(file.name, '.qrcoder-theme')) {
         if (window.$app && typeof processQRCoderFile === 'function') {
-          processQRCoderFile(file, file.name.endsWith('.qrcoder') ? { name: file.name } : null);
+          processQRCoderFile(file, fileNameEndsWith(file.name, '.qrcoder') ? { name: file.name } : null);
         }
       } else {
         if (window.$app) {
@@ -1103,21 +1243,23 @@ document.addEventListener("DOMContentLoaded", () => {
         const file = await fileHandleParams.getFile();
 
         let attempts = 0;
-        const maxAttempts = 50; // Max wait 5 seconds.
+        let warnedSlow = false;
 
-        // Poll safely to wait for app initialization.
+        // Wait until Alpine init finishes (draft restore may take longer than 5s).
         const checkAppReady = setInterval(() => {
           attempts++;
 
           if (window.$app && window.$app._isInitialized) {
             clearInterval(checkAppReady);
             if (typeof processQRCoderFile === 'function') {
-              // The handle becomes the overwrite-save target only after a successful load.
               processQRCoderFile(file, fileHandleParams);
             }
-          } else if (attempts > maxAttempts) {
-            clearInterval(checkAppReady);
-            console.error("Failed to auto-load file due to timeout.");
+          } else if (!warnedSlow && attempts > 50) {
+            warnedSlow = true;
+            console.warn("Still waiting for app init before loading launched file...");
+            if (window.$app && typeof window.$app.showFlashNotification === 'function') {
+              window.$app.showFlashNotification("Opening file… finish any dialogs if prompted.");
+            }
           }
         }, 100);
       } catch (e) {
@@ -2727,7 +2869,7 @@ function qrCodeGenerator() {
       this.saveName = this.saveName.trim() || `Untitled QR (${new Date().toLocaleDateString()})`;
 
       const originalQr = this.editingQRCodeId ? this.savedQRCodes.find((qr) => qr.id === this.editingQRCodeId) : null;
-      const conflictingQr = this.savedQRCodes.find((qr) => qr.name.trim() === this.saveName.trim() && qr.id !== this.editingQRCodeId);
+      const conflictingQr = this.savedQRCodes.find((qr) => String(qr.name || "").trim() === this.saveName.trim() && qr.id !== this.editingQRCodeId);
 
       if (conflictingQr) {
         const isConfirmed = await appConfirm("A QR code with the same name already exists. Do you want to overwrite it?");
@@ -2843,13 +2985,14 @@ function qrCodeGenerator() {
             if (!str) return "";
             return String(str).replace(/([\\"|;,:])/g, "\\$1");
           };
-          if (ssid) {
-            const encType = encryption === "WPA/WPA2" ? "WPA" : (encryption === "None" ? "nopass" : encryption);
+          const normalizedEnc = normalizeWifiEncryption(encryption) || (encryption === "WPA/WPA2" || encryption === "WEP" || encryption === "None" ? encryption : "");
+          if (ssid && String(ssid).trim() && normalizedEnc) {
+            const encType = normalizedEnc === "WPA/WPA2" ? "WPA" : (normalizedEnc === "None" ? "nopass" : normalizedEnc);
             const hiddenFlag = hidden ? "H:true;" : "";
             // Quote values so numeric-only SSIDs/passwords are not read as hex
             const quoted = (str) => `"${escapeWifiStr(str)}"`;
             const passStr = encType === "nopass" ? "" : `P:${quoted(password)};`;
-            data = `WIFI:T:${encType};S:${quoted(ssid)};${passStr}${hiddenFlag};`;
+            data = `WIFI:T:${encType};S:${quoted(String(ssid).trim())};${passStr}${hiddenFlag};`;
           }
           break;
         }
@@ -2881,43 +3024,37 @@ function qrCodeGenerator() {
         case "event": {
           const event = this.formData.event || {};
           const { summary, location, start, end, description } = event;
-          const formatDT = (dt) => {
-            if (!dt) return "";
-            try {
-              const date = new Date(dt);
-              return date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
-            } catch (e) {
-              return "";
-            }
-          };
+          const formatDT = (date) => date.toISOString().replace(/[-:]/g, "").split(".")[0] + "Z";
           const escapeICal = (str) => {
             if (!str) return "";
             return String(str).replace(/[\\;,]/g, "\\$&").replace(/\r?\n/g, "\\n");
           };
-          if (summary && start && end) {
+          const range = summary && start && end ? isValidEventRange(start, end) : null;
+          if (range) {
             const fallback = this.eventIdentity || (typeof this.getEditorEventIdentity === "function" ? this.getEditorEventIdentity() : null);
             const { uid, dtstamp } = resolveEventIdentity(event, fallback);
             const identityLines = (uid ? `UID:${uid}\r\n` : "") + (dtstamp ? `DTSTAMP:${dtstamp}\r\n` : "");
-            data = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//GrindTools//QRCoder//EN\r\nBEGIN:VEVENT\r\n${identityLines}SUMMARY:${escapeICal(summary)}\r\nLOCATION:${escapeICal(location)}\r\nDTSTART:${formatDT(start)}\r\nDTEND:${formatDT(end)}\r\nDESCRIPTION:${escapeICal(description)}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
+            data = `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//GrindTools//QRCoder//EN\r\nBEGIN:VEVENT\r\n${identityLines}SUMMARY:${escapeICal(summary)}\r\nLOCATION:${escapeICal(location)}\r\nDTSTART:${formatDT(range.startDate)}\r\nDTEND:${formatDT(range.endDate)}\r\nDESCRIPTION:${escapeICal(description)}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
           }
           break;
         }
         case "email": {
           const { to, subject, body } = this.formData.email;
-          if (to) {
+          const cleanTo = isValidEmailAddress(to);
+          if (cleanTo) {
             let query = [];
-            if (subject) query.push(`subject=${encodeURIComponent(subject)}`);
-            if (body) query.push(`body=${encodeURIComponent(body)}`);
-            data = `mailto:${to}${query.length > 0 ? '?' + query.join('&') : ''}`;
+            if (subject) query.push(`subject=${encodeURIComponent(String(subject).trim())}`);
+            if (body) query.push(`body=${encodeURIComponent(String(body))}`);
+            data = `mailto:${cleanTo}${query.length > 0 ? '?' + query.join('&') : ''}`;
           }
           break;
         }
         case "sms": {
           const smsPhone = this.formData.sms.phone;
           const smsMessage = this.formData.sms.message;
-          if (smsPhone) {
-            // Standard URI scheme that works on both iOS and Android. Safely remove symbols and whitespaces via regex.
-            let smsData = `sms:${smsPhone.replace(/[^0-9\+]/g, '')}`;
+          const digits = String(smsPhone || "").replace(/[^0-9+]/g, "");
+          if (digits && /[0-9]/.test(digits)) {
+            let smsData = `sms:${digits}`;
             if (smsMessage) smsData += `?body=${encodeURIComponent(smsMessage)}`;
             data = smsData;
           }
@@ -2925,22 +3062,24 @@ function qrCodeGenerator() {
         }
         case "crypto": {
           const { currency, address } = this.formData.crypto;
-          if (address) {
-            let cleanAddress = address.trim();
-            // Automatically strip the scheme prefix (e.g., "bitcoin:") if the user accidentally pasted it (securely without regex)
-            const prefix = `${currency}:`.toLowerCase();
+          const cur = String(currency || "").trim().toLowerCase();
+          if (address && ALLOWED_CRYPTO_CURRENCIES.has(cur)) {
+            let cleanAddress = String(address).trim();
+            const prefix = `${cur}:`;
             if (cleanAddress.toLowerCase().startsWith(prefix)) {
               cleanAddress = cleanAddress.substring(prefix.length);
             }
-            
-            data = `${currency}:${cleanAddress}`;
+            if (cleanAddress && !/[\s<>"']/.test(cleanAddress) && !/^[a-z][a-z0-9+.-]*:/i.test(cleanAddress)) {
+              data = `${cur}:${cleanAddress}`;
+            }
           }
           break;
         }
         case "geo": {
           const { latitude, longitude } = this.formData.geo;
-          if (latitude && longitude) {
-            data = `geo:${latitude},${longitude}?q=${latitude},${longitude}`;
+          const coords = isValidGeoCoord(latitude, longitude);
+          if (coords) {
+            data = `geo:${coords.latitude},${coords.longitude}?q=${coords.latitude},${coords.longitude}`;
           }
           break;
         }
@@ -3016,9 +3155,16 @@ function qrCodeGenerator() {
               case "venmo":
                 data = `https://venmo.com/${encodeURIComponent(cleanId)}`;
                 break;
-              case "paypay":
-                data = identifier.trim();
+              case "paypay": {
+                const paypayUrl = String(identifier || "").trim();
+                if (/^https:\/\//i.test(paypayUrl)) {
+                  try {
+                    const parsed = new URL(paypayUrl);
+                    if (parsed.protocol === 'https:') data = parsed.toString();
+                  } catch (_) {}
+                }
                 break;
+              }
               case "twitch":
                 data = `https://www.twitch.tv/${encodeURIComponent(cleanId)}`;
                 break;
@@ -3182,18 +3328,16 @@ function qrCodeGenerator() {
       const currentDataStr = this.getQrDataString();
       const byteSize = new Blob([currentDataStr]).size;
 
-      // Ensure data size limits are flagged
+      // Ensure data size limits are flagged (blocking errors come from generation catch)
       if (byteSize > 180) {
         this.qrQuality.issues.push({ id: 'capacity_warning', status: "warning", message: `Large data size (${byteSize} Bytes). Ensure a good scanning environment.` });
-      }
-      if (byteSize > 2500) {
-        this.qrQuality.issues.push({ id: 'capacity_error', status: "bad", message: `Data size exceeds the limit (${byteSize} Bytes). Please use a shorter URL.` });
       }
 
       // Estimate version
       let version = 40;
+      const ecc = this.qrOptions.errorCorrectionLevel;
       for (const cap of QR_CAPACITY_TABLE) {
-        if (byteSize <= cap[this.qrOptions.errorCorrectionLevel]) {
+        if (byteSize <= cap[ecc]) {
           version = cap.v;
           break;
         }
@@ -5696,33 +5840,7 @@ function qrCodeGenerator() {
       });
     },
     openIdb() {
-      return new Promise((resolve, reject) => {
-        // Bump database version to 5 for Drafts support
-        const request = indexedDB.open('GrindQRCoderDB_Standalone', 6);
-        request.onupgradeneeded = (e) => {
-          const db = e.target.result;
-          if (!db.objectStoreNames.contains('qrcodes')) {
-            db.createObjectStore('qrcodes');
-          }
-          if (!db.objectStoreNames.contains('qrcodes_v2')) {
-            db.createObjectStore('qrcodes_v2', { keyPath: 'id' });
-          }
-          if (!db.objectStoreNames.contains('templates')) {
-            db.createObjectStore('templates', { keyPath: 'id' });
-          }
-          if (!db.objectStoreNames.contains('projects')) {
-            db.createObjectStore('projects', { keyPath: 'id' });
-          }
-          if (!db.objectStoreNames.contains('drafts')) {
-            db.createObjectStore('drafts');
-          }
-          if (!db.objectStoreNames.contains('brandKits')) {
-            db.createObjectStore('brandKits', { keyPath: 'id' });
-          }
-        };
-        request.onsuccess = (e) => resolve(e.target.result);
-        request.onerror = (e) => reject(e.target.error);
-      });
+      return openSharedIdb();
     },
 
     // --- Auto Draft Fail-safe ---
@@ -5752,6 +5870,7 @@ function qrCodeGenerator() {
         const db = await this.openIdb();
         const tx = db.transaction('drafts', 'readwrite');
         tx.objectStore('drafts').put(draftData, 'current_draft');
+        await idbTransactionDone(tx);
       } catch (e) {
         console.warn('Failed to save draft', e);
       }
@@ -5762,6 +5881,7 @@ function qrCodeGenerator() {
         if (!db.objectStoreNames.contains('drafts')) return;
         const tx = db.transaction('drafts', 'readwrite');
         tx.objectStore('drafts').delete('current_draft');
+        await idbTransactionDone(tx);
       } catch (e) {
         console.warn('Failed to clear draft', e);
       }
@@ -5771,12 +5891,9 @@ function qrCodeGenerator() {
         const db = await this.openIdb();
         if (!db.objectStoreNames.contains('drafts')) return;
 
-        const draft = await new Promise((resolve) => {
-          const tx = db.transaction('drafts', 'readonly');
-          const req = tx.objectStore('drafts').get('current_draft');
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => resolve(null);
-        });
+        const draft = await idbRequest(
+          db.transaction('drafts', 'readonly').objectStore('drafts').get('current_draft')
+        ).catch(() => null);
 
         if (draft && draft.timestamp) {
           // Only restore if draft is less than 24 hours old
@@ -5858,17 +5975,21 @@ function qrCodeGenerator() {
                 const storeV1 = tx.objectStore('qrcodes');
                 const reqV1 = storeV1.get('savedList');
                 reqV1.onsuccess = () => resolve(reqV1.result);
+                reqV1.onerror = () => resolve([]);
               } else {
                 resolve([]);
               }
             };
+            reqV2.onerror = () => resolve([]);
           } else if (db.objectStoreNames.contains('qrcodes')) {
             const storeV1 = tx.objectStore('qrcodes');
             const reqV1 = storeV1.get('savedList');
             reqV1.onsuccess = () => resolve(reqV1.result);
+            reqV1.onerror = () => resolve([]);
           } else {
             resolve([]);
           }
+          tx.onerror = () => resolve([]);
         });
 
         let parsedSaved = null;
@@ -6011,6 +6132,7 @@ function qrCodeGenerator() {
       };
       this.projects.push(newProject);
       await this.persistProjects();
+      if (typeof setDirty === 'function') setDirty(true);
       this.currentProjectId = newProject.id;
       this.showFlashNotification("Project created.");
       return newProject.id;
@@ -6026,6 +6148,7 @@ function qrCodeGenerator() {
       if (!newName || !newName.trim() || newName.trim() === project.name) return;
       project.name = newName.trim();
       await this.persistProjects();
+      if (typeof setDirty === 'function') setDirty(true);
       this.showFlashNotification("Project renamed.");
     },
     async deleteProject(projectId) {
@@ -6045,6 +6168,7 @@ function qrCodeGenerator() {
       }
       this.projects = this.projects.filter(p => p.id !== projectId);
       await this.persistProjects();
+      if (typeof setDirty === 'function') setDirty(true);
       if (this.currentProjectId === projectId) this.currentProjectId = 'all';
       this.showFlashNotification("Project deleted.");
     },
@@ -6204,7 +6328,10 @@ function qrCodeGenerator() {
         this.formData = loadedFormData;
 
         const safeOptions = JSON.parse(JSON.stringify(defaultQrOptions));
-        const editOpts = JSON.parse(JSON.stringify(qrToEdit.qrOptions));
+        const rawEditOpts = qrToEdit.qrOptions || {};
+        const { logo: editLogo, ...editRest } = rawEditOpts;
+        const editOpts = JSON.parse(JSON.stringify(editRest));
+        editOpts.logo = editLogo || "";
         this.qrOptions = {
           ...safeOptions,
           ...editOpts,
@@ -6212,7 +6339,7 @@ function qrCodeGenerator() {
           imageOptions: { ...safeOptions.imageOptions, ...(editOpts.imageOptions || {}) }
         };
         this.logoFileName = qrToEdit.logoFileName;
-        this.frame = JSON.parse(JSON.stringify(qrToEdit.frame));
+        this.frame = JSON.parse(JSON.stringify(qrToEdit.frame || DEFAULT_IMPORT_FRAME));
         if (transitionToGenerator) {
           this.currentView = "generator";
           this.currentStep = "contentEntry";
@@ -6845,7 +6972,7 @@ function qrCodeGenerator() {
     },
     handleCsvDrop(event) {
       const file = event.dataTransfer?.files[0] || event.target.files[0];
-      if (!file || !file.name.endsWith('.csv')) {
+      if (!file || !fileNameEndsWith(file.name, '.csv')) {
         this.showFlashNotification("Please select a valid .csv file.");
         return;
       }
@@ -6983,15 +7110,25 @@ function qrCodeGenerator() {
                 else if (this.selectedType === 'wifi') {
                   if (f.key === 'hidden') {
                     specificFormData.wifi[f.key] = (val.toLowerCase() === 'true' || val === '1');
+                  } else if (f.key === 'encryption') {
+                    const normalizedEnc = normalizeWifiEncryption(val);
+                    if (!normalizedEnc) isRowValid = false;
+                    else specificFormData.wifi[f.key] = normalizedEnc;
                   } else {
                     specificFormData.wifi[f.key] = val;
                   }
                 }
                 else if (this.selectedType === 'vcard') specificFormData.vcard[f.key] = val;
                 else if (this.selectedType === 'event') specificFormData.event[f.key] = val;
-                else if (this.selectedType === 'email') specificFormData.email[f.key] = val;
+                else if (this.selectedType === 'email') {
+                  if (f.key === 'to' && !isValidEmailAddress(val)) isRowValid = false;
+                  specificFormData.email[f.key] = val;
+                }
                 else if (this.selectedType === 'sms') specificFormData.sms[f.key] = val;
-                else if (this.selectedType === 'crypto') specificFormData.crypto[f.key] = val;
+                else if (this.selectedType === 'crypto') {
+                  if (f.key === 'currency' && !ALLOWED_CRYPTO_CURRENCIES.has(String(val).trim().toLowerCase())) isRowValid = false;
+                  specificFormData.crypto[f.key] = f.key === 'currency' ? String(val).trim().toLowerCase() : val;
+                }
                 else if (this.selectedType === 'geo') specificFormData.geo[f.key] = val;
                 else if (this.selectedType === 'sns') specificFormData.sns[f.key] = val;
                 else if (this.selectedType === 'images') specificFormData.images.url = val;
@@ -7085,14 +7222,14 @@ function qrCodeGenerator() {
           let msg = `Successfully generated ${newQRCodes.length} QR codes.`;
           if (newQRCodes.length < this.csvData.length) {
             const skipped = this.csvData.length - newQRCodes.length;
-            msg += ` (${skipped} row${skipped > 1 ? 's' : ''} skipped due to data limit)`;
+            msg += ` (${skipped} row${skipped > 1 ? 's' : ''} skipped due to invalid or oversized data)`;
             this.hapticFeedback('error');
           } else {
             this.hapticFeedback('success');
           }
           this.showFlashNotification(msg);
         } else {
-          this.showFlashNotification("No valid URLs found in the CSV.");
+          this.showFlashNotification("No valid rows found in the CSV.");
           this.hapticFeedback('error');
         }
 
@@ -7259,6 +7396,8 @@ function qrCodeGenerator() {
         const store = tx.objectStore('brandKits');
         store.clear();
         this.brandKits.forEach(kit => store.put(window.Alpine.raw(kit)));
+        await idbTransactionDone(tx);
+        if (typeof setDirty === 'function') setDirty(true);
         if (showNotification) {
           this.showFlashNotification("Brand kit saved.");
         }
@@ -7319,26 +7458,29 @@ function qrCodeGenerator() {
         this.brandKits = [];
       }
     },
-    applyBrandKit() {
+    applyBrandKit({ silent = false } = {}) {
       const kit = this.getActiveBrandKit();
       if (!kit) return;
+      const colors = Array.isArray(kit.colors) && kit.colors.length >= 2
+        ? kit.colors
+        : ['#000000', '#ffffff'];
 
+      // Only replace the logo when the kit defines one (preserve user logo otherwise)
       if (kit.logo) {
         this.qrOptions.logo = kit.logo;
         this.logoFileName = kit.name + " Logo";
-      } else {
-        this.qrOptions.logo = "";
-        this.logoFileName = "";
       }
       this.qrOptions.colorType = "single";
-      this.qrOptions.foregroundColor = kit.colors[0];
-      this.qrOptions.cornerColor = kit.colors[0];
-      this.qrOptions.cornerDotColor = kit.colors[0];
-      this.qrOptions.backgroundColor = kit.colors[1];
+      this.qrOptions.foregroundColor = colors[0];
+      this.qrOptions.cornerColor = colors[0];
+      this.qrOptions.cornerDotColor = colors[0];
+      this.qrOptions.backgroundColor = colors[1];
       this.updateQrCode();
 
-      this.showFlashNotification(`Applied ${kit.name} settings.`);
-      this.hapticFeedback('light');
+      if (!silent) {
+        this.showFlashNotification(`Applied ${kit.name} settings.`);
+        this.hapticFeedback('light');
+      }
     },
     hexToRgb(hex) {
       if (!hex || typeof hex !== 'string') return null;

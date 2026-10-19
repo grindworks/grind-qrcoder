@@ -362,7 +362,7 @@
 
         <!-- Toggle tabs for "Create", "Manage", and "Verify" -->
         <div class="mb-8 flex w-full flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 sm:gap-0">
-          <nav class="flex w-full sm:w-auto items-center gap-1 rounded-full bg-slate-200/60 p-1.5 shadow-inner-soft backdrop-blur-sm">
+          <nav aria-label="Main" class="flex w-full sm:w-auto items-center gap-1 rounded-full bg-slate-200/60 p-1.5 shadow-inner-soft backdrop-blur-sm">
             <button @click="if(isExportingBulk || isImporting) { showFlashNotification('Please wait until the process completes.'); return; }; currentView = 'generator'" :class="currentView === 'generator' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:text-slate-800 hover:bg-white/50'" class="flex flex-1 sm:flex-none items-center justify-center gap-1.5 sm:gap-2 rounded-full px-2 sm:px-5 py-2.5 text-[13px] sm:text-sm font-bold transition-all duration-300 whitespace-nowrap">
               <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2">
                 <use href="icons-sprite.svg#outline-qr-code"></use>
@@ -446,7 +446,7 @@
             <div class="flex flex-col gap-8 xl:flex-row">
               <!-- Left side: Configuration panel -->
               <div class="w-full xl:flex-1">
-                <nav class="mb-8 flex items-center gap-1.5 rounded-2xl bg-slate-200/50 p-1.5 shadow-inner-soft backdrop-blur-sm">
+                <nav aria-label="Create steps" class="mb-8 flex items-center gap-1.5 rounded-2xl bg-slate-200/50 p-1.5 shadow-inner-soft backdrop-blur-sm">
                   <button @click="activeStepTab = 'content'" :class="activeStepTab === 'content' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:bg-white/50 hover:text-slate-800'" class="flex-1 rounded-xl px-2 sm:px-4 py-3 text-sm font-bold transition-all duration-300"><span class="hidden sm:inline">1. </span>Content</button>
                   <button @click="activeStepTab = 'design'" :class="activeStepTab === 'design' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:bg-white/50 hover:text-slate-800'" class="flex-1 rounded-xl px-2 sm:px-4 py-3 text-sm font-bold transition-all duration-300"><span class="hidden sm:inline">2. </span>Design</button>
                   <button @click="activeStepTab = 'logo'" :class="activeStepTab === 'logo' ? 'bg-white shadow-sm text-primary ring-1 ring-slate-900/5' : 'text-slate-500 hover:bg-white/50 hover:text-slate-800'" class="flex-1 rounded-xl px-2 sm:px-4 py-3 text-sm font-bold transition-all duration-300"><span class="hidden sm:inline">3. </span>Logo<span class="hidden sm:inline"> & Frame</span></button>
@@ -1041,7 +1041,7 @@
                             <label class="mb-2 block text-sm font-medium text-slate-700">Recommended Color Palettes</label>
                             <div class="flex flex-wrap gap-2">
                               <template x-for="palette in colorPalettes">
-                                <button @click="applyColorPalette(palette)" class="flex h-8 w-16 transform overflow-hidden rounded-lg border border-slate-300 shadow-sm outline-none transition hover:scale-105 focus:ring-2 focus:ring-primary focus:ring-offset-2">
+                                <button type="button" @click="applyColorPalette(palette)" :aria-label="'Apply color palette ' + palette.fg + ' on ' + palette.bg" class="flex h-8 w-16 transform overflow-hidden rounded-lg border border-slate-300 shadow-sm outline-none transition hover:scale-105 focus:ring-2 focus:ring-primary focus:ring-offset-2">
                                   <div :style="{ backgroundColor: palette.fg }" class="h-full w-1/2"></div>
                                   <div :style="{ backgroundColor: palette.bg }" class="h-full w-1/2"></div>
                                 </button>
@@ -1276,7 +1276,7 @@
                                 <span class="tooltiptext font-normal">This area is essential for stable scanning of the QR code. A margin of 4 modules is strongly recommended.</span>
                               </button>
                             </label>
-                            <div @click="toggleQuietZone()" tabindex="0" @keydown.space.prevent="toggleQuietZone()" @keydown.enter.prevent="toggleQuietZone()" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2" role="switch" :aria-checked="includeQuietZone" :class="includeQuietZone ? 'bg-primary' : 'bg-slate-300'">
+                            <div @click="toggleQuietZone()" tabindex="0" @keydown.space.prevent="toggleQuietZone()" @keydown.enter.prevent="toggleQuietZone()" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2" role="switch" aria-label="Quiet zone margin" :aria-checked="includeQuietZone" :class="includeQuietZone ? 'bg-primary' : 'bg-slate-300'">
                               <span aria-hidden="true" class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out" :class="includeQuietZone ? 'translate-x-5' : 'translate-x-0'"></span>
                             </div>
                           </div>
@@ -1338,7 +1338,7 @@
                                       <img :src="getActiveBrandKit()?.logo || ''" class="h-8 w-8 rounded object-contain drop-shadow-sm" alt="" />
                                       <span class="text-sm font-semibold text-slate-700" x-text="getActiveBrandKit()?.name + ' Logo'"></span>
                                     </div>
-                                    <button @click="removeBrandLogo(); applyBrandKit();" class="rounded-full bg-white p-1.5 text-slate-400 shadow-sm ring-1 ring-slate-200 transition-all hover:bg-rose-50 hover:text-rose-500" title="Remove logo">
+                                    <button @click="removeBrandLogo(); applyBrandKit({ silent: true });" class="rounded-full bg-white p-1.5 text-slate-400 shadow-sm ring-1 ring-slate-200 transition-all hover:bg-rose-50 hover:text-rose-500" title="Remove logo">
                                       <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-x-mark"></use></svg>
                                     </button>
                                   </div>
@@ -1364,7 +1364,7 @@
                                 <div class="border-t border-slate-100 pt-4">
                                   <div class="mb-2 flex items-center justify-between">
                                     <label class="block text-sm font-medium text-slate-700">Brand Color</label>
-                                    <button type="button" @click="if(getActiveBrandKit()) { getActiveBrandKit().colors = ['#000000', '#ffffff']; saveBrandKits(false); applyBrandKit(); }" class="flex items-center gap-1 text-[11px] font-bold text-slate-400 transition-colors hover:text-slate-600">
+                                    <button type="button" @click="if(getActiveBrandKit()) { getActiveBrandKit().colors = ['#000000', '#ffffff']; saveBrandKits(false); applyBrandKit({ silent: true }); }" class="flex items-center gap-1 text-[11px] font-bold text-slate-400 transition-colors hover:text-slate-600">
                                       <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-arrow-path"></use></svg>Reset
                                     </button>
                                   </div>
@@ -1373,8 +1373,8 @@
                                       <div>
                                         <label class="mb-1.5 block text-xs font-semibold text-slate-500">Main Color</label>
                                         <div class="flex items-center gap-3">
-                                          <input type="color" x-model="getActiveBrandKit().colors[0]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                          <input type="text" x-model="getActiveBrandKit().colors[0]" spellcheck="false" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                          <input type="color" x-model="getActiveBrandKit().colors[0]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit({ silent: true });" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                          <input type="text" x-model="getActiveBrandKit().colors[0]" spellcheck="false" @input.debounce.300ms="saveBrandKits(false); applyBrandKit({ silent: true });" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                         </div>
                                       </div>
                                     </template>
@@ -1382,8 +1382,8 @@
                                       <div>
                                         <label class="mb-1.5 block text-xs font-semibold text-slate-500">Background Color</label>
                                         <div class="flex items-center gap-3">
-                                          <input type="color" x-model="getActiveBrandKit().colors[1]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
-                                          <input type="text" x-model="getActiveBrandKit().colors[1]" spellcheck="false" @input.debounce.300ms="saveBrandKits(false); applyBrandKit();" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                                          <input type="color" x-model="getActiveBrandKit().colors[1]" @input.debounce.300ms="saveBrandKits(false); applyBrandKit({ silent: true });" class="shrink-0 rounded-full transition-all hover:ring-2 hover:ring-primary/50 focus:outline-none focus:ring-2 focus:ring-primary" />
+                                          <input type="text" x-model="getActiveBrandKit().colors[1]" spellcheck="false" @input.debounce.300ms="saveBrandKits(false); applyBrandKit({ silent: true });" class="block w-full rounded-lg border border-slate-300 bg-white p-2 font-mono text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
                                         </div>
                                       </div>
                                     </template>
@@ -1951,7 +1951,7 @@
                 <button @click="searchQuery = ''; currentProjectId = 'all'; activeTypeFilter = 'all'; currentPage = 1" class="mt-4 rounded-lg bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-300">Clear All Filters</button>
               </div>
 
-              <nav x-show="totalPages > 1" class="flex items-center justify-between rounded-lg bg-slate-100 px-4 py-3 sm:px-6">
+              <nav x-show="totalPages > 1" aria-label="Pagination" class="flex items-center justify-between rounded-lg bg-slate-100 px-4 py-3 sm:px-6">
                 <div class="flex flex-1 justify-between sm:hidden">
                   <button @click="changePage(currentPage - 1)" :disabled="currentPage === 1" class="relative inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">Prev</button>
                   <button @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages" class="relative ml-3 inline-flex items-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50">Next</button>
@@ -2266,7 +2266,7 @@
     </div>
 
     <!-- Mobile Bottom Navigation -->
-    <nav class="sm:hidden fixed bottom-0 left-0 z-40 w-full backdrop-blur-md bg-white/80 border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
+    <nav aria-label="Mobile" class="sm:hidden fixed bottom-0 left-0 z-40 w-full backdrop-blur-md bg-white/80 border-t border-slate-200 pb-[env(safe-area-inset-bottom)]">
       <div class="grid grid-cols-3 items-center px-2 py-1">
         <button @click="if(isExportingBulk || isImporting) { showFlashNotification('Please wait until the process completes.'); return; }; if(currentView === 'generator') { if(hasUnsavedEdit && !confirm('Discard changes and start new?')) return; resetGenerator(); currentStep='typeSelection'; } else { currentView = 'generator'; }" class="flex flex-col items-center justify-center py-2 rounded-2xl transition-all" :class="currentView === 'generator' ? 'text-primary scale-105' : 'text-slate-400 active:bg-slate-100'">
           <svg class="h-6 w-6 mb-0.5" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5"><use href="icons-sprite.svg#outline-qr-code"></use></svg>
