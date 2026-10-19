@@ -660,6 +660,7 @@
                             <label for="wifi-encryption" class="mb-2 block text-sm font-medium text-slate-700">Encryption</label>
                             <select id="wifi-encryption" x-model="formData.wifi.encryption" @change="updateQrCode()" class="block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20">
                               <option>WPA/WPA2</option>
+                              <option>WPA3</option>
                               <option>WEP</option>
                               <option>None</option>
                             </select>
@@ -1544,14 +1545,14 @@
                             <div class="group relative rounded-lg bg-slate-900 px-3 py-2.5 shadow-inner">
                               <div class="flex items-center justify-between mb-1">
                                 <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500" x-text="item.label"></span>
-                                <button @click="if(item.url) { copyToTextClipboard(item.url); hapticFeedback('light'); showFlashNotification('Copied!'); }" class="rounded bg-slate-700 p-1 text-slate-400 transition-colors hover:bg-slate-600 hover:text-white opacity-100 sm:opacity-0 sm:group-hover:opacity-100" aria-label="Copy URL" title="Copy">
+                                <button @click="if(item.url) { const ok = await copyToTextClipboard(item.url); if(ok) { hapticFeedback('light'); showFlashNotification('Copied!'); } else { hapticFeedback('error'); showFlashNotification('Could not copy.'); } }" class="rounded bg-slate-700 p-1 text-slate-400 transition-colors hover:bg-slate-600 hover:text-white opacity-100 sm:opacity-0 sm:group-hover:opacity-100" aria-label="Copy URL" title="Copy">
                                   <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
                                 </button>
                               </div>
                               <p class="break-all font-mono text-[11px] leading-relaxed text-slate-300" x-text="item.url || '(No data)'"></p>
                             </div>
                           </template>
-                          <button @click="const allText = getRawDataList().map(i => i.label + ': ' + i.url).join('\n'); copyToTextClipboard(allText); hapticFeedback('light'); showFlashNotification('Copied all URLs!');" class="flex w-full items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-400 transition-colors hover:bg-slate-700 hover:text-white">
+                          <button @click="const allText = getRawDataList().map(i => i.label + ': ' + i.url).join('\n'); const ok = await copyToTextClipboard(allText); if(ok) { hapticFeedback('light'); showFlashNotification('Copied all URLs!'); } else { hapticFeedback('error'); showFlashNotification('Could not copy.'); }" class="flex w-full items-center justify-center gap-1.5 rounded-lg bg-slate-800 px-3 py-2 text-xs font-bold text-slate-400 transition-colors hover:bg-slate-700 hover:text-white">
                             <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
                             Copy All
                           </button>
@@ -1560,7 +1561,7 @@
                       <!-- Simple single view (default / non-URL types) -->
                       <template x-if="selectedType !== 'url' || !formData.url.variations || formData.url.variations.length === 0">
                         <div class="relative mt-3 group rounded-lg bg-slate-900 p-4 shadow-inner">
-                          <button @click="if(rawDataString.trim()) { copyToTextClipboard(rawDataString.trim()); copiedRaw = true; hapticFeedback('light'); setTimeout(() => copiedRaw = false, 2000); }" class="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-slate-700 p-1.5 text-slate-400 transition-colors hover:bg-slate-600 hover:text-white opacity-100 sm:opacity-0 sm:group-hover:opacity-100" aria-label="Copy Raw Data" title="Copy Raw Data">
+                          <button @click="if(rawDataString.trim()) { const ok = await copyToTextClipboard(rawDataString.trim()); if(ok) { copiedRaw = true; hapticFeedback('light'); setTimeout(() => copiedRaw = false, 2000); } else { hapticFeedback('error'); showFlashNotification('Could not copy.'); } }" class="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-slate-700 p-1.5 text-slate-400 transition-colors hover:bg-slate-600 hover:text-white opacity-100 sm:opacity-0 sm:group-hover:opacity-100" aria-label="Copy Raw Data" title="Copy Raw Data">
                             <svg x-show="!copiedRaw" class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
                             <svg x-show="copiedRaw" x-cloak class="h-3.5 w-3.5 text-green-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                           </button>
@@ -1760,19 +1761,19 @@
               <!-- Grid View -->
               <div x-show="viewMode === 'grid'" class="space-y-4" :class="{ 'pointer-events-none opacity-60 transition-opacity': isExportingBulk }">
                 <template x-for="qr in displayedItems" :key="qr.id">
-                  <div x-data="{ dropdownOpen: false }" class="relative min-w-0 rounded-xl bg-white shadow-md ring-1 ring-slate-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" :class="dropdownOpen ? 'z-10' : 'z-0'">
+                  <div x-data="{ dropdownOpen: false }" class="relative min-w-0 overflow-hidden rounded-xl bg-white shadow-md ring-1 ring-slate-900/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg" :class="dropdownOpen ? 'z-10 overflow-visible' : 'z-0'">
                     <div class="grid min-w-0 items-center gap-y-4 p-4 md:grid-cols-12 md:gap-x-4 md:p-6">
                       <div class="col-span-12 flex min-w-0 items-center gap-4 md:col-span-4">
-                        <label class="p-2 -ml-2 cursor-pointer flex items-center justify-center">
+                        <label class="shrink-0 p-2 -ml-2 cursor-pointer flex items-center justify-center">
                           <input type="checkbox" :name="'select-qr-' + qr.id" aria-label="Select QR code" :value="qr.id" x-model="selectedIds" @click="handleCheckboxClick($event, qr.id)" class="h-5 w-5 rounded border-slate-300 text-primary focus:ring-primary transition-colors cursor-pointer" />
                         </label>
                         <button @click="editQRCode(qr.id)" class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white p-1 shadow-sm transition-all hover:scale-105 hover:border-primary/50 hover:shadow-md" title="Edit">
                           <img :src="qr.previewSvgUrl" class="h-full w-full object-contain" :alt="'QR Code: ' + (qr.name || 'Untitled')" />
                         </button>
-                        <div class="min-w-0 flex-1">
-                          <p class="font-semibold text-slate-800 truncate max-w-full" x-text="qr.name" :title="qr.name"></p>
-                          <div class="flex items-center gap-2 mt-0.5">
-                            <p class="text-sm text-slate-500" x-text="qrTypes.find(t => t.id === qr.type)?.title || 'Unknown'"></p>
+                        <div class="min-w-0 flex-1 overflow-hidden">
+                          <p class="font-semibold text-slate-800 truncate" x-text="qr.name" :title="qr.name"></p>
+                          <div class="mt-0.5 flex min-w-0 items-center gap-2 overflow-hidden">
+                            <p class="truncate text-sm text-slate-500" x-text="qrTypes.find(t => t.id === qr.type)?.title || 'Unknown'"></p>
                             <span x-show="qr.type === 'url' && (qr.formData?.url?.variations?.length || 0) > 0" class="inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600 ring-1 ring-inset ring-indigo-500/10" x-cloak>
                               <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-folder"></use></svg>
                               <span x-text="(qr.formData?.url?.variations?.length || 0) + ' Variants'"></span>
@@ -1898,14 +1899,14 @@
                               <img :src="qr.previewSvgUrl" class="w-full h-full object-contain" :alt="'QR Code: ' + (qr.name || 'Untitled')" />
                             </button>
                           </td>
-                          <td class="px-4 py-3 max-w-[200px]">
-                            <div class="flex items-center gap-1.5 mb-0.5">
+                          <td class="px-4 py-3 max-w-[200px] min-w-0">
+                            <div class="mb-0.5 flex min-w-0 items-center gap-1.5">
                               <button @click.stop="toggleFavorite(qr.id)" class="shrink-0 transition-all hover:scale-110 focus:outline-none" :class="qr.isFavorite ? 'text-amber-400 drop-shadow-sm' : 'text-slate-300 hover:text-amber-400'" :title="qr.isFavorite ? 'Unpin' : 'Pin to top'">
                                 <svg class="h-4 w-4" :fill="qr.isFavorite ? 'currentColor' : 'none'" :stroke-width="qr.isFavorite ? '0' : '2'" stroke="currentColor"><use :href="qr.isFavorite ? 'icons-sprite.svg#solid-star' : 'icons-sprite.svg#outline-star'"></use></svg>
                               </button>
-                              <div class="font-bold text-slate-800 truncate" x-text="qr.name" :title="qr.name"></div>
+                              <div class="min-w-0 truncate font-bold text-slate-800" x-text="qr.name" :title="qr.name"></div>
                             </div>
-                            <div class="text-xs text-slate-500 truncate mt-0.5" x-text="qr.memo || 'No memo'" :title="qr.memo"></div>
+                            <div class="mt-0.5 truncate text-xs text-slate-500" x-text="qr.memo || 'No memo'" :title="qr.memo"></div>
                             <div x-show="qr.type === 'url' && (qr.formData?.url?.variations?.length || 0) > 0" class="mt-1" x-cloak>
                               <span class="inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600 ring-1 ring-inset ring-indigo-500/10">
                                 <svg class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-folder"></use></svg>
@@ -2161,7 +2162,7 @@
                         <p class="mt-1 text-[10px] text-slate-400" x-text="result.timestamp"></p>
                       </div>
                       <div x-data="{ copied: false }" class="flex items-center gap-1 shrink-0 transition-opacity" :class="copied ? 'opacity-100' : 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100'">
-                        <button @click="copyToTextClipboard(result.text); hapticFeedback('light'); showFlashNotification('Copied!'); copied = true; setTimeout(() => copied = false, 2000);" class="rounded-lg p-1.5 transition-colors" :class="copied ? 'bg-green-50 text-green-500' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'" aria-label="Copy result" :title="copied ? 'Copied!' : 'Copy'">
+                        <button @click="const ok = await copyToTextClipboard(result.text); if(ok) { hapticFeedback('light'); showFlashNotification('Copied!'); copied = true; setTimeout(() => copied = false, 2000); } else { hapticFeedback('error'); showFlashNotification('Could not copy.'); }" class="rounded-lg p-1.5 transition-colors" :class="copied ? 'bg-green-50 text-green-500' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-600'" aria-label="Copy result" :title="copied ? 'Copied!' : 'Copy'">
                           <svg x-show="!copied" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>
                           <svg x-show="copied" x-cloak class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
                         </button>
@@ -2346,7 +2347,7 @@
                   <p class="mb-4 text-sm text-slate-500" x-text="`Data content of \x22${qrToShare.name}\x22`"></p>
                   <div class="flex rounded-lg shadow-sm">
                     <textarea readonly :value="getShareDataText(qrToShare)" rows="4" class="resize-none overflow-y-auto block w-full min-w-0 flex-1 rounded-none rounded-l-lg border-slate-300 bg-slate-50 p-3 font-mono text-xs focus:border-primary focus:ring-primary"></textarea>
-                    <button @click="copyToTextClipboard(getShareDataText(qrToShare)); copied = true; hapticFeedback('light'); setTimeout(() => copied = false, 2000)" type="button" class="relative -ml-px inline-flex w-24 items-center justify-center gap-x-1.5 rounded-r-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 ring-1 ring-inset ring-slate-300 transition-all hover:bg-slate-200">
+                    <button @click="const ok = await copyToTextClipboard(getShareDataText(qrToShare)); if(ok) { copied = true; hapticFeedback('light'); setTimeout(() => copied = false, 2000); } else { hapticFeedback('error'); showFlashNotification('Could not copy.'); }" type="button" class="relative -ml-px inline-flex w-24 items-center justify-center gap-x-1.5 rounded-r-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-600 ring-1 ring-inset ring-slate-300 transition-all hover:bg-slate-200">
                       <template x-if="!copied">
                         <span class="flex items-center gap-1.5">
                           <svg class="h-4 w-4 text-slate-500"><use href="icons-sprite.svg#outline-clipboard-document"></use></svg>

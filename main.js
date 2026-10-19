@@ -73,7 +73,8 @@ function normalizeWifiEncryption(value) {
   const key = String(value || "").trim().toLowerCase();
   if (!key || key === "none" || key === "nopass" || key === "open") return "None";
   if (key === "wep") return "WEP";
-  if (key === "wpa" || key === "wpa2" || key === "wpa/wpa2" || key === "wpa2/wpa3" || key === "wpa3") return "WPA/WPA2";
+  if (key === "wpa3" || key === "sae") return "WPA3";
+  if (key === "wpa" || key === "wpa2" || key === "wpa/wpa2" || key === "wpa2/wpa3") return "WPA/WPA2";
   return "";
 }
 
@@ -693,17 +694,15 @@ async function loadQRCoderFile() {
 
 async function saveQRCoderFile() {
   const component = window.$app;
-
-  // Block forced save from shortcuts when data size limit is exceeded.
-  if (component && component.qrQuality.issues.some(i => i.id === 'capacity_error')) {
-    component.showFlashNotification("Cannot save because the data size exceeds the limit.");
-    component.hapticFeedback('error');
-    return;
-  }
+  const editorOverCapacity = component && component.qrQuality.issues.some(i => i.id === 'capacity_error');
 
   // Attempt to save to dashboard automatically if there are unsaved edits.
+  // Capacity errors only block the current editor QR — not library backup export.
   if (component && component.hasUnsavedEdit) {
-    if (component.editingQRCodeId) {
+    if (editorOverCapacity) {
+      component.showFlashNotification("Current QR exceeds the size limit; exporting existing library only.");
+      component.hapticFeedback('error');
+    } else if (component.editingQRCodeId) {
       // Keep editor view and overwrite save if editing an existing QR code.
       await component.saveToGrind(true);
     } else {
@@ -1965,32 +1964,33 @@ function qrCodeGenerator() {
       try {
         if (navigator.clipboard && window.isSecureContext) {
           await navigator.clipboard.writeText(text);
-          return; // Stop execution on success
+          return true;
         }
       } catch (error) {
         console.warn("Clipboard API failed, trying fallback...", error);
       }
-      
-      // Fallback process using execCommand
+
       const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "absolute";
-        const yPosition = window.scrollY || document.documentElement.scrollTop;
-        textArea.style.top = yPosition + "px";
-        textArea.style.left = "-999999px";
-        document.body.appendChild(textArea);
-        textArea.focus({ preventScroll: true });
-        textArea.select();
-        if (textArea.setSelectionRange) {
-          textArea.setSelectionRange(0, 99999); // iOS Safari fallback
-        }
-        try {
-          document.execCommand('copy');
-        } catch (error) {
-          console.error("Copy fallback failed", error);
-        } finally {
-          textArea.remove();
-        }
+      textArea.value = text;
+      textArea.style.position = "absolute";
+      const yPosition = window.scrollY || document.documentElement.scrollTop;
+      textArea.style.top = yPosition + "px";
+      textArea.style.left = "-999999px";
+      document.body.appendChild(textArea);
+      textArea.focus({ preventScroll: true });
+      textArea.select();
+      if (textArea.setSelectionRange) {
+        textArea.setSelectionRange(0, 99999);
+      }
+      try {
+        const ok = document.execCommand('copy');
+        return !!ok;
+      } catch (error) {
+        console.error("Copy fallback failed", error);
+        return false;
+      } finally {
+        textArea.remove();
+      }
     },
 
     // --- Haptic feedback ---
@@ -2446,11 +2446,14 @@ function qrCodeGenerator() {
       } catch (error) {
         console.error("QR Code generation failed:", error);
         this.qrQuality.score = 0;
-        this.qrQuality.issues.push({
-          id: 'capacity_error',
-          status: "bad",
-          message: "Data size exceeds QR code limits. Reduce text or use a dynamic QR (short URL)."
-        });
+        this.rawDataString = "";
+        if (!this.qrQuality.issues.some(i => i.id === 'capacity_error')) {
+          this.qrQuality.issues.push({
+            id: 'capacity_error',
+            status: "bad",
+            message: "Data size exceeds QR code limits. Reduce text or use a dynamic QR (short URL)."
+          });
+        }
         this.hapticFeedback('error');
         return;
       }
@@ -2985,9 +2988,9 @@ function qrCodeGenerator() {
             if (!str) return "";
             return String(str).replace(/([\\"|;,:])/g, "\\$1");
           };
-          const normalizedEnc = normalizeWifiEncryption(encryption) || (encryption === "WPA/WPA2" || encryption === "WEP" || encryption === "None" ? encryption : "");
+          const normalizedEnc = normalizeWifiEncryption(encryption) || (["WPA/WPA2", "WPA3", "WEP", "None"].includes(encryption) ? encryption : "");
           if (ssid && String(ssid).trim() && normalizedEnc) {
-            const encType = normalizedEnc === "WPA/WPA2" ? "WPA" : (normalizedEnc === "None" ? "nopass" : normalizedEnc);
+            const encType = normalizedEnc === "WPA/WPA2" ? "WPA" : (normalizedEnc === "WPA3" ? "SAE" : (normalizedEnc === "None" ? "nopass" : normalizedEnc));
             const hiddenFlag = hidden ? "H:true;" : "";
             // Quote values so numeric-only SSIDs/passwords are not read as hex
             const quoted = (str) => `"${escapeWifiStr(str)}"`;
@@ -4826,7 +4829,7 @@ function qrCodeGenerator() {
       this.showFlashNotification(`Exported ${list.length} URLs as CSV.`);
       this.hapticFeedback('success');
     },
-    copyUrlsAsMarkdown() {
+    async copyUrlsAsMarkdown() {
       const targets = this.savedQRCodes.filter(qr => this.selectedIds.includes(qr.id) && qr.type === 'url');
       if (targets.length === 0) return;
 
@@ -4849,10 +4852,15 @@ function qrCodeGenerator() {
         md += "\n";
       });
 
-      this.copyToTextClipboard(md);
+      const ok = await this.copyToTextClipboard(md);
       this.showUrlExportModal = false;
-      this.showFlashNotification("Copied Markdown to clipboard.");
-      this.hapticFeedback('success');
+      if (ok) {
+        this.showFlashNotification("Copied Markdown to clipboard.");
+        this.hapticFeedback('success');
+      } else {
+        this.showFlashNotification("Could not copy to clipboard.");
+        this.hapticFeedback('error');
+      }
     },
 
     // --- Smart Paste ---
@@ -5009,7 +5017,7 @@ function qrCodeGenerator() {
       if (this.isScannerActive) return;
       try {
         if (typeof Html5Qrcode === 'undefined') {
-          this.showFlashNotification('Scanner library not loaded. Please check your connection.');
+          this.showFlashNotification('Scanner library failed to load. Reload the page and try again.');
           return;
         }
 
@@ -5304,12 +5312,17 @@ function qrCodeGenerator() {
         }
       }
     },
-    copyAllScanResults() {
+    async copyAllScanResults() {
       if (this.scannerResults.length === 0) return;
       const text = this.scannerResults.map(r => r.text).join('\n');
-      this.copyToTextClipboard(text);
-      this.showFlashNotification(`Copied ${this.scannerResults.length} result(s) to clipboard.`);
-      this.hapticFeedback('light');
+      const ok = await this.copyToTextClipboard(text);
+      if (ok) {
+        this.showFlashNotification(`Copied ${this.scannerResults.length} result(s) to clipboard.`);
+        this.hapticFeedback('light');
+      } else {
+        this.showFlashNotification("Could not copy to clipboard.");
+        this.hapticFeedback('error');
+      }
     },
     playBeep() {
       try {
