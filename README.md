@@ -43,7 +43,7 @@ Once you "Install as App" from your browser, all necessary resources are cached 
 ### 6. Strong Encryption & Seamless File Management
 Directly read and write local database files (`.qrcoder`) on your OS from the browser. Simply double-click the file on your OS to launch the app and automatically load the data (File Handling API).
 Alternatively, just **drag and drop** a `.qrcoder` backup file anywhere on the screen to instantly restore your workspace.
-When saving, strong encryption via `AES-256-GCM` using the Web Crypto API can be applied. Even if the file is leaked, it can never be decrypted without the password.
+When saving, strong encryption via `AES-256-GCM` using the Web Crypto API can be applied (PBKDF2-SHA256, passwords normalized with Unicode NFC, minimum 8 characters). Even if the file is leaked, it can never be decrypted without the password.
 
 - **🚨 Warning:** If you forget your password, due to the nature of encryption, data recovery is technically 100% impossible. Please manage your password carefully.
 - **💡 Recommended Browsers:** We strongly recommend using **Chrome** or **Edge**, which fully support direct overwrite saving (File System Access API). (In Safari/Firefox, it will be downloaded and saved as a new file each time).

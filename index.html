@@ -305,10 +305,10 @@
               <!-- Hidden username field to satisfy browser password manager requirements -->
               <input type="text" name="file-encryption-username" autocomplete="username" class="sr-only" aria-hidden="true" tabindex="-1" value="encryption-user">
               <label for="file-password" class="sr-only">Encryption Password</label>
-              <input type="password" id="file-password" placeholder="Encryption Password..." autocomplete="new-password"
+              <input type="password" id="file-password" placeholder="Password (min 8 chars)..." autocomplete="new-password"
                 data-lpignore="true" data-1p-ignore spellcheck="false" autocorrect="off" autocapitalize="off"
                 class="bg-white shadow-sm py-2 pr-10 pl-3 border border-slate-200 focus:border-primary focus:ring-4 focus:ring-primary/20 rounded-md outline-none w-48 md:w-56 text-slate-900 text-base md:text-sm transition-all placeholder-slate-400"
-                title="Enter a password to strongly encrypt the file when saving">
+                title="Optional. At least 8 characters. Encrypts the .qrcoder backup with AES-256-GCM.">
               <button type="button" aria-label="Toggle password visibility"
                 class="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-slate-600 transition-colors" title="Show/Hide Password">
                 <svg id="icon-eye-open" class="hidden w-4 h-4">

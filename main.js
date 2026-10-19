@@ -195,7 +195,22 @@ function idbTransactionDone(tx) {
 
 // --- Encryption/Decryption logic ---
 const MAGIC_BYTES = new TextEncoder().encode("GRINDEN2");
-const MAGIC_BYTES_LEGACY = new TextEncoder().encode("GRINDENC");
+const MIN_FILE_PASSWORD_LENGTH = 8;
+
+function normalizePassword(password) {
+  return String(password || "").normalize("NFC");
+}
+
+// URL.toString() uses + for spaces in queries; keep %20 for stable QR payloads
+function serializeUrlPreferPercent20(urlObj) {
+  const href = urlObj.toString();
+  const hashIndex = href.indexOf("#");
+  const withoutHash = hashIndex >= 0 ? href.slice(0, hashIndex) : href;
+  const hash = hashIndex >= 0 ? href.slice(hashIndex) : "";
+  const qIndex = withoutHash.indexOf("?");
+  if (qIndex < 0) return href;
+  return withoutHash.slice(0, qIndex + 1) + withoutHash.slice(qIndex + 1).replace(/\+/g, "%20") + hash;
+}
 
 // Byte-mode capacities per ISO/IEC 18004 (versions 1–40)
 const QR_CAPACITY_TABLE = [
@@ -291,7 +306,7 @@ function appAlert(message) {
 async function deriveKey(password, salt, iterations = 600000) {
   const enc = new TextEncoder();
   const keyMaterial = await window.crypto.subtle.importKey(
-    "raw", enc.encode(password), { name: "PBKDF2" }, false, ["deriveKey"]
+    "raw", enc.encode(normalizePassword(password)), { name: "PBKDF2" }, false, ["deriveKey"]
   );
   return window.crypto.subtle.deriveKey(
     { name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" },
@@ -302,7 +317,7 @@ async function deriveKey(password, salt, iterations = 600000) {
 async function encryptData(data, password) {
   const salt = window.crypto.getRandomValues(new Uint8Array(16));
   const iv = window.crypto.getRandomValues(new Uint8Array(12));
-  const key = await deriveKey(password, salt, 600000);
+  const key = await deriveKey(normalizePassword(password), salt, 600000);
   const encrypted = await window.crypto.subtle.encrypt(
     { name: "AES-GCM", iv: iv }, key, data
   );
@@ -328,7 +343,7 @@ async function decryptData(encryptedData, password) {
 
   try {
     const iterations = isEncryptedV2 ? 600000 : 100000;
-    const key = await deriveKey(password, salt, iterations);
+    const key = await deriveKey(normalizePassword(password), salt, iterations);
     const decrypted = await window.crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, data);
     return new Uint8Array(decrypted);
   } catch (e) {
@@ -446,7 +461,7 @@ async function processQRCoderFile(file, handle = null, { skipEditorConfirm = fal
 
     let text;
     if (isEncrypted) {
-      let password = document.getElementById("file-password")?.value;
+      let password = normalizePassword(document.getElementById("file-password")?.value || "");
       let success = false;
       let attempt = 0;
       while (!success) {
@@ -460,8 +475,9 @@ async function processQRCoderFile(file, handle = null, { skipEditorConfirm = fal
           }
         } catch (err) {
           const msg = attempt > 0 ? "❌ Incorrect password. Please try again:" : "The file is encrypted. Enter the password to decrypt:";
-          password = await appPrompt(msg);
-          if (password === null) return;
+          const entered = await appPrompt(msg);
+          if (entered === null) return;
+          password = normalizePassword(entered);
           attempt++;
         }
       }
@@ -716,7 +732,6 @@ async function saveQRCoderFile() {
     }
   }
 
-  let success = false;
   try {
     const exportData = {
       version: 3,
@@ -734,7 +749,8 @@ async function saveQRCoderFile() {
     // Wait for UI redraw (Release main thread).
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    const currentPassword = pwInput ? pwInput.value : "";
+    const currentPassword = normalizePassword(pwInput ? pwInput.value : "");
+    if (pwInput && pwInput.value !== currentPassword) pwInput.value = currentPassword;
     const currentPasswordHash = await sha256(currentPassword);
 
     if (lastSavedPasswordHash !== "" && currentPassword === "") {
@@ -743,10 +759,16 @@ async function saveQRCoderFile() {
       }
     }
 
+    if (currentPassword !== "" && currentPassword.length < MIN_FILE_PASSWORD_LENGTH) {
+      component.showFlashNotification(`Password must be at least ${MIN_FILE_PASSWORD_LENGTH} characters.`);
+      component.hapticFeedback('error');
+      return;
+    }
+
     if (currentPassword !== "" && currentPasswordHash !== lastSavedPasswordHash) {
       const confirmPw = await appPrompt("🔒 Set (or change) password.\nEnter the same password again to confirm:", "password");
       if (confirmPw === null) return;
-      if (confirmPw !== currentPassword) {
+      if (normalizePassword(confirmPw) !== currentPassword) {
         component.showFlashNotification("Passwords do not match. Save canceled.");
         component.hapticFeedback('error');
         return;
@@ -793,7 +815,6 @@ async function saveQRCoderFile() {
       fileHandle = { name: a.download };
     }
 
-    success = true;
     lastSavedPasswordHash = currentPasswordHash;
 
     // New success feedback logic
@@ -1126,13 +1147,6 @@ document.addEventListener("keydown", (e) => {
   if (isInputFocused && e.key !== "Escape") {
     return;
   }
-
-  if (e.key === "Escape") {
-    const app = window.$app;
-    if (app && (app.showSaveModal || app.showShareModal || app.showDownloadModal || app.showUrlExportModal || app.showSceneModal || app.showPromptModal || app.showConfirmModal || app.showAlertModal || app.showImportModal || app.showBulkMoveModal || app.showBulkTagModal || app.showQaModal || app.showUtmPresetManager)) {
-      return;
-    }
-  }
 });
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1373,7 +1387,6 @@ function qrCodeGenerator() {
 
   return {
     // --- Manage UI display states ---
-    subOpen: true, // Toggle side menu state.
     isSavingBackup: false, // Track backup saving state for UI button.
     isSaveSuccess: false,
     currentView: "generator", // 'generator' (create) or 'dashboard' (manage).
@@ -2113,7 +2126,7 @@ function qrCodeGenerator() {
         if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
           return "about:blank";
         }
-        if (!utmObj) return urlObj.toString();
+        if (!utmObj) return serializeUrlPreferPercent20(urlObj);
 
         const cleanParam = (val) => String(val || "").trim().replace(/^[?&]+/, '');
         ['source', 'medium', 'campaign', 'term', 'content'].forEach(key => {
@@ -2121,7 +2134,8 @@ function qrCodeGenerator() {
             urlObj.searchParams.set(`utm_${key}`, cleanParam(utmObj[key]));
           }
         });
-        return urlObj.toString();
+        // Prefer %20 over + so existing spaces in queries stay percent-encoded
+        return serializeUrlPreferPercent20(urlObj);
       } catch (e) {
         return "about:blank";
       }
@@ -3241,10 +3255,9 @@ function qrCodeGenerator() {
 
       if (invalidColor) {
         // Handled below in overall check
-      } else if (isNegative) {
-        contrastValStr = "Inverted";
       } else {
-        contrastValStr = minContrast.toFixed(1) + ":1";
+        // Light-on-dark is valid for QR; score by contrast ratio either way
+        contrastValStr = minContrast.toFixed(1) + ":1" + (isNegative ? " (light on dark)" : "");
         if (minContrast >= 7.0) {
           contrastScore = 30;
           contrastPass = true;
@@ -3554,21 +3567,21 @@ function qrCodeGenerator() {
         },
         {
           name: "Luxury", // 12
-          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g-luxury" gradientTransform="rotate(45)"><stop offset="0%" stop-color="#FBBF24"/><stop offset="100%" stop-color="#D97706"/></linearGradient></defs><rect width="100" height="100" fill="#FFFBEB"/><path d="M50 10 A 40 40 0 0 1 90 50 A 40 40 0 0 1 50 90 A 40 40 0 0 1 10 50 A 40 40 0 0 1 50 10 M50 25 A 25 25 0 0 0 25 50 A 25 25 0 0 0 50 75 A 25 25 0 0 0 75 50 A 25 25 0 0 0 50 25" fill="url(#g-luxury)"/></svg>`,
+          preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g-luxury" gradientTransform="rotate(45)"><stop offset="0%" stop-color="#B45309"/><stop offset="100%" stop-color="#78350F"/></linearGradient></defs><rect width="100" height="100" fill="#FFFBEB"/><path d="M50 10 A 40 40 0 0 1 90 50 A 40 40 0 0 1 50 90 A 40 40 0 0 1 10 50 A 40 40 0 0 1 50 10 M50 25 A 25 25 0 0 0 25 50 A 25 25 0 0 0 50 75 A 25 25 0 0 0 75 50 A 25 25 0 0 0 50 25" fill="url(#g-luxury)"/></svg>`,
           options: {
             ...defaultQrOptions,
             colorType: "gradient",
             gradient: {
               type: "linear",
               rotation: "45",
-              color1: "#FBBF24",
-              color2: "#D97706",
+              color1: "#B45309",
+              color2: "#78350F",
             },
             backgroundColor: "#FFFBEB",
             dotsStyle: "classy-rounded",
             cornersStyle: "extra-rounded",
-            cornerColor: "#FBBF24",
-            cornerDotColor: "#FBBF24",
+            cornerColor: "#B45309",
+            cornerDotColor: "#78350F",
             cornersDotStyle: "dot",
           },
         },
@@ -4126,7 +4139,7 @@ function qrCodeGenerator() {
 
       const solanaTemplate = {
         name: "Solana",
-        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#9945FF"/></g><image x="20" y="20" width="60" height="60" href="${solanaLogoUrl}" /></svg>`,
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#6B21A8"/></g><image x="20" y="20" width="60" height="60" href="${solanaLogoUrl}" /></svg>`,
         options: {
           ...defaultQrOptions,
           errorCorrectionLevel: "H",
@@ -4135,14 +4148,14 @@ function qrCodeGenerator() {
           gradient: {
             type: "linear",
             rotation: "135",
-            color1: "#9945FF",
-            color2: "#19FB9B",
+            color1: "#6B21A8",
+            color2: "#0F766E",
           },
           backgroundColor: "#ffffff",
           dotsStyle: "rounded",
           cornersStyle: "extra-rounded",
-          cornerColor: "#9945FF",
-          cornerDotColor: "#19FB9B",
+          cornerColor: "#6B21A8",
+          cornerDotColor: "#0F766E",
           cornersDotStyle: "dot",
           imageOptions: { hideBackgroundDots: true, imageSize: 0.35, margin: 8 },
         },
@@ -4430,7 +4443,7 @@ function qrCodeGenerator() {
 
       const linktreeTemplate = {
         name: "Linktree",
-        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#43E55E"/></g><image x="30" y="30" width="40" height="40" href="${linktreeLogoUrl}" /></svg>`,
+        preview: `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" fill="#fff"/><g opacity="0.2"><rect x="10" y="10" width="80" height="80" rx="8" fill="#15803D"/></g><image x="30" y="30" width="40" height="40" href="${linktreeLogoUrl}" /></svg>`,
         options: {
           ...defaultQrOptions,
           errorCorrectionLevel: "H",
@@ -4441,7 +4454,7 @@ function qrCodeGenerator() {
           dotsStyle: "rounded",
           cornersStyle: "square",
           cornerColor: "#000000",
-          cornerDotColor: "#43E55E",
+          cornerDotColor: "#15803D",
           cornersDotStyle: "square",
           imageOptions: { hideBackgroundDots: true, imageSize: 0.3, margin: 10 },
         },
@@ -4932,7 +4945,6 @@ function qrCodeGenerator() {
 
           // Limit the maximum number of added variants to 100 to prevent DOM explosion (UI freeze)
           const MAX_VARIANTS = 100;
-          let addedCount = 0;
 
           for (let i = 1; i < urls.length; i++) {
             if (this.formData.url.variations.length >= MAX_VARIANTS) {
@@ -4947,7 +4959,6 @@ function qrCodeGenerator() {
               utm: parsed.utm,
               customUrl: isSameBase ? '' : parsed.base
             });
-            addedCount++;
           }
           
           if (urls.length - 1 > MAX_VARIANTS) {
@@ -7299,9 +7310,6 @@ function qrCodeGenerator() {
       this.includeQuietZone = !this.includeQuietZone;
       this.qrOptions.margin = this.includeQuietZone ? 20 : 0;
       this.updateQrCode();
-    },
-    get activeBrandKit() {
-      return this.getActiveBrandKit();
     },
     getActiveBrandKit() {
       return this.brandKits.find(b => b.id === this.activeBrandKitId) || null;
