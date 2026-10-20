@@ -1,2 +1,2 @@
-# 言語判定（Linguist）から除外するファイル
+# Files excluded from language detection (Linguist)
 *.svg linguist-generated=true
