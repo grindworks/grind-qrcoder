@@ -1,41 +1,43 @@
 # QR Coder AI Rules
 
-> Shared rules for every Grind product: [`../AGENTS.md`](../AGENTS.md). This file adds QR Coder rules and wins where the two differ.
+> Product type: PWA. Shared rules: [`../AGENTS.md`](../AGENTS.md) §1, §2, §4, §6 and the PWA rules in §7. This file adds QR Coder rules and wins where the two differ.
 
-## 1. Environment & Architecture
+## 1. Stack
 
-- **Serverless & Offline-First (PWA):** No Backend (No PHP, No Node.js). The application MUST run entirely in the browser using HTML, Vanilla JavaScript, Alpine.js, and Tailwind CSS.
-- **IndexedDB & JSON Storage:** Database operations are performed in the browser's IndexedDB for local persistence. Exported data is saved as `.qrcoder` files (JSON format).
-- **Local File Management:** Read/Write operations are strictly handled via the **File System Access API** (with fallbacks) and the **File Handling API** (`launchQueue`). Never suggest uploading files to a server.
-- **Strong Security:** Data saving must pass through Web Crypto API (`AES-256-GCM`) when a password is provided.
-- **Absolute Portability (CRITICAL):**
-  - **Zero Build Tools:** Do NOT suggest adding `npm`, `Webpack`, `Vite`, or ES Modules that require a build step. The system MUST work instantly by just opening `index.html` in a modern browser.
-  - **Offline Asset Management:** Ensure all UI assets and external scripts (e.g., `@alpinejs/collapse`, `qr-code-styling`) are explicitly added to the Service Worker (`sw.js`) cache list to guarantee 100% offline functionality.
+- Alpine.js app: the root is `x-data="qrCodeGenerator()"` (factory in `main.js`), with the `collapse` and `focus` plugins. Load `alpine.min.js` last among the deferred scripts; `init()` needs the libraries before it.
+- Vendored libraries in `assets/`: `qr-code-styling`, `html5-qrcode`, `fflate`, `DOMPurify`.
+  - `qr-code-styling` is patched to encode text as UTF-8 by default (`stringToBytesFuncs.default`). Keep that patch when updating the library, then re-check that Japanese and emoji payloads decode correctly.
+  - `html5-qrcode` loads on first use of the Verify tab (`loadScannerLibrary()`). It stays in the `sw.js` precache.
+- Tailwind CSS v4.2.4. `./build.sh` downloads the standalone binary for the current OS on first run and checks its pinned SHA-256. The binary is git-ignored.
 
-## 2. Coding Standards & Data Handling
+## 2. Data and files
 
-- **JavaScript (Modern ES6+ & Alpine.js):** Use modern features (arrow functions, template literals, destructuring, Optional Chaining). Use Alpine.js (`x-data`, `x-bind`, `x-transition`, `x-collapse`) for UI state management.
-- **Data Persistence & Safety:**
-  - Data modifications (creating, editing, deleting) update the Alpine.js state and persist to IndexedDB.
-  - Any operation that modifies the unsaved configuration MUST set a flag (`isDirty = true` via `setDirty()`) to warn the user before they close the tab or switch views.
-  - **Memory Management:** Clean up object URLs (`URL.revokeObjectURL()`) and avoid deep copying massive Base64 strings to prevent memory leaks and UI stuttering.
-- **Error Handling (FAIL-SAFE):**
-  - Assume files selected by the user might be corrupted or manipulated. Always wrap decryption and `JSON.parse` in robust `try...catch` blocks.
-  - Fail gracefully with user-friendly alerts or toast notifications (`showFlashNotification`), allowing the user to retry without reloading the app.
+- Storage: IndexedDB `GrindQRCoderDB_Standalone`. Saved QR codes are written as a diff (changed records only); projects, templates and brand kits are rewritten whole.
+- Backups: `.qrcoder` (JSON) and `.qrcoder-theme` (design assets). Opened via the File System Access API, drag and drop, or `launchQueue`. Optional `GRINDEN2` encryption: minimum 8 characters, passwords normalized to NFC.
+- Imports go through the `sanitizeImported*` helpers. Image fields accept `data:image/...` URLs only, so imported files cannot make the app load remote URLs.
+- Two unsaved-state flags:
+  - `isDirty` (`setDirty()`): the library changed since the last `.qrcoder` save or load. Drives the unsaved badge and the warning when the tab closes.
+  - `hasUnsavedEdit`: the editor holds unsaved changes. Drives confirmations when leaving the editor and the auto-draft.
+- Auto-drafts never store the Wi-Fi password. When an edit of a saved QR code is restored, the password comes back from the saved record.
+- Every path that saves, downloads or copies a QR code must check the payload first (`canExportQr` for buttons, `getQrPayloadBlockReason()` for code paths).
+- Saved QR codes, including Wi-Fi passwords, are stored in plaintext in IndexedDB; encryption applies only to exported backups.
+- Media types (image gallery, video) are links only (YouTube, Google Photos and similar). Never imply that a local file is hosted online.
 
-## 3. Frontend (S-Rank UI & Hacker Aesthetic)
+## 3. UI
 
-- **Tailwind CSS:** Use Tailwind utility classes for all styling. The app strictly uses a light theme (do not use `dark:` classes). Avoid custom CSS in `<style>` blocks unless absolutely necessary (e.g., custom scrollbars).
-- **Icons (SVG Sprites):** Icons are loaded via external SVG sprites (`<use href="icons-sprite.svg#icon-name"></use>`).
-- **Micro-Interactions & UX:**
-  - Enhance the "Grind (fast input)" experience. Ensure form submissions do not cause page reloads (`@submit.prevent`).
-  - Use `@input.debounce` instead of `x-model.debounce` to prevent input lag.
-  - Maintain focus on input fields programmatically after actions.
-  - Ensure UI transitions do not cause layout shifts (CLS). Use Alpine.js `x-transition` and `@alpinejs/collapse` for smooth animations.
-- **Minimalist Hacker Vibe:** Keep the UI clean. Hide complex actions in the Command Palette (`Cmd+K`).
+- Look, top bar, shortcuts, toasts, dialogs, wording and languages follow shared §7 UI. Do not restate them here; add only what differs.
+- Use `@input.debounce`, never `x-model.debounce`.
+- Dialogs: `appAlert()`, `appConfirm()` and `appPrompt()` are the reference implementation for the other apps. In Alpine handlers use `await appConfirm(...)`.
+- Product-specific top-bar controls: none. QR Coder has no Alt+N; it has Undo and Redo (Cmd/Ctrl+Z, Cmd/Ctrl+Y) instead.
+- The update prompt (`notifyAppUpdate()` and `window.applyAppUpdate()`) is the reference implementation of the shared update toast.
 
-## 4. AI Directives
+## 4. Known gaps against shared §7
 
-- **Deep Contextual Analysis:** Do not act like a naive static analysis tool. Analyze actual data flow in the browser memory (e.g., Alpine.js component scope vs. window scope) before suggesting "optimizations."
-- **Respect Design Philosophy:** Maintain the "Serverless & Subscription-free" nature of the tool. Do NOT suggest features that require external hosting for user media. Media features (like Video or Image Galleries) MUST strictly be URL-based (e.g., YouTube links, Google Photos links). Do not implement local file uploads that mislead users into thinking their files are hosted online.
-- **Language:** Output chat explanations in **Japanese**. The entire codebase (UI text, code, comments, regular expressions, console logs, etc.) MUST strictly be 100% in **English**. Do NOT use Japanese anywhere in the source code.
+- Icons still use the external `icons-sprite.svg` (about 140 references in `index.html`); move them to an inline sprite in `index.html`.
+- Hard-coded hex colors remain in the `<style>` block of `index.html` (scrollbar, tooltip and swatch borders); move them to Tailwind palette variables.
+- Shape: cards and buttons use `rounded-lg` and `rounded-xl`; the shared rule is `rounded-md` for controls and `rounded-xl` for cards.
+- `showToast` does not exist; the app has a `flash-toast` element and `notifyAppUpdate()`. Add the shared `showToast(message, iconHtml, type)`.
+- UI language is English only and the strings are inline in `index.html` and `main.js`. Move them to `lang/en.js` and `lang/ja.js` with the shared `i18n.js`.
+- `alert()` remains in `main.js` for the iOS install hint; use `appAlert()`.
+- Tailwind is 4.2.4 with SHA-256 pins in `build.sh`; move to 4.3.1 and update the pins.
+- `.gitattributes` has a Japanese comment.
