@@ -327,7 +327,7 @@ function appConfirm(message) {
     };
     app.showConfirmModal = true;
     setTimeout(() => {
-      if (app.$refs.confirmOkBtn) app.$refs.confirmOkBtn.focus();
+      if (app.$refs.confirmCancelBtn) app.$refs.confirmCancelBtn.focus();
     }, 100);
   });
 }

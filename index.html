@@ -3200,7 +3200,7 @@
             <p class="text-sm text-slate-500 whitespace-pre-wrap" x-text="confirmMessage"></p>
           </div>
           <div class="flex gap-3">
-            <button type="button" @click="resolveConfirm(false); showConfirmModal = false;" class="flex-1 py-3 rounded-xl bg-slate-100 font-bold text-slate-700 active:scale-95 transition-transform hover:bg-slate-200">Cancel</button>
+            <button type="button" x-ref="confirmCancelBtn" @click="resolveConfirm(false); showConfirmModal = false;" class="flex-1 py-3 rounded-xl bg-slate-100 font-bold text-slate-700 active:scale-95 transition-transform hover:bg-slate-200">Cancel</button>
             <button type="button" @click="resolveConfirm(true); showConfirmModal = false;" class="flex-1 py-3 rounded-xl bg-amber-500 font-bold text-white shadow-md active:scale-95 transition-transform hover:bg-amber-600" x-ref="confirmOkBtn">OK</button>
           </div>
         </div>
