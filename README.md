@@ -66,7 +66,6 @@ When saving, strong encryption via `AES-256-GCM` using the Web Crypto API can be
 - `sw.js`: Service Worker for the PWA (full offline capability, cache control).
 - `manifest.json`: PWA Manifest.
 - `assets/`: Vendored libraries (Alpine, qr-code-styling, html5-qrcode, fflate, DOMPurify).
-- `icons-sprite.svg`: Icon sprite (only the icons referenced by `index.html` / `main.js`).
 
 ## Development
 

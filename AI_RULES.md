@@ -36,5 +36,6 @@
 ## 4. Known gaps against shared §7
 
 - Hard-coded hex colors remain in the `<style>` block of `index.html` (scrollbar, tooltip and swatch borders); move them to Tailwind palette variables.
+- Tailwind `blue-*` classes remain in `index.html` (focus rings, tints and a few `text-blue-600` links), two footer links use inline `#0ea5e9` and `#64748b`, and the `glowPulse` keyframes in `input.css` still use the old blue. Replace them with `primary` tokens when those places are touched.
 - Tailwind is 4.2.4 with SHA-256 pins in `build.sh`; move to 4.3.1 and update the pins.
 - `.gitattributes` has a Japanese comment.
