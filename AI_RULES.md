@@ -8,7 +8,7 @@
 - Vendored libraries in `assets/`: `qr-code-styling`, `html5-qrcode`, `fflate`, `DOMPurify`.
   - `qr-code-styling` is patched to encode text as UTF-8 by default (`stringToBytesFuncs.default`). Keep that patch when updating the library, then re-check that Japanese and emoji payloads decode correctly.
   - `html5-qrcode` loads on first use of the Verify tab (`loadScannerLibrary()`). It stays in the `sw.js` precache.
-- Tailwind CSS v4.2.4. `./build.sh` downloads the standalone binary for the current OS on first run and checks its pinned SHA-256. The binary is git-ignored.
+- Tailwind CSS v4.3.1. `./build.sh` downloads the standalone binary for the current OS on first run and checks its pinned SHA-256. The binary is git-ignored.
 
 ## 2. Data and files
 
@@ -38,5 +38,4 @@
 - Hard-coded hex colors remain in the `<style>` block of `index.html` (scrollbar, tooltip and swatch borders); move them to Tailwind palette variables.
 - Tailwind `blue-*` classes remain in `index.html` (focus rings, tints and a few `text-blue-600` links), two footer links use inline `#0ea5e9` and `#64748b`, and the `glowPulse` keyframes in `input.css` still use the old blue. Replace them with `primary` tokens when those places are touched.
 - The tab title does not show the unsaved state (the badge does); the shared rule starts it with `* `.
-- Tailwind is 4.2.4 with SHA-256 pins in `build.sh`; move to 4.3.1 and update the pins.
 - `.gitattributes` has a Japanese comment.
