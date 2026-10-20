@@ -3180,7 +3180,7 @@
         <div x-show="showPromptModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="resolvePrompt(null); showPromptModal = false;" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true"></div>
         <span class="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">&#8203;</span>
         <div x-show="showPromptModal" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="translate-y-full sm:translate-y-0 sm:scale-95 opacity-0" x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100" class="relative inline-block w-full max-w-sm transform-gpu rounded-3xl bg-white text-left align-bottom shadow-2xl transition-all sm:my-8 sm:align-middle p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-          <h3 id="prompt-modal-title" class="text-lg font-bold text-slate-900 mb-4" x-text="promptMessage"></h3>
+          <h3 id="prompt-modal-title" class="text-lg font-bold text-slate-900 mb-4 whitespace-pre-line" x-text="promptMessage"></h3>
           <form @submit.prevent="resolvePrompt(promptInput); showPromptModal = false;">
             <input :type="promptInputType" x-model="promptInput" x-ref="promptInputField" autocomplete="off" data-lpignore="true" spellcheck="false" class="mb-6 block w-full rounded-lg border border-slate-300 bg-white p-3 text-base md:text-sm text-slate-900 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/20" autofocus />
             <div class="flex gap-3">

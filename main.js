@@ -11,6 +11,7 @@ if (window.top !== window.self) {
 }
 // --- Global functions and variables (File save/load, Command palette) ---
 let isDirty = false;
+let dirtyRevision = 0; // Counts edits so a save can tell whether new ones arrived while it ran
 let fileHandle = null;
 let lastSavedPasswordHash = "";
 
@@ -306,6 +307,7 @@ function appPrompt(message, defaultValue = "", { type = "text" } = {}) {
     app.promptInputType = type;
     app.resolvePrompt = (value) => {
       resolve(value);
+      app.promptInput = "";
       app.resolvePrompt = null;
     };
     app.showPromptModal = true;
@@ -460,6 +462,7 @@ function screenKey(view, step) {
 }
 
 function setDirty(state) {
+  if (state) dirtyRevision++;
   isDirty = state;
   const badge = document.getElementById("dirty-badge");
   if (badge) {
@@ -797,6 +800,7 @@ async function saveQRCoderFile() {
       templates: window.Alpine.raw(component.myTemplates)
     };
     const dataString = JSON.stringify(exportData);
+    const revisionAtExport = dirtyRevision;
 
     const encoder = new TextEncoder();
     let fileData = encoder.encode(dataString);
@@ -881,8 +885,8 @@ async function saveQRCoderFile() {
       }, 1500);
     }
 
-    // Hide unsaved badge securely after restoring UI structure.
-    setDirty(false);
+    // Hide unsaved badge securely after restoring UI structure; edits made during the save stay unsaved
+    if (dirtyRevision === revisionAtExport) setDirty(false);
 
     if (component && component.hapticFeedback) component.hapticFeedback('success');
     component.showFlashNotification("Backup saved.");
@@ -4918,7 +4922,7 @@ function qrCodeGenerator() {
     async renameUtmPreset(presetId) {
       const preset = this.utmPresets.find(p => p.id === presetId);
       if (!preset) return;
-      const newName = await appPrompt(`Rename "${preset.name}":`);
+      const newName = await appPrompt(`Rename "${preset.name}":`, preset.name);
       if (!newName || !newName.trim()) return;
       preset.name = newName.trim();
       this.saveUtmPresets();
@@ -6359,7 +6363,7 @@ function qrCodeGenerator() {
       }
       const project = this.projects.find(p => p.id === projectId);
       if (!project) return;
-      const newName = await appPrompt(`Rename project "${project.name}":`);
+      const newName = await appPrompt(`Rename project "${project.name}":`, project.name);
       if (!newName || !newName.trim() || newName.trim() === project.name) return;
       project.name = newName.trim();
       await this.persistProjects();
@@ -7204,6 +7208,7 @@ function qrCodeGenerator() {
       this.csvFile = file;
       const reader = new FileReader();
       reader.onload = async (e) => {
+        try {
         const buffer = e.target.result;
         let text = '';
         try {
@@ -7239,6 +7244,11 @@ function qrCodeGenerator() {
         this.csvMapping.tags = this.csvHeaders.find(h => /tag|category/i.test(h)) || "";
 
         this.reMapCsvHeaders();
+        } catch (err) {
+          console.error("CSV import failed:", err);
+          this.showFlashNotification("Could not read the CSV file.");
+          this.resetImportState();
+        }
       };
       reader.onerror = () => {
         this.showFlashNotification("Failed to read the file. It may be locked or corrupted.");
@@ -7526,7 +7536,7 @@ function qrCodeGenerator() {
     async renameBrandKit() {
       const kit = this.getActiveBrandKit();
       if (!kit) return;
-      const newName = await appPrompt(`Rename "${kit.name}":`);
+      const newName = await appPrompt(`Rename "${kit.name}":`, kit.name);
       if (!newName || !newName.trim()) return;
       kit.name = newName.trim();
       this.saveBrandKits();
