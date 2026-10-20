@@ -27,7 +27,7 @@
 
 - Look, top bar, shortcuts, toasts, dialogs, wording and languages follow shared §7 UI. Do not restate them here; add only what differs.
 - Use `@input.debounce`, never `x-model.debounce`.
-- Dialogs: `appAlert()`, `appConfirm()` and `appPrompt()` are the reference implementation for the other apps. In Alpine handlers use `await appConfirm(...)`.
+- Dialogs: `appAlert()`, `appConfirm()` and `appPrompt()` follow the shared §7 signatures. They are Alpine modals; in Alpine handlers use `await appConfirm(...)`.
 - Product-specific top-bar controls: none. QR Coder has no Alt+N; it has Undo and Redo (Cmd/Ctrl+Z, Cmd/Ctrl+Y) instead.
 - The update prompt (`notifyAppUpdate()` and `window.applyAppUpdate()`) is the reference implementation of the shared update toast.
 
@@ -37,6 +37,5 @@
 - Shape: cards and buttons use `rounded-lg` and `rounded-xl`; the shared rule is `rounded-md` for controls and `rounded-xl` for cards.
 - `showToast` does not exist; the app has a `flash-toast` element and `notifyAppUpdate()`. Add the shared `showToast(message, iconHtml, type)`.
 - UI language is English only and the strings are inline in `index.html` and `main.js`. Move them to `lang/en.js` and `lang/ja.js` with the shared `i18n.js`.
-- `alert()` remains in `main.js` for the iOS install hint; use `appAlert()`.
 - Tailwind is 4.2.4 with SHA-256 pins in `build.sh`; move to 4.3.1 and update the pins.
 - `.gitattributes` has a Japanese comment.

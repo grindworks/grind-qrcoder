@@ -297,12 +297,13 @@ const QR_CAPACITY_TABLE = [
   { v: 40, L: 2953, M: 2331, Q: 1663, H: 1273 }
 ];
 
-function appPrompt(message, inputType = "password") {
+// Shared dialog API: appPrompt(message, defaultValue, { type: 'text' | 'password' }) resolves with the text, or null on cancel
+function appPrompt(message, defaultValue = "", { type = "text" } = {}) {
   return new Promise((resolve) => {
     const app = window.$app;
     app.promptMessage = message;
-    app.promptInput = "";
-    app.promptInputType = inputType;
+    app.promptInput = defaultValue;
+    app.promptInputType = type;
     app.resolvePrompt = (value) => {
       resolve(value);
       app.resolvePrompt = null;
@@ -517,7 +518,7 @@ async function processQRCoderFile(file, handle = null, { skipEditorConfirm = fal
         } catch (err) {
           // A non-empty first attempt came from the password field, so it was already a wrong guess
           const msg = (attempt > 0 || password) ? "❌ Incorrect password. Please try again:" : "The file is encrypted. Enter the password to decrypt:";
-          const entered = await appPrompt(msg);
+          const entered = await appPrompt(msg, "", { type: "password" });
           if (entered === null) return;
           password = normalizePassword(entered);
           attempt++;
@@ -821,7 +822,7 @@ async function saveQRCoderFile() {
     }
 
     if (currentPassword !== "" && currentPasswordHash !== lastSavedPasswordHash) {
-      const confirmPw = await appPrompt("🔒 Set (or change) password.\nEnter the same password again to confirm:", "password");
+      const confirmPw = await appPrompt("🔒 Set (or change) password.\nEnter the same password again to confirm:", "", { type: "password" });
       if (confirmPw === null) return;
       if (normalizePassword(confirmPw) !== currentPassword) {
         component.showFlashNotification("Passwords do not match. Save canceled.");
@@ -1424,6 +1425,7 @@ window.qrCodeGenerator = qrCodeGenerator;
 window.saveQRCoderFile = saveQRCoderFile;
 // Alpine handlers use the in-app dialog instead of native confirm()
 window.appConfirm = appConfirm;
+window.appAlert = appAlert;
 
 // Manage all QR code generator features in this Alpine.js component.
 function qrCodeGenerator() {
@@ -4896,7 +4898,7 @@ function qrCodeGenerator() {
       this.updateQrCode(false);
     },
     async saveCurrentRowAsPreset(variation) {
-      const name = await appPrompt('Enter a name for this UTM preset:', 'text');
+      const name = await appPrompt('Enter a name for this UTM preset:');
       if (!name || !name.trim()) return;
       this.utmPresets.push({
         id: this.generateUniqueId(),
@@ -4916,7 +4918,7 @@ function qrCodeGenerator() {
     async renameUtmPreset(presetId) {
       const preset = this.utmPresets.find(p => p.id === presetId);
       if (!preset) return;
-      const newName = await appPrompt(`Rename "${preset.name}":`, 'text');
+      const newName = await appPrompt(`Rename "${preset.name}":`);
       if (!newName || !newName.trim()) return;
       preset.name = newName.trim();
       this.saveUtmPresets();
@@ -6335,7 +6337,7 @@ function qrCodeGenerator() {
       }
     },
     async createNewProject() {
-      const name = await appPrompt("Enter project name:", "text");
+      const name = await appPrompt("Enter project name:");
       if (!name || !name.trim()) return null;
 
       const newProject = {
@@ -6357,7 +6359,7 @@ function qrCodeGenerator() {
       }
       const project = this.projects.find(p => p.id === projectId);
       if (!project) return;
-      const newName = await appPrompt(`Rename project "${project.name}":`, "text");
+      const newName = await appPrompt(`Rename project "${project.name}":`);
       if (!newName || !newName.trim() || newName.trim() === project.name) return;
       project.name = newName.trim();
       await this.persistProjects();
@@ -6386,7 +6388,7 @@ function qrCodeGenerator() {
       this.showFlashNotification("Project deleted.");
     },
     async saveCurrentAsTemplate() {
-      const templateName = await appPrompt("Enter a name for this template (e.g. My Brand):", "text");
+      const templateName = await appPrompt("Enter a name for this template (e.g. My Brand):");
       if (!templateName || !templateName.trim()) return;
 
       const rawOptions = window.Alpine.raw(this.qrOptions);
@@ -7506,7 +7508,7 @@ function qrCodeGenerator() {
       return this.brandKits.find(b => b.id === this.activeBrandKitId) || null;
     },
     async createNewBrandKit() {
-      const name = await appPrompt("Enter brand name (e.g. Client A):", "text");
+      const name = await appPrompt("Enter brand name (e.g. Client A):");
       if (!name || !name.trim()) return;
 
       const newKit = {
@@ -7524,7 +7526,7 @@ function qrCodeGenerator() {
     async renameBrandKit() {
       const kit = this.getActiveBrandKit();
       if (!kit) return;
-      const newName = await appPrompt(`Rename "${kit.name}":`, "text");
+      const newName = await appPrompt(`Rename "${kit.name}":`);
       if (!newName || !newName.trim()) return;
       kit.name = newName.trim();
       this.saveBrandKits();
@@ -7937,19 +7939,7 @@ document.addEventListener("DOMContentLoaded", () => {
       installBtn.classList.remove("hidden");
       installBtn.textContent = "📥 Install App (iOS)";
       installBtn.onclick = () => {
-        const app = window.$app;
-        const message = "To install this app on iOS:\n\n1. Tap the Share icon (square with arrow) at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.";
-        if (app) {
-          // Outside the main IIFE — set modal state directly (same as appAlert)
-          app.alertMessage = message;
-          app.resolveAlert = () => { app.resolveAlert = null; };
-          app.showAlertModal = true;
-          setTimeout(() => {
-            if (app.$refs?.alertOkBtn) app.$refs.alertOkBtn.focus();
-          }, 100);
-        } else {
-          alert("To install on iOS:\n1. Tap the Share icon\n2. Select 'Add to Home Screen'");
-        }
+        window.appAlert("To install this app on iOS:\n\n1. Tap the Share icon (square with arrow) at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.");
       };
     }
   }
