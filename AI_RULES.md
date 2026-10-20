@@ -26,6 +26,7 @@
 ## 3. UI
 
 - Look, top bar, shortcuts, toasts, dialogs, wording and languages follow shared §7 UI. Do not restate them here; add only what differs.
+- Exempt from the shared shape and toast rules: qrcoder keeps its own layout (tabs and cards), corner radius and shadows, and its own toast (`flash-toast`, placed by the app) next to the update prompt. Do not migrate it to `rounded-md` or `showToast`.
 - Use `@input.debounce`, never `x-model.debounce`.
 - Dialogs: `appAlert()`, `appConfirm()` and `appPrompt()` follow the shared §7 signatures. They are Alpine modals; in Alpine handlers use `await appConfirm(...)`.
 - Product-specific top-bar controls: none. QR Coder has no Alt+N; it has Undo and Redo (Cmd/Ctrl+Z, Cmd/Ctrl+Y) instead.
@@ -35,7 +36,5 @@
 ## 4. Known gaps against shared §7
 
 - Hard-coded hex colors remain in the `<style>` block of `index.html` (scrollbar, tooltip and swatch borders); move them to Tailwind palette variables.
-- Shape: cards and buttons use `rounded-lg` and `rounded-xl`; the shared rule is `rounded-md` for controls and `rounded-xl` for cards.
-- `showToast` does not exist; the app has a `flash-toast` element and `notifyAppUpdate()`. Add the shared `showToast(message, iconHtml, type)`.
 - Tailwind is 4.2.4 with SHA-256 pins in `build.sh`; move to 4.3.1 and update the pins.
 - `.gitattributes` has a Japanese comment.
