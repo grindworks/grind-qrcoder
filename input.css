@@ -1,33 +1,35 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.never-used));
+
 @theme {
   /* Premium Primary Color (Vibrant Blue) */
-  --color-primary: #0052ff;
-  --color-primary-hover: #0040cc;
-  --color-primary-50: #f0f5ff;
-  --color-primary-100: #e0ebff;
+  --color-primary: oklch(54.6% 0.245 262.881);
+  --color-primary-hover: oklch(48.8% 0.243 264.376);
+  --color-primary-50: oklch(97% 0.014 254.604);
+  --color-primary-100: oklch(93.2% 0.032 255.585);
 
   /* Premium Soft Shadows */
   --shadow-soft: 0 10px 40px -10px rgba(0, 0, 0, 0.06);
   --shadow-softer: 0 4px 20px -5px rgba(0, 0, 0, 0.04);
-  --shadow-glow: 0 0 24px -4px rgba(0, 82, 255, 0.3);
+  --shadow-glow: 0 0 24px -4px rgba(21, 93, 252, 0.3);
   --shadow-inner-soft: inset 0 2px 4px 0 rgba(0, 0, 0, 0.02);
 
   /* Typography (system fonts only — no external font fetches) */
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", "Yu Gothic", Meiryo, Roboto, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", Meiryo, sans-serif;
 
   /* Animation definitions */
-  --animate-modal-in: modalIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  --animate-modal-overlay: modalOverlay 0.3s ease-out forwards;
-  --animate-toast-in: toastIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  --animate-toast-out: toastOut 0.4s ease-in forwards;
-  --animate-glow-pulse: glowPulse 3s ease-in-out infinite;
-  --animate-fade-in: fadeIn 0.4s ease-out forwards;
-  --animate-slide-up: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  --animate-block-enter: blockEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  --animate-float: float 8s ease-in-out infinite;
-  --animate-success-flash: successFlash 0.8s ease-out;
-  --animate-ripple: ripple 0.8s ease-out;
+  --animate-modal-in: modalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-modal-overlay: modalOverlay 0.2s ease-out forwards;
+  --animate-toast-in: toastIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-toast-out: toastOut 0.3s ease-in forwards;
+  --animate-glow-pulse: glowPulse 2s ease-in-out infinite;
+  --animate-fade-in: fadeIn 0.3s ease-out forwards;
+  --animate-slide-up: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-block-enter: blockEnter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-success-flash: successFlash 0.6s ease-out;
+  --animate-ripple: ripple 0.6s ease-out;
 }
 
 /* 1. Explicitly specify target files for class name extraction */
