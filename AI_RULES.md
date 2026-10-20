@@ -33,7 +33,6 @@
 
 ## 4. Known gaps against shared §7
 
-- Icons still use the external `icons-sprite.svg` (about 140 references in `index.html`); move them to an inline sprite in `index.html`.
 - Hard-coded hex colors remain in the `<style>` block of `index.html` (scrollbar, tooltip and swatch borders); move them to Tailwind palette variables.
 - Shape: cards and buttons use `rounded-lg` and `rounded-xl`; the shared rule is `rounded-md` for controls and `rounded-xl` for cards.
 - `showToast` does not exist; the app has a `flash-toast` element and `notifyAppUpdate()`. Add the shared `showToast(message, iconHtml, type)`.

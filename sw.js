@@ -1,5 +1,5 @@
 // Update this version to trigger a cache update (Format: YYYYMMDD-Revision)
-const CACHE_NAME = "grindqrcoder-v20261020-2";
+const CACHE_NAME = "grindqrcoder-v20261020-3";
 const urlsToCache = [
   "./",
   "./styles.css",
@@ -7,7 +7,6 @@ const urlsToCache = [
   "./icon-192.png",
   "./icon-512.png",
   "./grind-qrcoder.jpg",
-  "./icons-sprite.svg",
   "./ICON_GOOGLE_MAPS.png",
   "./ICON_FACEBOOK.png",
   "./ICON_INSTAGRAM.png",

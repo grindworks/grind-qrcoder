@@ -952,10 +952,10 @@ let isCommandPaletteOpen = false;
 let focusBeforeCommandPalette = null;
 let selectedCommandIndex = 0;
 const commandsList = [
-  { id: "save", icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5"><use href="icons-sprite.svg#outline-arrow-down-tray"></use></svg>', title: "Save Backup", action: () => saveQRCoderFile() },
-  { id: "open", icon: '<svg class="w-5 h-5"><use href="icons-sprite.svg#outline-folder"></use></svg>', title: "Open Backup", action: () => loadQRCoderFile() },
-  { id: "export_theme", icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5"><use href="icons-sprite.svg#outline-sparkles"></use></svg>', title: "Export Design Assets (Brands & Templates)", action: () => saveDesignAssets() },
-  { id: "wipe_local_data", icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5"><use href="icons-sprite.svg#outline-trash"></use></svg>', title: "Delete All Local Data", action: () => wipeAllLocalData() }
+  { id: "save", icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5"><use href="#outline-arrow-down-tray"></use></svg>', title: "Save Backup", action: () => saveQRCoderFile() },
+  { id: "open", icon: '<svg class="w-5 h-5"><use href="#outline-folder"></use></svg>', title: "Open Backup", action: () => loadQRCoderFile() },
+  { id: "export_theme", icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5"><use href="#outline-sparkles"></use></svg>', title: "Export Design Assets (Brands & Templates)", action: () => saveDesignAssets() },
+  { id: "wipe_local_data", icon: '<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.5"><use href="#outline-trash"></use></svg>', title: "Delete All Local Data", action: () => wipeAllLocalData() }
 ];
 
 // html5-qrcode (~375KB) is only needed on the Verify tab, so load it on first use
@@ -1060,7 +1060,7 @@ function getCommandSearchResults(query) {
         })
         .map(qr => ({
           id: `qr-${qr.id}`,
-          icon: '<svg class="w-5 h-5"><use href="icons-sprite.svg#outline-qr-code"></use></svg>',
+          icon: '<svg class="w-5 h-5"><use href="#outline-qr-code"></use></svg>',
           title: qr.name || "Untitled",
           action: async () => {
             // Show confirmation dialog if there are unsaved changes in the editor
