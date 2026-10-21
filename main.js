@@ -226,6 +226,9 @@ function recordsEqual(a, b) {
 
 // Last state written to qrcodes_v2 (id -> shape clone); null until the first full write this session
 let persistedQrSnapshot = null;
+let isSavingToLibrary = false;
+// Set when a stored list could not be read, so an empty in-memory list never overwrites it
+let storageReadFailed = { qrcodes: false, templates: false, projects: false };
 
 function idbTransactionDone(tx) {
   return new Promise((resolve, reject) => {
@@ -505,7 +508,13 @@ async function processQRCoderFile(file, handle = null, { skipEditorConfirm = fal
     const isEncrypted = magicStr === "GRINDENC" || magicStr === "GRINDEN2";
 
     let text;
+    let decryptedWith = "";
     if (isEncrypted) {
+      // magic + salt + iv + GCM tag: anything shorter is damaged, not a wrong password
+      if (Uints.length < 8 + 16 + 12 + 16) {
+        await appAlert("This encrypted file is incomplete or damaged and cannot be opened.");
+        return;
+      }
       let password = normalizePassword(document.getElementById("file-password")?.value || "");
       let success = false;
       let attempt = 0;
@@ -513,11 +522,7 @@ async function processQRCoderFile(file, handle = null, { skipEditorConfirm = fal
         try {
           Uints = await decryptData(Uints, password);
           success = true;
-          if (password) {
-            const pwInput = document.getElementById("file-password");
-            if (pwInput) pwInput.value = password;
-            lastSavedPasswordHash = await sha256(password);
-          }
+          decryptedWith = password;
         } catch (err) {
           // A non-empty first attempt came from the password field, so it was already a wrong guess
           const msg = (attempt > 0 || password) ? "❌ Incorrect password. Please try again:" : "The file is encrypted. Enter the password to decrypt:";
@@ -530,15 +535,26 @@ async function processQRCoderFile(file, handle = null, { skipEditorConfirm = fal
       text = new TextDecoder().decode(Uints);
     } else {
       text = new TextDecoder().decode(Uints);
-      const pwInput = document.getElementById("file-password");
-      if (pwInput) pwInput.value = "";
-      lastSavedPasswordHash = "";
     }
 
     const parsedData = JSON.parse(text);
 
     // [New] Check if it's a theme (Design Assets) file
     const isThemeFile = fileNameEndsWith(file.name, '.qrcoder-theme') || parsedData.type === 'theme';
+
+    // A design-assets file is merged into the library, so it must not change the library's password
+    if (!isThemeFile) {
+      const pwInput = document.getElementById("file-password");
+      if (isEncrypted) {
+        if (decryptedWith) {
+          if (pwInput) pwInput.value = decryptedWith;
+          lastSavedPasswordHash = await sha256(decryptedWith);
+        }
+      } else {
+        if (pwInput) pwInput.value = "";
+        lastSavedPasswordHash = "";
+      }
+    }
 
     if (isThemeFile) {
       const importedBrands = parsedData.brandKits || [];
@@ -1321,6 +1337,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("drop", (e) => {
     e.preventDefault();
     dragCounter = 0;
+    if (isLockedByOtherTab) return;
     if (dropzone) {
       dropzone.classList.add("hidden");
       dropzone.classList.remove("flex");
@@ -1383,6 +1400,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Handle PWA File Handling API (launch via double-click).
   if ('launchQueue' in window) {
     window.launchQueue.setConsumer(async (launchParams) => {
+      if (isLockedByOtherTab) return;
       if (!launchParams.files || launchParams.files.length === 0) return;
       const fileHandleParams = launchParams.files[0];
 
@@ -2510,7 +2528,6 @@ function qrCodeGenerator() {
       // Reset unsaved flags dirtied by the initial preview render (keep them for a restored draft).
       // A plain timer is used because Alpine's $nextTick stays held in background tabs (no animation frames).
       setTimeout(() => {
-        if (typeof setDirty === 'function') setDirty(false);
         if (!restoredDraft) this.hasUnsavedEdit = false;
         this._isInitialized = true; // Set initialization flag.
       }, 100);
@@ -2560,7 +2577,6 @@ function qrCodeGenerator() {
       if (!this.qrCodeInstance) return;
 
       this.hasUnsavedEdit = true;
-      setDirty(true);
 
       // Exclude invalid logos (e.g., relative paths) saved by old bugs to prevent errors.
       if (this.qrOptions.logo && !this.qrOptions.logo.startsWith("data:")) {
@@ -2655,7 +2671,6 @@ function qrCodeGenerator() {
         this.historyIndex = -1;
         this.recordState();
         this.hasUnsavedEdit = false;
-        if (typeof setDirty === 'function') setDirty(false);
       });
     },
 
@@ -2810,6 +2825,10 @@ function qrCodeGenerator() {
           bgRect.setAttribute("fill", "transparent");
           bgRect.style.fill = "transparent";
         }
+        svgClone.querySelectorAll(".qr-frame-bg").forEach((el) => {
+          el.setAttribute("fill", "transparent");
+          el.style.fill = "transparent";
+        });
       }
 
       // Convert to static array using Array.from for dynamic DOM replacement.
@@ -2925,6 +2944,10 @@ function qrCodeGenerator() {
           bgRect.setAttribute("fill", "transparent");
           bgRect.style.fill = "transparent";
         }
+        svgClone.querySelectorAll(".qr-frame-bg").forEach((el) => {
+          el.setAttribute("fill", "transparent");
+          el.style.fill = "transparent";
+        });
       }
 
       // Convert to static array using Array.from for dynamic DOM replacement.
@@ -3025,6 +3048,15 @@ function qrCodeGenerator() {
     // Save generated QR code to IndexedDB.
     // If stayOnEditor is true, keep editor open after saving instead of returning to dashboard.
     async saveToGrind(stayOnEditor = false) {
+      if (isSavingToLibrary) return false;
+      isSavingToLibrary = true;
+      try {
+        return await this._saveToGrind(stayOnEditor);
+      } finally {
+        isSavingToLibrary = false;
+      }
+    },
+    async _saveToGrind(stayOnEditor = false) {
       this.updateQrCode(false); // Force update to flush debounced inputs
 
       const blockReason = this.getQrPayloadBlockReason();
@@ -3078,6 +3110,16 @@ function qrCodeGenerator() {
       // Convert tags string to array (comma-separated, trimmed, empty removed).
       const tagsArray = this.saveTags ? this.saveTags.split(',').map(t => t.trim()).filter(t => t) : [];
 
+      // Keep only the active type's input; other types may hold unrelated values such as a Wi-Fi password
+      const rawFormData = window.Alpine.raw(this.formData);
+      let savedFormData = JSON.parse(JSON.stringify(defaultFormData));
+      const activeFormData = rawFormData[this.selectedType];
+      if (Object.prototype.hasOwnProperty.call(savedFormData, this.selectedType) && activeFormData && typeof activeFormData === 'object') {
+        savedFormData[this.selectedType] = JSON.parse(JSON.stringify(activeFormData));
+      } else {
+        savedFormData = JSON.parse(JSON.stringify(rawFormData));
+      }
+
       const isNew = !this.editingQRCodeId;
       const newQr = {
         id: this.editingQRCodeId || this.generateUniqueId(),
@@ -3087,7 +3129,7 @@ function qrCodeGenerator() {
         tags: tagsArray,
         type: this.selectedType,
         isFavorite: originalQr ? !!originalQr.isFavorite : false,
-        formData: JSON.parse(JSON.stringify(window.Alpine.raw(this.formData))),
+        formData: savedFormData,
         qrOptions: copiedOptions,
         logoFileName: this.logoFileName,
         frame: JSON.parse(JSON.stringify(this.frame)),
@@ -5190,20 +5232,34 @@ function qrCodeGenerator() {
         await this.$nextTick();
         await new Promise(r => setTimeout(r, 100)); // Allow animation/layout to settle
 
-        this.scannerInstance = new Html5Qrcode('qr-scanner-viewport');
-        await this.scannerInstance.start(
-          { 
-            facingMode: 'environment',
-            advanced: [{ zoom: 2.0 }, { focusMode: "continuous" }] 
-          },
-          { 
-            fps: 10, 
+        const scanner = new Html5Qrcode('qr-scanner-viewport');
+        this.scannerInstance = scanner;
+        // html5-qrcode takes exactly one key here; zoom and focus are applied once the camera runs
+        await scanner.start(
+          { facingMode: 'environment' },
+          {
+            fps: 10,
             qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.333334 
+            aspectRatio: 1.333334
           },
           (decodedText) => this.onScanSuccess(decodedText),
           () => {} // Ignore errors during continuous scanning
         );
+        // The user may have left the Verify tab while the camera was starting
+        if (this.scannerInstance !== scanner) {
+          try {
+            await scanner.stop();
+            scanner.clear();
+          } catch (stopError) {
+            console.warn('Error stopping scanner', stopError);
+          }
+          return;
+        }
+        try {
+          await scanner.applyVideoConstraints({ advanced: [{ zoom: 2.0 }, { focusMode: 'continuous' }] });
+        } catch (constraintError) {
+          // Zoom and focus control are optional and many cameras do not support them
+        }
       } catch (e) {
         console.error('Failed to start scanner', e);
         this.isScannerActive = false;
@@ -5383,8 +5439,10 @@ function qrCodeGenerator() {
 
           let decodedText = "";
           let isUrl = false;
+          let decoded = false;
           try {
             const result = await tempScanner.scanFile(resultObj.file, true);
+            decoded = true;
             decodedText = result;
             isUrl = /^https?:\/\//i.test(decodedText);
           } catch (scanErr) {
@@ -5431,7 +5489,8 @@ function qrCodeGenerator() {
             fileName: file.name,
             filePreview: URL.createObjectURL(file)
           });
-          successCount++;
+          if (decoded) successCount++;
+          else failCount++;
 
           // Limit to 50 results to prevent unbounded memory growth
           if (this.scannerResults.length > 50) {
@@ -5478,10 +5537,15 @@ function qrCodeGenerator() {
     },
     async copyAllScanResults() {
       if (this.scannerResults.length === 0) return;
-      const text = this.scannerResults.map(r => r.text).join('\n');
+      const copyable = this.scannerResults.filter(r => !String(r.text).startsWith('Decode Failed'));
+      if (copyable.length === 0) {
+        this.showFlashNotification("No decoded results to copy.");
+        return;
+      }
+      const text = copyable.map(r => r.text).join('\n');
       const ok = await this.copyToTextClipboard(text);
       if (ok) {
-        this.showFlashNotification(`Copied ${this.scannerResults.length} result(s) to clipboard.`);
+        this.showFlashNotification(`Copied ${copyable.length} result(s) to clipboard.`);
         this.hapticFeedback('light');
       } else {
         this.showFlashNotification("Could not copy to clipboard.");
@@ -5826,6 +5890,18 @@ function qrCodeGenerator() {
             break;
           }
         }
+        // The generated background stops above the frame; fill the frame area too so light text stays readable
+        const frameBackground = this.qrOptions.backgroundColor;
+        if (frameBackground && frameBackground !== "transparent") {
+          const frameBgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          frameBgRect.classList.add("qr-frame-bg");
+          frameBgRect.setAttribute("x", 0);
+          frameBgRect.setAttribute("y", originalSize);
+          frameBgRect.setAttribute("width", originalSize);
+          frameBgRect.setAttribute("height", frameHeight);
+          frameBgRect.setAttribute("fill", frameBackground);
+          frameGroup.insertBefore(frameBgRect, frameGroup.firstChild);
+        }
         svgElement.appendChild(frameGroup);
       });
     },
@@ -6013,7 +6089,6 @@ function qrCodeGenerator() {
       this.clearDraft(); // Clear draft when resetting manually
       this.$nextTick(() => {
         this.hasUnsavedEdit = false;
-        if (typeof setDirty === 'function') setDirty(false);
       });
     },
     openIdb() {
@@ -6120,6 +6195,10 @@ function qrCodeGenerator() {
       }
     },
     async persistSavedQRCodes() {
+      if (storageReadFailed.qrcodes) {
+        this.showFlashNotification("Saved QR codes could not be read, so saving is paused to protect them. Reload the page.");
+        return;
+      }
       try {
         const db = await this.openIdb();
         const records = this.savedQRCodes.map((qr) => window.Alpine.raw(qr));
@@ -6194,21 +6273,21 @@ function qrCodeGenerator() {
                 const storeV1 = tx.objectStore('qrcodes');
                 const reqV1 = storeV1.get('savedList');
                 reqV1.onsuccess = () => resolve(reqV1.result);
-                reqV1.onerror = () => resolve([]);
+                reqV1.onerror = () => reject(reqV1.error);
               } else {
                 resolve([]);
               }
             };
-            reqV2.onerror = () => resolve([]);
+            reqV2.onerror = () => reject(reqV2.error);
           } else if (db.objectStoreNames.contains('qrcodes')) {
             const storeV1 = tx.objectStore('qrcodes');
             const reqV1 = storeV1.get('savedList');
             reqV1.onsuccess = () => resolve(reqV1.result);
-            reqV1.onerror = () => resolve([]);
+            reqV1.onerror = () => reject(reqV1.error);
           } else {
             resolve([]);
           }
-          tx.onerror = () => resolve([]);
+          tx.onerror = () => reject(tx.error);
         });
 
         let parsedSaved = null;
@@ -6225,7 +6304,9 @@ function qrCodeGenerator() {
         }
       } catch(e) {
         console.warn("Failed to load from IndexedDB", e);
+        storageReadFailed.qrcodes = true;
         this.savedQRCodes = [];
+        this.showFlashNotification("Could not read saved QR codes. Saving is paused to protect them; reload the page.");
       }
 
       // --- Automatic repair migration for old thumbnails (with crossorigin attribute) ---
@@ -6268,13 +6349,18 @@ function qrCodeGenerator() {
       }
     },
     async persistMyTemplates() {
+      if (storageReadFailed.templates) {
+        this.showFlashNotification("Saved templates could not be read, so saving is paused to protect them. Reload the page.");
+        return;
+      }
       try {
         const db = await this.openIdb();
-        return new Promise((resolve, reject) => {
+        return await new Promise((resolve, reject) => {
           const tx = db.transaction('templates', 'readwrite');
           const store = tx.objectStore('templates');
           tx.oncomplete = () => resolve();
           tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error || new Error('Transaction aborted'));
           store.clear();
           if (this.myTemplates.length > 0) {
             this.myTemplates.forEach(t => store.put(window.Alpine.raw(t)));
@@ -6297,22 +6383,28 @@ function qrCodeGenerator() {
           const store = tx.objectStore('templates');
           const req = store.getAll();
           req.onsuccess = () => resolve(req.result);
-          req.onerror = () => resolve([]);
+          req.onerror = () => reject(req.error);
         });
         this.myTemplates = saved || [];
       } catch(e) {
         console.warn("Failed to load templates from IndexedDB", e);
+        storageReadFailed.templates = true;
         this.myTemplates = [];
       }
     },
     async persistProjects() {
+      if (storageReadFailed.projects) {
+        this.showFlashNotification("Saved projects could not be read, so saving is paused to protect them. Reload the page.");
+        return;
+      }
       try {
         const db = await this.openIdb();
-        return new Promise((resolve, reject) => {
+        return await new Promise((resolve, reject) => {
           const tx = db.transaction('projects', 'readwrite');
           const store = tx.objectStore('projects');
           tx.oncomplete = () => resolve();
           tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error || new Error('Transaction aborted'));
           store.clear();
           this.projects.forEach(p => store.put(window.Alpine.raw(p)));
         });
@@ -6325,11 +6417,11 @@ function qrCodeGenerator() {
       try {
         const db = await this.openIdb();
         if (db.objectStoreNames.contains('projects')) {
-          const saved = await new Promise(resolve => {
+          const saved = await new Promise((resolve, reject) => {
             const tx = db.transaction('projects', 'readonly');
             const req = tx.objectStore('projects').getAll();
             req.onsuccess = () => resolve(req.result);
-            req.onerror = () => resolve([]);
+            req.onerror = () => reject(req.error);
           });
           if (saved && saved.length > 0) {
             this.projects = saved;
@@ -6338,6 +6430,7 @@ function qrCodeGenerator() {
         }
       } catch(e) {
         console.warn("Failed to load projects from IndexedDB", e);
+        storageReadFailed.projects = true;
       }
     },
     async createNewProject() {
@@ -6574,7 +6667,6 @@ function qrCodeGenerator() {
             this.recordState();
           }
           this.hasUnsavedEdit = false;
-          if (typeof setDirty === 'function') setDirty(false);
         });
       }
     },
@@ -7837,6 +7929,17 @@ function unlockAppFromOtherTab() {
   document.body.style.pointerEvents = "";
   const app = window.$app;
   if (app) {
+    // The other tab may have saved while this one was locked; reload so the next save cannot erase its changes
+    persistedQrSnapshot = null;
+    (async () => {
+      try {
+        await app.loadProjects();
+        await app.loadSavedQRCodes();
+        await app.loadMyTemplates();
+      } catch (reloadError) {
+        console.warn("Failed to reload data after unlock", reloadError);
+      }
+    })();
     if (app.showAlertModal) {
       app.resolveAlert?.();
       app.showAlertModal = false;

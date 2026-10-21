@@ -69,7 +69,7 @@ When saving, strong encryption via `AES-256-GCM` using the Web Crypto API can be
 
 ## Development
 
-- **Build CSS:** run `./build.sh` after changing classes in `index.html` / `main.js` or editing `input.css`. It downloads the Tailwind CSS v4.2.4 standalone binary for your OS on first run (verified by SHA-256) and writes `styles.css`. Commit the rebuilt `styles.css`.
+- **Build CSS:** run `./build.sh` after changing classes in `index.html` / `main.js` or editing `input.css`. It downloads the Tailwind CSS v4.3.1 standalone binary for your OS on first run (verified by SHA-256) and writes `styles.css`. Commit the rebuilt `styles.css`.
 - **Release:** bump `CACHE_NAME` in `sw.js` whenever any cached file changes. Cached app files are served only from the current version's cache, so installed apps pick up changes only after the bump; users then see an "update ready" prompt and the new version activates on **Reload**.
 - **Run locally:** serve the folder over HTTP (e.g. `python3 -m http.server`) and open it in the browser; the Service Worker requires `http://localhost` or HTTPS.
 

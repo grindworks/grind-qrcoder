@@ -1,7 +1,8 @@
 // Update this version to trigger a cache update (Format: YYYYMMDD-Revision)
-const CACHE_NAME = "grindqrcoder-v20261020-7";
+const CACHE_NAME = "grindqrcoder-v20261021-1";
 const urlsToCache = [
   "./",
+  "./index.html",
   "./styles.css",
   "./main.js",
   "./icon-192.png",
