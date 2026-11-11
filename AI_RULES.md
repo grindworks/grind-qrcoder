@@ -1,6 +1,6 @@
 # QR Coder AI Rules
 
-> Product type: PWA. Shared rules: [`../AGENTS.md`](../AGENTS.md) §1, §2, §4, §6 and the PWA rules in §7. This file adds QR Coder rules and wins where the two differ.
+> Product type: PWA. Shared rules: [`../AGENTS.md`](../AGENTS.md) §1, §2, §4, §6 and §7, and the PWA rules in [`../PWA.md`](../PWA.md). This file adds QR Coder rules and wins where the two differ.
 
 ## 1. Stack
 
@@ -25,14 +25,14 @@
 
 ## 3. UI
 
-- Look, top bar, shortcuts, toasts, dialogs, wording and languages follow shared §7 UI. Do not restate them here; add only what differs.
+- Look, top bar, shortcuts, toasts, dialogs, wording and languages follow `../PWA.md` UI. Do not restate them here; add only what differs.
 - Exempt from the shared shape and toast rules: qrcoder keeps its own layout (tabs and cards), corner radius and shadows, and its own toast (`flash-toast`, placed by the app) next to the update prompt. Do not migrate it to `rounded-md` or `showToast`.
 - Use `@input.debounce`, never `x-model.debounce`.
-- Dialogs: `appAlert()`, `appConfirm()` and `appPrompt()` follow the shared §7 signatures. They are Alpine modals; in Alpine handlers use `await appConfirm(...)`.
+- Dialogs: `appAlert()`, `appConfirm()` and `appPrompt()` follow the `../PWA.md` signatures. They are Alpine modals; in Alpine handlers use `await appConfirm(...)`.
 - Product-specific top-bar controls: none. QR Coder has no Alt+N; it has Undo and Redo (Cmd/Ctrl+Z, Cmd/Ctrl+Y) instead.
 - The update prompt (`notifyAppUpdate()` and `window.applyAppUpdate()`) is the reference implementation of the shared update toast.
 - UI language: English only, for overseas users. Strings stay inline in `index.html` and `main.js`; qrcoder has no `lang/` folder or `i18n.js`, and no language choice.
 
-## 4. Known gaps against shared §7
+## 4. Known gaps against `../PWA.md`
 
 None.
